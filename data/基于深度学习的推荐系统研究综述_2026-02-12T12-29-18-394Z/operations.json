@@ -1,0 +1,147 @@
+[
+  {
+    "type": "updateAttribute",
+    "args": [
+      1,
+      "section-color",
+      "bg-chart-4/10 border-chart-4/20"
+    ],
+    "timestamp": 1770899320283
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      1,
+      "section-color",
+      "bg-chart-5/10 border-chart-5/20"
+    ],
+    "timestamp": 1770899321909
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      1,
+      "section-color",
+      "bg-chart-2/10 border-chart-2/20"
+    ],
+    "timestamp": 1770899323546
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      1,
+      "section-color",
+      "bg-chart-1/10 border-chart-1/20"
+    ],
+    "timestamp": 1770899325014
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      12,
+      "columns",
+      "3"
+    ],
+    "timestamp": 1770899341783
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      12,
+      "section-color",
+      "bg-chart-2/10 border-chart-2/20"
+    ],
+    "timestamp": 1770899341784
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      12,
+      "columns",
+      "3"
+    ],
+    "timestamp": 1770899343164
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      12,
+      "section-color",
+      "bg-chart-3/10 border-chart-3/20"
+    ],
+    "timestamp": 1770899343164
+  },
+  {
+    "type": "updateFrontmatter",
+    "args": [
+      "status",
+      "modified"
+    ],
+    "timestamp": 1770899346112
+  },
+  {
+    "type": "updateFrontmatter",
+    "args": [
+      "training_sample",
+      "false"
+    ],
+    "timestamp": 1770899346112
+  },
+  {
+    "type": "updateFrontmatter",
+    "args": [
+      "status",
+      "done"
+    ],
+    "timestamp": 1770899346998
+  },
+  {
+    "type": "updateFrontmatter",
+    "args": [
+      "training_sample",
+      "true"
+    ],
+    "timestamp": 1770899346998
+  },
+  {
+    "type": "updateFrontmatter",
+    "args": [
+      "status",
+      "modified"
+    ],
+    "timestamp": 1770899347684
+  },
+  {
+    "type": "updateFrontmatter",
+    "args": [
+      "training_sample",
+      "false"
+    ],
+    "timestamp": 1770899347684
+  },
+  {
+    "type": "updateFrontmatter",
+    "args": [
+      "status",
+      "done"
+    ],
+    "timestamp": 1770899348057
+  },
+  {
+    "type": "updateFrontmatter",
+    "args": [
+      "training_sample",
+      "true"
+    ],
+    "timestamp": 1770899348057
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      4,
+      "card-color",
+      "chart-2"
+    ],
+    "timestamp": 1770899351290
+  }
+]

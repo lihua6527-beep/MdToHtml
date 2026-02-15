@@ -1,0 +1,37 @@
+[
+  {
+    "type": "batchUpdateAttributes",
+    "args": [
+      2
+    ],
+    "timestamp": 1771148818945
+  },
+  {
+    "type": "batchUpdateAttributes",
+    "args": [
+      2
+    ],
+    "timestamp": 1771148819687
+  },
+  {
+    "type": "batchUpdateAttributes",
+    "args": [
+      2
+    ],
+    "timestamp": 1771148824489
+  },
+  {
+    "type": "batchUpdateAttributes",
+    "args": [
+      2
+    ],
+    "timestamp": 1771148825152
+  },
+  {
+    "type": "batchUpdateAttributes",
+    "args": [
+      2
+    ],
+    "timestamp": 1771148825845
+  }
+]

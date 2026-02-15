@@ -1,0 +1,299 @@
+[
+  {
+    "type": "updateAttribute",
+    "args": [
+      29,
+      "columns",
+      "3"
+    ],
+    "timestamp": 1770897292539
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      29,
+      "columns",
+      "4"
+    ],
+    "timestamp": 1770897293071
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      29,
+      "columns",
+      "1"
+    ],
+    "timestamp": 1770897293558
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      30,
+      "content-align",
+      "center"
+    ],
+    "timestamp": 1770897297403
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      30,
+      "col-span",
+      4
+    ],
+    "timestamp": 1770897299053
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      28,
+      "col-span",
+      4
+    ],
+    "timestamp": 1770897302841
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      28,
+      "content-align",
+      "center"
+    ],
+    "timestamp": 1770897303567
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "content-align",
+      "center"
+    ],
+    "timestamp": 1770897305966
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "col-span",
+      4
+    ],
+    "timestamp": 1770897306858
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "content-align",
+      "center"
+    ],
+    "timestamp": 1770897308710
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "content-align",
+      "left"
+    ],
+    "timestamp": 1770897309204
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "content-align",
+      "center"
+    ],
+    "timestamp": 1770897309727
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "title-align",
+      "left"
+    ],
+    "timestamp": 1770897310331
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "title-align",
+      "center"
+    ],
+    "timestamp": 1770897310988
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "content-align",
+      "center"
+    ],
+    "timestamp": 1770897311850
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "content-align",
+      "right"
+    ],
+    "timestamp": 1770897312299
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "content-align",
+      "center"
+    ],
+    "timestamp": 1770897312839
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "content-align",
+      "left"
+    ],
+    "timestamp": 1770897313282
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "content-align",
+      "center"
+    ],
+    "timestamp": 1770897314206
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "card-style",
+      "highlight"
+    ],
+    "timestamp": 1770897315592
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "card-style",
+      "stat"
+    ],
+    "timestamp": 1770897316209
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "card-style",
+      "quote"
+    ],
+    "timestamp": 1770897318186
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "card-style",
+      "warning"
+    ],
+    "timestamp": 1770897319611
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "card-style",
+      "code"
+    ],
+    "timestamp": 1770897322188
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "card-style",
+      "summary"
+    ],
+    "timestamp": 1770897323223
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "card-style",
+      "orange"
+    ],
+    "timestamp": 1770897324220
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "card-style",
+      "summary"
+    ],
+    "timestamp": 1770897325189
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "card-style",
+      "normal"
+    ],
+    "timestamp": 1770897325891
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "col-span",
+      3
+    ],
+    "timestamp": 1770897327009
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "content-align",
+      "center"
+    ],
+    "timestamp": 1770897328118
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "content-align",
+      "left"
+    ],
+    "timestamp": 1770897328570
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "col-span",
+      2
+    ],
+    "timestamp": 1770897331852
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "col-span",
+      1
+    ],
+    "timestamp": 1770897332655
+  }
+]

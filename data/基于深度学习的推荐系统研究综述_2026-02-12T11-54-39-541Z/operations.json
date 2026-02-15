@@ -1,0 +1,56 @@
+[
+  {
+    "type": "updateAttribute",
+    "args": [
+      27,
+      "columns",
+      "3"
+    ],
+    "timestamp": 1770897206444
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      27,
+      "columns",
+      "4"
+    ],
+    "timestamp": 1770897207524
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      27,
+      "columns",
+      "1"
+    ],
+    "timestamp": 1770897208168
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "col-span",
+      2
+    ],
+    "timestamp": 1770897213199
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      26,
+      "col-span",
+      3
+    ],
+    "timestamp": 1770897273219
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      30,
+      "col-span",
+      4
+    ],
+    "timestamp": 1770897276188
+  }
+]

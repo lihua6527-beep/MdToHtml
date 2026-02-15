@@ -1,0 +1,50 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./MdToHtml
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: MdToHtml/package-lock.json
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Run Unit Tests
+      run: npm run test:ci
+
+    - name: Build and E2E Verify
+      # This runs the build and then checks the static output
+      run: npm run test:e2e
+      
+    - name: Upload Test Coverage
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: coverage-report
+        path: MdToHtml/coverage/
+        
+    - name: Upload Static Output
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: static-site
+        path: MdToHtml/out/

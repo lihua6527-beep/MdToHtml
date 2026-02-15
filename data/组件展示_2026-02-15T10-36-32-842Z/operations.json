@@ -1,0 +1,23 @@
+[
+  {
+    "type": "batchUpdateAttributes",
+    "args": [
+      3
+    ],
+    "timestamp": 1771151783362
+  },
+  {
+    "type": "batchUpdateAttributes",
+    "args": [
+      3
+    ],
+    "timestamp": 1771151784068
+  },
+  {
+    "type": "batchUpdateAttributes",
+    "args": [
+      3
+    ],
+    "timestamp": 1771151786128
+  }
+]

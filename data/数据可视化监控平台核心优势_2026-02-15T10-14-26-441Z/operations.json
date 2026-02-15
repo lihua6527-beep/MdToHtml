@@ -1,0 +1,44 @@
+[
+  {
+    "type": "batchUpdateAttributes",
+    "args": [
+      3
+    ],
+    "timestamp": 1771150452767
+  },
+  {
+    "type": "batchUpdateAttributes",
+    "args": [
+      3
+    ],
+    "timestamp": 1771150454597
+  },
+  {
+    "type": "batchUpdateAttributes",
+    "args": [
+      3
+    ],
+    "timestamp": 1771150455672
+  },
+  {
+    "type": "batchUpdateAttributes",
+    "args": [
+      3
+    ],
+    "timestamp": 1771150459130
+  },
+  {
+    "type": "batchUpdateAttributes",
+    "args": [
+      3
+    ],
+    "timestamp": 1771150459901
+  },
+  {
+    "type": "batchUpdateAttributes",
+    "args": [
+      3
+    ],
+    "timestamp": 1771150460896
+  }
+]

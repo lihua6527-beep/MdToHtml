@@ -1,0 +1,11 @@
+[
+  {
+    "type": "updateAttribute",
+    "args": [
+      28,
+      "content-align",
+      "left"
+    ],
+    "timestamp": 1770897355289
+  }
+]

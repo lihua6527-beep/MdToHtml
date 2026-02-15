@@ -1,0 +1,200 @@
+[
+  {
+    "type": "updateAttribute",
+    "args": [
+      1,
+      "layout",
+      "grid"
+    ],
+    "timestamp": 1771140155358
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      1,
+      "columns",
+      "3"
+    ],
+    "timestamp": 1771140155358
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      1,
+      "layout",
+      "grid"
+    ],
+    "timestamp": 1771140156569
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      1,
+      "columns",
+      "3"
+    ],
+    "timestamp": 1771140156569
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      1,
+      "layout",
+      "grid"
+    ],
+    "timestamp": 1771140157851
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      1,
+      "columns",
+      "3"
+    ],
+    "timestamp": 1771140157851
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      1,
+      "layout",
+      "grid"
+    ],
+    "timestamp": 1771140158032
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      1,
+      "columns",
+      "3"
+    ],
+    "timestamp": 1771140158032
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      1,
+      "layout",
+      "grid"
+    ],
+    "timestamp": 1771140158191
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      1,
+      "columns",
+      "3"
+    ],
+    "timestamp": 1771140158191
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      3,
+      "card-style",
+      "normal"
+    ],
+    "timestamp": 1771140163416
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      2,
+      "card-style",
+      "normal"
+    ],
+    "timestamp": 1771140169597
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      2,
+      "col-span",
+      1
+    ],
+    "timestamp": 1771140172983
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      2,
+      "col-span",
+      2
+    ],
+    "timestamp": 1771140174919
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      2,
+      "col-span",
+      3
+    ],
+    "timestamp": 1771140176278
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      4,
+      "layout",
+      "grid"
+    ],
+    "timestamp": 1771140182468
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      4,
+      "columns",
+      "3"
+    ],
+    "timestamp": 1771140182468
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      4,
+      "layout",
+      "grid"
+    ],
+    "timestamp": 1771140182965
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      4,
+      "columns",
+      "3"
+    ],
+    "timestamp": 1771140182965
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      4,
+      "layout",
+      "grid"
+    ],
+    "timestamp": 1771140185721
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      4,
+      "columns",
+      "3"
+    ],
+    "timestamp": 1771140185721
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      2,
+      "col-span",
+      1
+    ],
+    "timestamp": 1771140210177
+  }
+]
