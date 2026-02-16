@@ -8,6 +8,13 @@ jest.mock('@/components/CHD/CHDRenderer', () => ({
   CHDRenderer: ({ markdown }: { markdown: string }) => <div data-testid="renderer">{markdown}</div>,
 }));
 
+jest.mock('next/navigation', () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+    refresh: jest.fn(),
+  }),
+}));
+
 describe('Dynamic Slug Page', () => {
   describe('generateStaticParams', () => {
     it('should return decoded slugs', async () => {

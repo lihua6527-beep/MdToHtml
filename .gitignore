@@ -9,6 +9,10 @@ coverage/
 # Next.js
 .next/
 out/
+output/
+MdToHtml/output/
+MdToHtml/logs/
+MdToHtml/.next/
 
 # Production
 build/

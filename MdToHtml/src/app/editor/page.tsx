@@ -25,6 +25,8 @@ export default function EditorPage() {
   const [isMounted, setIsMounted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [activeLine, setActiveLine] = useState<number>(0);
+  // Track last saved content for diff logging
+  const [lastSavedContent, setLastSavedContent] = useState<string>('');
   
   // Interaction Hook
   const { updateAttribute, updateContent, moveCard, batchUpdateAttributes } = useMarkdownInteraction(content, setContent);
@@ -43,6 +45,7 @@ export default function EditorPage() {
     setIsMounted(true);
     const saved = loadFromStorage('chd_md_content', INITIAL_CONTENT);
     setContent(saved);
+    setLastSavedContent(saved);
   }, []);
 
   // Auto-Save
@@ -93,6 +96,7 @@ export default function EditorPage() {
         reader.onload = (event) => {
             if (event.target?.result) {
                 setContent(event.target.result as string);
+                setLastSavedContent(event.target.result as string);
                 setCurrentFilename(file.name);
             }
         };
@@ -155,9 +159,12 @@ export default function EditorPage() {
                 body: JSON.stringify({ 
                     input: content, 
                     output: blocks,
+                    previous_content: lastSavedContent,
+                    current_content: content,
                     metadata: { slug }
                 })
             });
+            setLastSavedContent(content);
         } catch (err) {
             console.error('Failed to log training data', err);
         }
