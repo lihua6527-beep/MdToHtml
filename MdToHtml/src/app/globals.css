@@ -254,7 +254,6 @@
 }
 
 
-
 @layer base {
   * {
     @apply border-border;
@@ -263,3 +262,49 @@
     @apply bg-background text-foreground;
   }
 }
+<<<<<<< HEAD
+=======
+
+/* --- CHD Shape & Layout Utilities --- */
+
+@layer utilities {
+  /* Shapes */
+  .shape-circle { 
+    @apply rounded-full aspect-square flex items-center justify-center text-center;
+  }
+  .shape-pill { 
+    @apply rounded-[9999px]; 
+  }
+  .shape-cut {
+    clip-path: polygon(
+        20px 0, 100% 0, 
+        100% calc(100% - 20px), calc(100% - 20px) 100%, 
+        0 100%, 0 20px
+    );
+  }
+  .clip-arrow-card {
+    clip-path: polygon(0% 0%, 85% 0%, 100% 50%, 85% 100%, 0% 100%, 15% 50%);
+  }
+
+  /* Layouts */
+  .overlap-container {
+    @apply relative isolate;
+  }
+  .float-badge {
+    @apply absolute top-[-20px] right-[-20px] z-10 shadow-lg;
+  }
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border border-white/50;
+  }
+  .perspective-1000 { 
+    perspective: 1000px; 
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+>>>>>>> feature/card-shape-layout
