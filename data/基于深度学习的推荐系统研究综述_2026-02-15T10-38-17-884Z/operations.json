@@ -1,0 +1,20 @@
+[
+  {
+    "type": "updateAttribute",
+    "args": [
+      4,
+      "card-color",
+      "default"
+    ],
+    "timestamp": 1771151883707
+  },
+  {
+    "type": "updateAttribute",
+    "args": [
+      2,
+      "card-color",
+      "chart-3"
+    ],
+    "timestamp": 1771151888546
+  }
+]

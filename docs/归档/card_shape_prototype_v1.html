@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHD 形态与布局革新原型 v2.2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc; /* Slate 50 */
+            color: #0f172a; /* Slate 900 */
+        }
+
+        /* --- 形状原子类 (Shape Utilities) --- */
+        
+        /* 1. 圆形/胶囊 */
+        .shape-circle { border-radius: 50%; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; text-align: center; }
+        .shape-pill { border-radius: 9999px; }
+
+        /* 5. 切角 (Cut) - 使用 clip-path 实现 */
+        .shape-cut {
+            clip-path: polygon(
+                20px 0, 100% 0, 
+                100% calc(100% - 20px), calc(100% - 20px) 100%, 
+                0 100%, 0 20px
+            );
+        }
+
+        /* Clip Path for Single Arrow Card (With Deep Indentation) */
+        /* 左侧内凹 (15% 50%)，右侧尖头 (100% 50%) */
+        .clip-arrow-card {
+            clip-path: polygon(0% 0%, 85% 0%, 100% 50%, 85% 100%, 0% 100%, 15% 50%);
+        }
+
+        /* --- 布局黑魔法 (Layout Magic) --- */
+
+        /* 悬浮层叠 */
+        .overlap-container {
+            position: relative;
+            isolation: isolate;
+        }
+        .float-badge {
+            position: absolute;
+            top: -20px;
+            right: -20px;
+            z-index: 10;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 玻璃拟态增强 */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* 3D Carousel Utils */
+        .perspective-1000 { perspective: 1000px; }
+        
+        /* Dynamic Hub Styles */
+        .satellite-orbit {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 0; height: 0;
+        }
+        .satellite {
+            position: absolute;
+            top: 50%; left: 50%; /* Position at center of container */
+            margin-top: -2.5rem; margin-left: -2.5rem; /* Offset by half size */
+            width: 5rem; height: 5rem;
+            border-radius: 50%;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold;
+            color: #475569;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: 2px solid #e2e8f0;
+        }
+        .satellite:hover {
+            transform: scale(1.1);
+            border-color: #6366f1;
+            color: #6366f1;
+            z-index: 20;
+        }
+
+        /* Custom Scrollbar for Timeline */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+    </style>
+</head>
+<body class="p-8 max-w-6xl mx-auto min-h-screen">
+
+    <header class="mb-12 text-center">
+        <h1 class="text-4xl font-extrabold tracking-tight mb-4 bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            形态与布局革新原型 v2.2
+        </h1>
+        <p class="text-slate-500 text-lg">探索非矩形卡片与自由布局的可能性</p>
+        <p class="text-xs text-slate-400 mt-2">Latest Update: ZigZag Timeline, Split Sidebar, Enhanced Carousel</p>
+    </header>
+
+    <!-- 分类一：卡片样式 (Card Styles) -->
+    <section class="mb-20">
+        <h2 class="text-3xl font-bold mb-10 flex items-center gap-3 border-b border-slate-200 pb-4">
+            <span class="w-10 h-10 rounded-lg bg-blue-600 text-white flex items-center justify-center text-lg shadow-md">01</span>
+            基础卡片样式 (Base Styles)
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <!-- 1. 赛博切角卡片 -->
+            <div class="shape-cut bg-slate-800 text-white p-8 flex flex-col justify-center hover:bg-slate-700 transition-colors cursor-pointer h-64 shadow-lg group relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-40 transition-opacity">
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>
+                </div>
+                <div class="text-xs text-slate-400 mb-2 font-mono">ID: X-902</div>
+                <h3 class="text-xl font-bold mb-2">赛博切角 (Cyber Cut)</h3>
+                <p class="text-slate-300 text-sm">利用 clip-path 实现硬朗风格，适合科技主题。</p>
+            </div>
+
+            <!-- 2. 箭头形卡片 -->
+             <div class="relative h-64 bg-emerald-500 text-white flex flex-col items-center justify-center clip-arrow-card shadow-lg hover:bg-emerald-600 transition-colors group pl-8 pr-4">
+                <div class="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div class="font-bold text-2xl mb-2">箭头卡片</div>
+                <div class="text-sm opacity-90">Arrow Shape</div>
+                <div class="mt-4 text-xs opacity-75">首端缩进 + 尾端突出</div>
+            </div>
+
+            <!-- 3. 圆形卡片 -->
+            <div class="flex flex-col items-center justify-center">
+                <div class="shape-circle w-48 h-48 bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-xl hover:scale-105 transition-transform duration-300 border-4 border-white ring-4 ring-orange-100 flex flex-col items-center justify-center p-6">
+                    <div class="text-3xl font-bold mb-1">Circle</div>
+                    <div class="text-xs opacity-90 font-medium">原子化展示</div>
+                </div>
+                <div class="mt-6 text-center">
+                    <h3 class="text-lg font-bold text-slate-700">圆形 (Circle)</h3>
+                    <p class="text-slate-400 text-sm mt-1">用于图标、徽章或核心数据</p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- 分类二：卡片间组合关系 (Composition Layouts) -->
+    <section class="mb-20">
+        <h2 class="text-3xl font-bold mb-10 flex items-center gap-3 border-b border-slate-200 pb-4">
+            <span class="w-10 h-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-lg shadow-md">02</span>
+            组合关系 (Compositions)
+        </h2>
+
+        <!-- 1. 破格悬浮 -->
+        <div class="mb-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            <div class="lg:col-span-4">
+                <h3 class="text-xl font-bold text-slate-800 mb-2">A. 破格悬浮 (Floating Badge)</h3>
+                <p class="text-slate-500 leading-relaxed">通过将关键元素（如标签、图标）置于容器边界之外，打破矩形的沉闷感，创造视觉焦点。</p>
+            </div>
+            <div class="lg:col-span-8 bg-slate-50 p-8 rounded-2xl border border-slate-100">
+                <div class="bg-white rounded-2xl p-8 shadow-lg border border-slate-100 relative max-w-md mx-auto">
+                    <div class="float-badge shape-circle w-16 h-16 bg-amber-400 text-amber-900 font-bold border-4 border-white flex items-center justify-center rotate-12 text-sm shadow-lg">
+                        HOT!
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800 mb-2">核心数据指标</h2>
+                    <p class="text-slate-600 text-sm">关键绩效指标 (KPI) 已超越预期目标 120%。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 动态环形总分结构 -->
+        <div class="mb-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            <div class="lg:col-span-4">
+                <h3 class="text-xl font-bold text-slate-800 mb-2">B. 动态环形总分 (Dynamic Hub)</h3>
+                <p class="text-slate-500 leading-relaxed">
+                    不再局限于六边形。这是一个可调节的“卫星系统”，中心是核心主题，周围环绕着任意数量（N个）子卡片。
+                </p>
+                <div class="mt-4 flex gap-2">
+                    <button onclick="updateHub(4)" class="px-3 py-1 text-xs border rounded hover:bg-slate-100">4个</button>
+                    <button onclick="updateHub(6)" class="px-3 py-1 text-xs border rounded hover:bg-slate-100">6个</button>
+                    <button onclick="updateHub(8)" class="px-3 py-1 text-xs border rounded hover:bg-slate-100">8个</button>
+                </div>
+            </div>
+            <div class="lg:col-span-8 bg-slate-50 p-8 rounded-2xl border border-slate-100 flex justify-center overflow-hidden">
+                <div id="dynamic-hub" class="relative w-80 h-80 flex items-center justify-center">
+                    <!-- Center -->
+                    <div class="absolute z-10 w-24 h-24 bg-indigo-600 rounded-full shadow-2xl flex flex-col items-center justify-center text-white border-4 border-slate-50 top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                        <span class="font-bold">CORE</span>
+                    </div>
+                    <!-- Satellites will be injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 动态箭头环形分割 -->
+        <div class="mb-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            <div class="lg:col-span-4">
+                <h3 class="text-xl font-bold text-slate-800 mb-2">C. 动态箭头环形 (Arrow Split Ring)</h3>
+                <p class="text-slate-500 leading-relaxed">
+                    将“箭头卡片”的形态与环形布局结合。
+                    <br>
+                    每个扇区都是一个首尾相接的箭头形状（Start &gt; End），形成闭环流程。分割线为箭头（Chevron）而非简单的直线。
+                    <br><br>
+                    <span class="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded">箭头拼图</span>
+                    <span class="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded">闭环流程</span>
+                </p>
+                <div class="mt-4 flex gap-2">
+                    <button onclick="updateArrowRing(3)" class="px-3 py-1 text-xs border rounded hover:bg-slate-100">3个</button>
+                    <button onclick="updateArrowRing(4)" class="px-3 py-1 text-xs border rounded hover:bg-slate-100">4个</button>
+                    <button onclick="updateArrowRing(6)" class="px-3 py-1 text-xs border rounded hover:bg-slate-100">6个</button>
+                    <button onclick="updateArrowRing(8)" class="px-3 py-1 text-xs border rounded hover:bg-slate-100">8个</button>
+                </div>
+            </div>
+            <div class="lg:col-span-8 bg-slate-50 p-8 rounded-2xl border border-slate-100 flex justify-center">
+                <div id="arrow-ring-container" class="relative w-96 h-96 flex items-center justify-center">
+                    <svg id="arrow-ring-svg" class="w-full h-full transform transition-transform duration-500" viewBox="0 0 400 400" style="overflow: visible;">
+                        <!-- Arrow Segments -->
+                    </svg>
+                    <!-- Center Label -->
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div class="w-24 h-24 bg-white rounded-full shadow-inner flex flex-col items-center justify-center z-20 border-4 border-slate-50">
+                            <span class="text-slate-400 text-[10px] font-bold uppercase">Steps</span>
+                            <span id="arrow-count" class="text-2xl font-extrabold text-slate-800">4</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. 横向时间轴 (Horizontal Timeline) - Interlaced Version -->
+        <div class="mb-16 grid grid-cols-1 lg:grid-cols-12 gap-12">
+            <div class="lg:col-span-12">
+                <h3 class="text-xl font-bold text-slate-800 mb-6">D. 横向时间轴流程 (Interlaced Timeline)</h3>
+                <p class="text-slate-500 leading-relaxed mb-6">
+                    轴线优先 (Axis First)：节点顺序排列于中轴线，内容上下交错 (Up/Down Interlaced)，最大化利用纵向空间。
+                </p>
+                
+                <div class="bg-slate-50 p-8 rounded-2xl border border-slate-100 overflow-x-auto">
+                    <!-- Timeline Container -->
+                    <div class="relative h-96 min-w-[800px] px-12">
+                        
+                        <!-- Center Line (The Axis) with Arrow -->
+                        <div class="absolute top-1/2 left-0 right-8 h-1 bg-slate-300 z-0 rounded-full"></div>
+                        <!-- Arrow Head -->
+                        <div class="absolute top-1/2 right-4 w-4 h-4 border-t-4 border-r-4 border-slate-300 transform -translate-y-1/2 rotate-45 z-0"></div>
+
+                        <!-- Items Wrapper -->
+                        <div class="relative z-10 w-full h-full flex justify-between items-stretch">
+                            
+                            <!-- Item 1 (Top Content) -->
+                            <div class="relative w-48 group">
+                                <!-- Dot on Axis (Absolute Center) -->
+                                <div class="absolute top-1/2 left-1/2 w-6 h-6 bg-blue-500 rounded-full border-4 border-white shadow-sm z-20 transform -translate-x-1/2 -translate-y-1/2"></div>
+                                
+                                <!-- Top Card (Absolute Bottom of Top Half) -->
+                                <div class="absolute bottom-1/2 left-0 w-full mb-6 transform transition-all hover:-translate-y-2 pb-2">
+                                    <div class="bg-white p-5 rounded-xl shadow-md border border-slate-100 text-center relative">
+                                        <div class="absolute bottom-[-8px] left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white rotate-45 border-r border-b border-slate-100"></div>
+                                        <span class="text-xs font-bold text-blue-500 mb-1 block">Q1 2024</span>
+                                        <h4 class="text-md font-bold text-slate-800">启动阶段</h4>
+                                        <p class="text-slate-500 text-xs mt-2">完成需求调研与可行性分析，确定核心技术栈。</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Item 2 (Bottom Content) -->
+                            <div class="relative w-48 group">
+                                <!-- Dot on Axis -->
+                                <div class="absolute top-1/2 left-1/2 w-6 h-6 bg-indigo-500 rounded-full border-4 border-white shadow-sm z-20 transform -translate-x-1/2 -translate-y-1/2"></div>
+                                
+                                <!-- Bottom Card (Absolute Top of Bottom Half) -->
+                                <div class="absolute top-1/2 left-0 w-full mt-6 transform transition-all hover:translate-y-2 pt-2">
+                                    <div class="bg-white p-5 rounded-xl shadow-md border border-slate-100 text-center relative">
+                                        <div class="absolute top-[-8px] left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white rotate-45 border-l border-t border-slate-100"></div>
+                                        <span class="text-xs font-bold text-indigo-500 mb-1 block">Q2 2024</span>
+                                        <h4 class="text-md font-bold text-slate-800">核心开发</h4>
+                                        <p class="text-slate-500 text-xs mt-2">完成MVP版本开发，打通前后端核心链路。</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Item 3 (Top Content) -->
+                            <div class="relative w-48 group">
+                                <!-- Dot on Axis -->
+                                <div class="absolute top-1/2 left-1/2 w-6 h-6 bg-emerald-500 rounded-full border-4 border-white shadow-sm z-20 transform -translate-x-1/2 -translate-y-1/2"></div>
+                                
+                                <!-- Top Card -->
+                                <div class="absolute bottom-1/2 left-0 w-full mb-6 transform transition-all hover:-translate-y-2 pb-2">
+                                    <div class="bg-white p-5 rounded-xl shadow-md border border-slate-100 text-center relative">
+                                        <div class="absolute bottom-[-8px] left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white rotate-45 border-r border-b border-slate-100"></div>
+                                        <span class="text-xs font-bold text-emerald-500 mb-1 block">Q3 2024</span>
+                                        <h4 class="text-md font-bold text-slate-800">全面测试</h4>
+                                        <p class="text-slate-500 text-xs mt-2">进行压力测试与安全审计，修复高危漏洞。</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Item 4 (Bottom Content) -->
+                            <div class="relative w-48 group">
+                                <!-- Dot on Axis -->
+                                <div class="absolute top-1/2 left-1/2 w-6 h-6 bg-amber-500 rounded-full border-4 border-white shadow-sm z-20 transform -translate-x-1/2 -translate-y-1/2"></div>
+                                
+                                <!-- Bottom Card -->
+                                <div class="absolute top-1/2 left-0 w-full mt-6 transform transition-all hover:translate-y-2 pt-2">
+                                    <div class="bg-white p-5 rounded-xl shadow-md border border-slate-100 text-center relative">
+                                        <div class="absolute top-[-8px] left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white rotate-45 border-l border-t border-slate-100"></div>
+                                        <span class="text-xs font-bold text-amber-500 mb-1 block">Q4 2024</span>
+                                        <h4 class="text-md font-bold text-slate-800">正式上线</h4>
+                                        <p class="text-slate-500 text-xs mt-2">部署生产环境，开启灰度发布，监控系统指标。</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                             <!-- Item 5 (Top Content) -->
+                             <div class="relative w-48 group">
+                                <!-- Dot on Axis -->
+                                <div class="absolute top-1/2 left-1/2 w-6 h-6 bg-cyan-500 rounded-full border-4 border-white shadow-sm z-20 transform -translate-x-1/2 -translate-y-1/2"></div>
+                                
+                                <!-- Top Card -->
+                                <div class="absolute bottom-1/2 left-0 w-full mb-6 transform transition-all hover:-translate-y-2 pb-2">
+                                    <div class="bg-white p-5 rounded-xl shadow-md border border-slate-100 text-center relative">
+                                        <div class="absolute bottom-[-8px] left-1/2 transform -translate-x-1/2 w-4 h-4 bg-white rotate-45 border-r border-b border-slate-100"></div>
+                                        <span class="text-xs font-bold text-cyan-500 mb-1 block">Q1 2025</span>
+                                        <h4 class="text-md font-bold text-slate-800">版本迭代</h4>
+                                        <p class="text-slate-500 text-xs mt-2">收集用户反馈，规划 V2.0 功能清单。</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. 3D 环形轮播 -->
+        <div class="mb-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            <div class="lg:col-span-4">
+                <h3 class="text-xl font-bold text-slate-800 mb-2">E. 3D 环形轮播 (Enhanced Carousel)</h3>
+                <p class="text-slate-500 leading-relaxed">
+                    间距加大，左右内容更可见。
+                    <br>
+                    <span class="text-xs text-slate-400">Drag to rotate • Click to select</span>
+                </p>
+                <div class="flex gap-4 mt-4">
+                    <button onclick="rotateCarousel(-1)" class="px-4 py-2 bg-white border border-slate-200 rounded-full hover:bg-slate-50 text-sm font-medium shadow-sm">← Prev</button>
+                    <button onclick="rotateCarousel(1)" class="px-4 py-2 bg-white border border-slate-200 rounded-full hover:bg-slate-50 text-sm font-medium shadow-sm">Next →</button>
+                </div>
+            </div>
+            <div class="lg:col-span-8 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-center overflow-hidden py-10 perspective-1000 h-96">
+                <!-- Width updated for wider gap visualization -->
+                <div id="carousel-container" class="relative w-56 h-64 transition-transform duration-700 ease-out" style="transform-style: preserve-3d;">
+                    <!-- Items -->
+                    <div class="carousel-item w-56 h-64 absolute inset-0 bg-white rounded-xl shadow-lg border border-slate-100 flex flex-col items-center justify-center p-6 select-none cursor-grab active:cursor-grabbing opacity-90 hover:opacity-100 transition-opacity">
+                        <div class="w-12 h-12 bg-blue-100 rounded-full mb-4 flex items-center justify-center text-blue-600 text-xl font-bold">1</div>
+                        <h4 class="font-bold text-slate-800 text-lg">Strategy</h4>
+                        <p class="text-xs text-slate-400 mt-2 text-center">Define vision</p>
+                    </div>
+                    <div class="carousel-item w-56 h-64 absolute inset-0 bg-white rounded-xl shadow-lg border border-slate-100 flex flex-col items-center justify-center p-6 select-none cursor-grab active:cursor-grabbing opacity-90 hover:opacity-100 transition-opacity">
+                        <div class="w-12 h-12 bg-purple-100 rounded-full mb-4 flex items-center justify-center text-purple-600 text-xl font-bold">2</div>
+                        <h4 class="font-bold text-slate-800 text-lg">Design</h4>
+                        <p class="text-xs text-slate-400 mt-2 text-center">Create mockups</p>
+                    </div>
+                    <div class="carousel-item w-56 h-64 absolute inset-0 bg-white rounded-xl shadow-lg border border-slate-100 flex flex-col items-center justify-center p-6 select-none cursor-grab active:cursor-grabbing opacity-90 hover:opacity-100 transition-opacity">
+                        <div class="w-12 h-12 bg-rose-100 rounded-full mb-4 flex items-center justify-center text-rose-600 text-xl font-bold">3</div>
+                        <h4 class="font-bold text-slate-800 text-lg">Develop</h4>
+                        <p class="text-xs text-slate-400 mt-2 text-center">Code implementation</p>
+                    </div>
+                    <div class="carousel-item w-56 h-64 absolute inset-0 bg-white rounded-xl shadow-lg border border-slate-100 flex flex-col items-center justify-center p-6 select-none cursor-grab active:cursor-grabbing opacity-90 hover:opacity-100 transition-opacity">
+                        <div class="w-12 h-12 bg-amber-100 rounded-full mb-4 flex items-center justify-center text-amber-600 text-xl font-bold">4</div>
+                        <h4 class="font-bold text-slate-800 text-lg">Deploy</h4>
+                        <p class="text-xs text-slate-400 mt-2 text-center">Ship to production</p>
+                    </div>
+                    <div class="carousel-item w-56 h-64 absolute inset-0 bg-white rounded-xl shadow-lg border border-slate-100 flex flex-col items-center justify-center p-6 select-none cursor-grab active:cursor-grabbing opacity-90 hover:opacity-100 transition-opacity">
+                        <div class="w-12 h-12 bg-emerald-100 rounded-full mb-4 flex items-center justify-center text-emerald-600 text-xl font-bold">5</div>
+                        <h4 class="font-bold text-slate-800 text-lg">Monitor</h4>
+                        <p class="text-xs text-slate-400 mt-2 text-center">Track metrics</p>
+                    </div>
+                    <div class="carousel-item w-56 h-64 absolute inset-0 bg-white rounded-xl shadow-lg border border-slate-100 flex flex-col items-center justify-center p-6 select-none cursor-grab active:cursor-grabbing opacity-90 hover:opacity-100 transition-opacity">
+                        <div class="w-12 h-12 bg-cyan-100 rounded-full mb-4 flex items-center justify-center text-cyan-600 text-xl font-bold">6</div>
+                        <h4 class="font-bold text-slate-800 text-lg">Iterate</h4>
+                        <p class="text-xs text-slate-400 mt-2 text-center">Improve based on feedback</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. 聚焦布局 (Focus Layout) -->
+        <div class="mb-16 grid grid-cols-1 lg:grid-cols-12 gap-12">
+            <div class="lg:col-span-12">
+                <h3 class="text-xl font-bold text-slate-800 mb-6">F. 聚焦布局 (Focus Layout)</h3>
+                <p class="text-slate-500 leading-relaxed mb-6">
+                    左侧主内容区 + 右侧辅助区（明确的上下分块结构）。
+                </p>
+                
+                <div class="bg-slate-100 p-8 rounded-2xl border border-slate-200">
+                    <div class="flex flex-col lg:flex-row gap-6 h-[600px]">
+                        
+                        <!-- Left Main Card (Flex Grow) -->
+                        <div class="flex-[3] bg-white rounded-2xl shadow-sm border border-slate-200 p-8 flex flex-col">
+                            <div class="flex items-center justify-between mb-6">
+                                <h2 class="text-2xl font-bold text-slate-800">Project Dashboard</h2>
+                                <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">Online</span>
+                            </div>
+                            <div class="flex-1 bg-slate-50 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center group hover:bg-slate-100 transition-colors cursor-pointer">
+                                <div class="text-center text-slate-400 group-hover:text-slate-500 transition-colors">
+                                    <div class="w-20 h-20 mx-auto mb-4 bg-white rounded-full flex items-center justify-center shadow-sm">
+                                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    </div>
+                                    <p class="font-medium">Main Workspace</p>
+                                    <p class="text-xs mt-1">Click to edit content</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Sidebar (Flex 1) - UPDATED: Explicit Top/Bottom Blocks -->
+                        <div class="flex-1 flex flex-col gap-6 h-full min-w-[300px]">
+                            
+                            <!-- Top Block: Task List -->
+                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex-1 flex flex-col">
+                                <h4 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                                    Today's Tasks
+                                </h4>
+                                <div class="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-hide">
+                                    <div class="p-3 bg-slate-50 rounded-lg text-sm border border-slate-100">
+                                        <div class="font-semibold text-slate-700">Review PR #12</div>
+                                        <div class="text-xs text-slate-400 mt-1">10:00 AM</div>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 rounded-lg text-sm border border-slate-100">
+                                        <div class="font-semibold text-slate-700">Team Meeting</div>
+                                        <div class="text-xs text-slate-400 mt-1">02:00 PM</div>
+                                    </div>
+                                    <div class="p-3 bg-slate-50 rounded-lg text-sm border border-slate-100">
+                                        <div class="font-semibold text-slate-700">Deploy v2.2</div>
+                                        <div class="text-xs text-slate-400 mt-1">05:00 PM</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Bottom Block: Notifications/Stats -->
+                            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex-1 flex flex-col">
+                                <h4 class="font-bold text-slate-700 mb-4 flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                                    Alerts
+                                </h4>
+                                <div class="flex-1 flex flex-col items-center justify-center bg-rose-50 rounded-xl border border-rose-100">
+                                    <span class="text-3xl font-extrabold text-rose-600">3</span>
+                                    <span class="text-xs text-rose-500 font-medium mt-1">Critical Errors</span>
+                                </div>
+                                <button class="mt-4 w-full py-2 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-700 transition-colors">View Logs</button>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <script>
+        // --- 1. Dynamic Hub Logic ---
+        function updateHub(count) {
+            const container = document.getElementById('dynamic-hub');
+            // Clear existing satellites (keep the core, which is first child)
+            while (container.children.length > 1) {
+                container.removeChild(container.lastChild);
+            }
+            
+            const radius = 130; // px
+            // Updated content with Title + Subtitle
+            const data = [
+                { title: 'API', sub: 'Gateway' },
+                { title: 'DB', sub: 'Postgres' },
+                { title: 'UI', sub: 'React' },
+                { title: 'Log', sub: 'ELK' },
+                { title: 'Auth', sub: 'OAuth2' },
+                { title: 'Net', sub: 'VPC' },
+                { title: 'Ops', sub: 'K8s' },
+                { title: 'Sec', sub: 'WAF' }
+            ];
+
+            for (let i = 0; i < count; i++) {
+                const angleDeg = (360 / count) * i;
+                const angleRad = (angleDeg * Math.PI) / 180;
+                
+                // x, y are relative to center (0,0)
+                const x = Math.cos(angleRad) * radius;
+                const y = Math.sin(angleRad) * radius;
+                
+                const el = document.createElement('div');
+                el.className = 'satellite';
+                // Use translate to move from center
+                el.style.transform = `translate(${x}px, ${y}px)`;
+                // Updated inner HTML structure
+                el.innerHTML = `
+                    <div class="flex flex-col items-center leading-tight">
+                        <span class="text-sm font-bold">${data[i % data.length].title}</span>
+                        <span class="text-[10px] text-slate-400 font-normal">${data[i % data.length].sub}</span>
+                    </div>
+                `;
+                
+                container.appendChild(el);
+            }
+        }
+        // Init with 6
+        updateHub(6);
+
+
+        /* 3. 3D Carousel Logic */
+        let currentAngle = 0;
+        const carouselContainer = document.getElementById('carousel-container');
+        const items = document.querySelectorAll('.carousel-item');
+        const itemCount = items.length;
+        const theta = 360 / itemCount;
+        
+        // Increased card width in calculation (224px + 120px gap)
+        // tan(PI/6) = 0.577
+        const panelWidth = 224; // w-56
+        const gap = 140; // Significantly larger gap (was 80)
+        const carouselRadius = Math.round((panelWidth + gap) / 2 / Math.tan(Math.PI / itemCount)); 
+
+        function rotateCarousel(direction) {
+            currentAngle += direction * theta;
+            carouselContainer.style.transform = `translateZ(-${carouselRadius}px) rotateY(${currentAngle}deg)`;
+        }
+
+        function setupCarousel() {
+            items.forEach((item, index) => {
+                const angle = theta * index;
+                // Rotate items to form a circle
+                item.style.transform = `rotateY(${angle}deg) translateZ(${carouselRadius}px)`;
+            });
+            // Initial position
+            carouselContainer.style.transform = `translateZ(-${carouselRadius}px) rotateY(0deg)`;
+        }
+        setupCarousel();
+
+        // Drag Support for Carousel
+        let isDragging = false;
+        let startX = 0;
+        let startAngle = 0;
+
+        carouselContainer.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            startX = e.clientX;
+            startAngle = currentAngle;
+            carouselContainer.style.cursor = 'grabbing';
+            carouselContainer.style.transition = 'none'; // Disable transition for instant follow
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const diffX = e.clientX - startX;
+            // Sensitivity: 0.5 degree per pixel
+            currentAngle = startAngle + (diffX * 0.5);
+            carouselContainer.style.transform = `translateZ(-${carouselRadius}px) rotateY(${currentAngle}deg)`;
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (!isDragging) return;
+            isDragging = false;
+            carouselContainer.style.cursor = 'default';
+            carouselContainer.style.transition = 'transform 0.7s ease-out'; // Re-enable smooth snap
+            
+            // Optional: Snap to nearest face
+            const snapAngle = Math.round(currentAngle / theta) * theta;
+            currentAngle = snapAngle;
+            carouselContainer.style.transform = `translateZ(-${carouselRadius}px) rotateY(${currentAngle}deg)`;
+        });
+
+
+        // --- 4. Arrow Split Ring Logic (Refactored) ---
+        function updateArrowRing(count) {
+            const svg = document.getElementById('arrow-ring-svg');
+            const countEl = document.getElementById('arrow-count');
+            countEl.innerText = count;
+
+            // Clear existing
+            while (svg.firstChild) {
+                svg.removeChild(svg.firstChild);
+            }
+
+            const cx = 200;
+            const cy = 200;
+            const rOuter = 180;
+            const rInner = 80;
+            const colors = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#10b981', '#06b6d4', '#3b82f6', '#8b5cf6'];
+            
+            // Helper to get coordinates
+            const getCoord = (r, angleDeg) => {
+                const rad = (angleDeg - 90) * Math.PI / 180;
+                return {
+                    x: cx + r * Math.cos(rad),
+                    y: cy + r * Math.sin(rad)
+                };
+            };
+
+            // Arrow shape params
+            // To make an arrow, the start of the segment is "indented" and the end is "pointed".
+            // Point offset angle
+            const arrowAngleOffset = 8; // degrees
+            const rMid = (rOuter + rInner) / 2;
+
+            for (let i = 0; i < count; i++) {
+                const startAngle = (360 / count) * i;
+                const endAngle = (360 / count) * (i + 1);
+                
+                // 1. Start Edge (The Tail - Indented)
+                // Defined by 3 points: Inner(start) -> Mid(start + offset) -> Outer(start)
+                const pStartIn = getCoord(rInner, startAngle);
+                const pStartMid = getCoord(rMid, startAngle + arrowAngleOffset);
+                const pStartOut = getCoord(rOuter, startAngle);
+
+                // 2. End Edge (The Head - Pointed)
+                // Defined by 3 points: Inner(end) -> Mid(end + offset) -> Outer(end)
+                const pEndIn = getCoord(rInner, endAngle);
+                const pEndMid = getCoord(rMid, endAngle + arrowAngleOffset);
+                const pEndOut = getCoord(rOuter, endAngle);
+                
+                const largeArc = (endAngle - startAngle) > 180 ? 1 : 0;
+                
+                // Path construction:
+                // Move to Start Inner
+                // Line to Start Mid (The indent)
+                // Line to Start Outer
+                // Arc to End Outer
+                // Line to End Mid (The point)
+                // Line to End Inner
+                // Arc to Start Inner (Reverse)
+                
+                const d = `
+                    M ${pStartIn.x} ${pStartIn.y}
+                    L ${pStartMid.x} ${pStartMid.y}
+                    L ${pStartOut.x} ${pStartOut.y}
+                    A ${rOuter} ${rOuter} 0 ${largeArc} 1 ${pEndOut.x} ${pEndOut.y}
+                    L ${pEndMid.x} ${pEndMid.y}
+                    L ${pEndIn.x} ${pEndIn.y}
+                    A ${rInner} ${rInner} 0 ${largeArc} 0 ${pStartIn.x} ${pStartIn.y}
+                    Z
+                `;
+                
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                path.setAttribute("d", d);
+                path.setAttribute("fill", colors[i % colors.length]);
+                path.setAttribute("stroke", "white"); // White separator
+                path.setAttribute("stroke-width", "4");
+                path.setAttribute("stroke-linejoin", "round");
+                
+                svg.appendChild(path);
+
+                // Add Text Label on top of the arc
+                // Position: Middle of the arc (startAngle + endAngle)/2, radius = (rInner + rOuter)/2
+                const midAngle = (startAngle + endAngle) / 2;
+                const pText = getCoord(rMid, midAngle);
+                
+                const textGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", pText.x);
+                text.setAttribute("y", pText.y);
+                text.setAttribute("text-anchor", "middle");
+                text.setAttribute("dominant-baseline", "middle");
+                text.setAttribute("fill", "white");
+                text.setAttribute("font-size", "12");
+                text.setAttribute("font-weight", "bold");
+                text.textContent = `Step ${i+1}`;
+                
+                // Optional: Rotate text to follow arc? Maybe keep horizontal for readability
+                // If rotated:
+                // const rotAngle = midAngle > 180 ? midAngle - 270 : midAngle - 90; // Adjust for upright
+                // text.setAttribute("transform", `rotate(${rotAngle}, ${pText.x}, ${pText.y})`);
+
+                textGroup.appendChild(text);
+                svg.appendChild(textGroup);
+            }
+        }
+        
+        // Init
+        updateArrowRing(4);
+    </script>
+</body>
+</html>

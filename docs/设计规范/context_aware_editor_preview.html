@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHD Context-Aware Editor Preview (v2.0 - Authentic Style)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'bg-page': '#f8fafc', // 220 100% 97%
+                        'bg-card': '#ffffff', // 0 0% 100%
+                        'border-soft': '#e2e8f0', // 0 0% 91%
+                        'text-primary': '#0f172a', // 221 52% 8%
+                        'text-secondary': '#475569', // 215 19% 35%
+                        'text-muted': '#94a3b8', // 215 20% 65%
+                        'primary': '#3b82f6', // 222 100% 59%
+                        'secondary': '#f1f5f9', // 213 100% 94%
+                        'chart-1': '#60a5fa', // 214 100% 75%
+                        'chart-2': '#3b82f6', // 220 100% 63%
+                        'chart-3': '#34d399', // 158 62% 63%
+                        'chart-4': '#7dd3fc', // 200 97% 75%
+                        'chart-5': '#6366f1', // 221 100% 73%
+                    },
+                    borderRadius: {
+                        'card': '0.75rem', // 12px
+                    },
+                    boxShadow: {
+                        'card': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Card Styles */
+        .card-base {
+            @apply bg-white border border-border-soft rounded-card shadow-sm transition-all duration-300 hover:shadow-card flex flex-col relative group cursor-pointer h-full overflow-hidden;
+        }
+        .card-active {
+            @apply ring-2 ring-primary ring-offset-2 transform scale-[1.02] z-10;
+        }
+        
+        /* Panel Styles */
+        .settings-panel {
+            @apply p-4 bg-bg-card border border-border-soft rounded-xl shadow-sm animate-[slide-in-from-top-2_0.2s_ease-out];
+        }
+
+        /* Toolbar Button */
+        .toolbar-btn {
+            @apply w-8 h-8 flex items-center justify-center rounded-md border transition-all duration-200;
+        }
+        .toolbar-btn-default {
+            @apply bg-bg-card border-border-soft text-text-secondary hover:text-primary hover:border-primary/50 hover:bg-blue-50/50;
+        }
+        .toolbar-btn-active {
+            @apply bg-primary text-white border-primary shadow-sm;
+        }
+
+        /* Context Menu (Click-to-Edit) */
+        .context-menu {
+            @apply absolute top-full left-1/2 -translate-x-1/2 mt-3 bg-white rounded-xl shadow-lg border border-border-soft p-3 z-50 flex flex-col gap-3 min-w-[200px] animate-[zoom-in-95_0.1s_ease-out];
+        }
+        .context-menu::before {
+            content: '';
+            @apply absolute -top-2 left-1/2 -translate-x-1/2 border-8 border-transparent border-b-border-soft;
+        }
+        .context-menu::after {
+            content: '';
+            @apply absolute -top-[7px] left-1/2 -translate-x-1/2 border-[7px] border-transparent border-b-white;
+        }
+    </style>
+</head>
+<body class="bg-bg-page min-h-screen p-8 font-sans text-text-primary antialiased selection:bg-primary/20">
+
+    <header class="max-w-5xl mx-auto mb-12 flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold tracking-tight text-text-primary mb-2">CHD Context-Aware Editor</h1>
+            <p class="text-text-secondary">Authentic Style Preview • Based on existing codebase</p>
+        </div>
+        <div class="flex gap-2">
+            <button class="px-4 py-2 bg-white border border-border-soft rounded-md text-sm font-medium text-text-secondary shadow-sm hover:bg-gray-50 transition-colors">
+                <i data-lucide="eye" class="w-4 h-4 inline mr-2"></i>Preview
+            </button>
+            <button class="px-4 py-2 bg-primary text-white rounded-md text-sm font-medium shadow-sm hover:bg-blue-600 transition-colors">
+                <i data-lucide="save" class="w-4 h-4 inline mr-2"></i>Save
+            </button>
+        </div>
+    </header>
+
+    <main class="max-w-5xl mx-auto space-y-16">
+
+        <!-- SCENARIO 1: Standard Parallel Layout -->
+        <section class="group">
+            <!-- Section Header & Toolbar -->
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-text-primary tracking-tight flex items-center gap-2">
+                    <span class="text-primary">##</span> 1. 标准网格 (Parallel)
+                </h2>
+                
+                <!-- Section Toolbar (Authentic Style) -->
+                <div class="flex items-center gap-2">
+                    <button class="toolbar-btn toolbar-btn-default" title="Add Card">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </button>
+                    <div class="w-px h-4 bg-border-soft mx-1"></div>
+                    <!-- Layout Switcher -->
+                    <button class="toolbar-btn toolbar-btn-active" title="Parallel (Grid)">
+                        <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                    </button>
+                    <button class="toolbar-btn toolbar-btn-default" title="Bento (Mosaic)">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                    </button>
+                    <button class="toolbar-btn toolbar-btn-default" title="Overlap (Free)">
+                        <i data-lucide="layers" class="w-4 h-4"></i>
+                    </button>
+                    <div class="w-px h-4 bg-border-soft mx-1"></div>
+                    <button class="toolbar-btn toolbar-btn-default" title="Settings">
+                        <i data-lucide="settings-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="grid grid-cols-12 gap-4">
+                <!-- Card 1: Active/Selected -->
+                <div class="col-span-4 relative">
+                    <div class="card-base card-active p-6">
+                        <h3 class="text-2xl font-bold mb-3 tracking-tight">核心卡片</h3>
+                        <p class="text-text-secondary text-base leading-relaxed">
+                            点击此卡片展示新的上下文编辑器。样式完全复刻自现有组件。
+                        </p>
+                    </div>
+
+                    <!-- Context Menu (Click-to-Edit) -->
+                    <div class="context-menu">
+                        <!-- Row 1: Shape & Visual -->
+                        <div class="flex items-center gap-3 pb-2 border-b border-gray-100">
+                            <span class="text-xs text-text-muted font-medium w-8">形态</span>
+                            <div class="flex gap-1">
+                                <button class="p-1.5 rounded bg-blue-50 text-primary hover:bg-blue-100 transition-colors" title="Rectangle">
+                                    <i data-lucide="square" class="w-4 h-4"></i>
+                                </button>
+                                <button class="p-1.5 rounded text-text-secondary hover:bg-gray-100 transition-colors" title="Circle">
+                                    <i data-lucide="circle" class="w-4 h-4"></i>
+                                </button>
+                                <button class="p-1.5 rounded text-text-secondary hover:bg-gray-100 transition-colors" title="Pill">
+                                    <i data-lucide="minus" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Colors (Chart Palette) -->
+                        <div class="flex items-center gap-3">
+                            <span class="text-xs text-text-muted font-medium w-8">颜色</span>
+                            <div class="flex gap-1.5">
+                                <button class="w-5 h-5 rounded-full border border-gray-200 bg-white hover:scale-110 transition-transform"></button>
+                                <button class="w-5 h-5 rounded-full bg-chart-1 hover:scale-110 transition-transform ring-2 ring-offset-1 ring-chart-1/30"></button>
+                                <button class="w-5 h-5 rounded-full bg-chart-2 hover:scale-110 transition-transform"></button>
+                                <button class="w-5 h-5 rounded-full bg-chart-3 hover:scale-110 transition-transform"></button>
+                                <button class="w-5 h-5 rounded-full bg-chart-4 hover:scale-110 transition-transform"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Standard -->
+                <div class="col-span-4">
+                    <div class="card-base bg-chart-1/10 border-chart-1/20 p-6">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-xl font-bold tracking-tight text-text-primary">配色演示</h3>
+                            <i data-lucide="palette" class="w-4 h-4 text-chart-2 opacity-50"></i>
+                        </div>
+                        <p class="text-text-secondary text-sm">
+                            使用 <code>bg-chart-1/10</code> 实现的清透背景色，符合 "Clean & Soft" 风格。
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Card 3: Standard -->
+                <div class="col-span-4">
+                    <div class="card-base p-6 hover:border-primary/50">
+                        <h3 class="text-xl font-bold mb-3 tracking-tight">普通卡片</h3>
+                        <p class="text-text-secondary text-sm">
+                            默认状态下的白色卡片，带有微弱的阴影和灰色边框。
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <hr class="mt-12 border-t border-border-soft" />
+        </section>
+
+
+        <!-- SCENARIO 2: Overlap Layout (Free Edit) -->
+        <section class="group relative min-h-[400px]">
+            <!-- Section Header & Toolbar -->
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-text-primary tracking-tight flex items-center gap-2">
+                    <span class="text-primary">##</span> 2. 自由堆叠 (Overlap)
+                </h2>
+                
+                <!-- Section Toolbar -->
+                <div class="flex items-center gap-2">
+                    <button class="toolbar-btn toolbar-btn-default">
+                        <i data-lucide="plus" class="w-4 h-4"></i>
+                    </button>
+                    <div class="w-px h-4 bg-border-soft mx-1"></div>
+                    <button class="toolbar-btn toolbar-btn-default" title="Parallel">
+                        <i data-lucide="layout-grid" class="w-4 h-4"></i>
+                    </button>
+                    <button class="toolbar-btn toolbar-btn-default" title="Bento">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                    </button>
+                    <button class="toolbar-btn toolbar-btn-active" title="Overlap">
+                        <i data-lucide="layers" class="w-4 h-4"></i>
+                    </button>
+                    <div class="w-px h-4 bg-border-soft mx-1"></div>
+                    <button class="toolbar-btn toolbar-btn-default">
+                        <i data-lucide="settings-2" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Overlap Container -->
+            <div class="relative w-full h-[300px] bg-white rounded-xl border border-dashed border-border-soft p-8 overflow-hidden">
+                <div class="absolute inset-0 opacity-[0.03] pointer-events-none" 
+                     style="background-image: radial-gradient(#3b82f6 1px, transparent 1px); background-size: 20px 20px;">
+                </div>
+
+                <!-- Card A: Bottom Layer -->
+                <div class="card-base absolute left-10 top-16 w-64 h-40 p-6 rotate-[-6deg] z-0 hover:z-10 bg-gray-50">
+                    <h3 class="font-bold text-lg mb-2">底层元素</h3>
+                    <p class="text-xs text-text-secondary">作为背景装饰存在</p>
+                </div>
+
+                <!-- Card B: Top Layer (Active) -->
+                <div class="card-base card-active absolute left-48 top-8 w-72 h-48 p-6 z-20 shadow-xl bg-white">
+                    <div class="flex items-start justify-between">
+                        <h3 class="font-bold text-xl mb-2">自由编辑</h3>
+                        <span class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wider">Active</span>
+                    </div>
+                    <p class="text-sm text-text-secondary mt-2">
+                        在 Overlap 模式下，编辑器会自动扩展位置和层级控制选项。
+                    </p>
+
+                    <!-- Context Menu (Expanded for Overlap) -->
+                    <div class="context-menu w-[220px] left-1/2 top-full mt-4">
+                        <!-- Row 1: Layer Control -->
+                        <div class="flex items-center justify-between pb-2 border-b border-gray-100">
+                            <span class="text-xs text-text-muted font-medium">层级</span>
+                            <div class="flex gap-1">
+                                <button class="p-1.5 rounded hover:bg-gray-100 text-text-secondary" title="Bring to Front">
+                                    <i data-lucide="arrow-up-to-line" class="w-4 h-4"></i>
+                                </button>
+                                <button class="p-1.5 rounded hover:bg-gray-100 text-text-secondary" title="Send to Back">
+                                    <i data-lucide="arrow-down-to-line" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Rotation -->
+                        <div class="flex items-center gap-3 py-2 border-b border-gray-100">
+                            <span class="text-xs text-text-muted font-medium w-8">旋转</span>
+                            <input type="range" min="-180" max="180" value="0" class="flex-1 h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                            <span class="text-[10px] text-text-secondary font-mono w-6 text-right">0°</span>
+                        </div>
+                        
+                        <!-- Row 3: Colors -->
+                        <div class="flex items-center gap-3 pt-1">
+                            <span class="text-xs text-text-muted font-medium w-8">颜色</span>
+                            <div class="flex gap-1.5">
+                                <button class="w-5 h-5 rounded-full bg-white border border-gray-200 ring-2 ring-offset-1 ring-primary/30"></button>
+                                <button class="w-5 h-5 rounded-full bg-chart-1"></button>
+                                <button class="w-5 h-5 rounded-full bg-chart-2"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+        </section>
+
+    </main>
+
+    <script>
+        // Initialize Lucide Icons
+        lucide.createIcons();
+    </script>
+</body>
+</html>

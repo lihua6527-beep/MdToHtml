@@ -1,0 +1,8 @@
+ID,Summary,Priority,Assignee,Estimate,Type,Status
+T-01,引入单元测试框架 (Jest/Vitest),P0,Trae,4h,Testing,To Do
+T-02,配置 CI/CD 流水线 (GitHub Actions),P0,User,6h,Release,To Do
+T-03,修复 Windows 构建脚本 (跨平台兼容),P0,Trae,2h,Code,To Do
+T-04,国际化文本抽离 (i18n Refactor),P1,Trae,4h,Code,To Do
+T-05,ML 模块 API 服务化 (FastAPI Integration),P1,Trae,8h,Code,To Do
+T-06,升级依赖版本 (Next.js/TS),P2,Trae,2h,Maintenance,To Do
+T-07,Lighthouse 性能跑分优化,P2,User,2h,Testing,To Do

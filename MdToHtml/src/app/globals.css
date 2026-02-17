@@ -1,0 +1,306 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* 默认主题 (Ocean Blue fallback) */
+    --bg-page: 220 100% 97%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 214 100% 99%;
+    
+    --text-primary: 221 52% 8%;
+    --text-secondary: 215 19% 35%;
+    --text-muted: 215 20% 65%;
+    
+    --border-soft: 0 0% 91%;
+    --border-highlight: 212 96% 78%;
+    
+    --primary: 222 100% 59%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 213 100% 94%;
+    --accent: 213 85% 97%;
+    
+    --ring: 213 82% 85%;
+    
+    --chart-1: 214 100% 75%;
+    --chart-2: 220 100% 63%;
+    --chart-3: 158 62% 63%;
+    --chart-4: 200 97% 75%;
+    --chart-5: 221 100% 73%;
+
+    --sidebar-background: 220 100% 99%;
+    --sidebar-foreground: 0 0% 13%;
+    --sidebar-primary: 0 0% 13%;
+    --sidebar-primary-foreground: 0 0% 96%;
+    --sidebar-accent: 0 0% 93%;
+    --sidebar-accent-foreground: 0 0% 13%;
+    --sidebar-border: 0 0% 91%;
+    --sidebar-ring: 0 0% 82%;
+
+    --radius-card: 0.75rem;
+    --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --font-heading: ui-sans-serif, system-ui, sans-serif;
+    --font-body: ui-sans-serif, system-ui, sans-serif;
+
+    /* Shadcn defaults */
+    --background: 0 0% 100%;
+    --foreground: 221 52% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 221 52% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 221 52% 8%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 213 100% 94%;
+    --muted-foreground: 215 16% 47%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 91%;
+    --input: 0 0% 91%;
+    --radius: 0.5rem;
+  }
+
+  /* Theme 1: Ocean Blue (Ocean Professional) */
+  [data-theme="ocean"] {
+    --bg-page: 220 100% 97%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 214 100% 99%;
+    --text-primary: 221 52% 8%;
+    --text-secondary: 215 19% 35%;
+    --text-muted: 215 20% 65%;
+    --primary: 222 100% 59%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 213 100% 94%;
+    --accent: 213 85% 97%;
+    --border-soft: 0 0% 91%;
+    --border-highlight: 212 96% 78%;
+    --ring: 213 82% 85%;
+    
+    --chart-1: 214 100% 75%;
+    --chart-2: 220 100% 63%;
+    --chart-3: 158 62% 63%;
+    --chart-4: 200 97% 75%;
+    --chart-5: 221 100% 73%;
+
+    --sidebar-background: 220 100% 99%;
+    --sidebar-foreground: 0 0% 13%;
+    --sidebar-primary: 0 0% 13%;
+    --sidebar-primary-foreground: 0 0% 96%;
+    --sidebar-accent: 0 0% 93%;
+    --sidebar-accent-foreground: 0 0% 13%;
+    --sidebar-border: 0 0% 91%;
+    --sidebar-ring: 0 0% 82%;
+  }
+
+  /* Theme 2: Mint Fresh */
+  [data-theme="mint"] {
+    --bg-page: 166 76% 97%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 150 100% 98%;
+    --text-primary: 176 61% 19%;
+    --text-secondary: 215 25% 27%;
+    --text-muted: 215 20% 65%;
+    --primary: 178 52% 62%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 167 85% 89%;
+    --accent: 166 76% 97%;
+    --border-soft: 177 41% 91%;
+    --border-highlight: 168 84% 78%;
+    --ring: 168 84% 78%;
+
+    --chart-1: 154 60% 75%;
+    --chart-2: 178 52% 62%;
+    --chart-3: 43 95% 64%;
+    --chart-4: 196 84% 66%;
+    --chart-5: 135 56% 69%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 13%;
+    --sidebar-primary: 0 0% 13%;
+    --sidebar-primary-foreground: 0 0% 96%;
+    --sidebar-accent: 0 0% 93%;
+    --sidebar-accent-foreground: 0 0% 13%;
+    --sidebar-border: 0 0% 91%;
+    --sidebar-ring: 0 0% 82%;
+  }
+
+  /* Theme 3: Lavender Dream */
+  [data-theme="lavender"] {
+    --bg-page: 260 33% 98%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 270 100% 99%;
+    --text-primary: 0 0% 11%;
+    --text-secondary: 0 0% 36%;
+    --text-muted: 0 0% 53%;
+    --primary: 256 39% 51%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 248 40% 96%;
+    --accent: 255 40% 96%;
+    --border-soft: 0 0% 92%;
+    --border-highlight: 269 97% 85%;
+    --ring: 269 100% 92%;
+
+    --chart-1: 230 77% 78%;
+    --chart-2: 278 65% 70%;
+    --chart-3: 274 82% 71%;
+    --chart-4: 0 78% 77%;
+    --chart-5: 213 85% 76%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 11%;
+    --sidebar-primary: 0 0% 11%;
+    --sidebar-primary-foreground: 217 40% 96%;
+    --sidebar-accent: 217 40% 96%;
+    --sidebar-accent-foreground: 0 0% 11%;
+    --sidebar-border: 217 40% 96%;
+    --sidebar-ring: 218 49% 92%;
+  }
+
+  /* Theme 4: Earth Organic */
+  [data-theme="earth"] {
+    --bg-page: 0 0% 98%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 120 75% 98%;
+    --text-primary: 138 81% 8%;
+    --text-secondary: 131 11% 28%;
+    --text-muted: 0 0% 48%;
+    --primary: 153 51% 51%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 109 65% 93%;
+    --accent: 120 50% 97%;
+    --border-soft: 0 2% 91%;
+    --border-highlight: 142 77% 73%;
+    --ring: 137 58% 83%;
+
+    --chart-1: 50 32% 69%;
+    --chart-2: 33 41% 65%;
+    --chart-3: 18 61% 56%;
+    --chart-4: 0 32% 51%;
+    --chart-5: 39 48% 64%;
+
+    --sidebar-background: 44 38% 94%;
+    --sidebar-foreground: 30 62% 18%;
+    --sidebar-primary: 29 65% 15%;
+    --sidebar-primary-foreground: 44 38% 94%;
+    --sidebar-accent: 39 44% 92%;
+    --sidebar-accent-foreground: 30 62% 18%;
+    --sidebar-border: 39 44% 92%;
+    --sidebar-ring: 39 25% 84%;
+  }
+
+  /* Theme 5: Caramel Vintage */
+  [data-theme="caramel"] {
+    --bg-page: 43 64% 98%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 42 100% 98%;
+    --text-primary: 30 62% 18%;
+    --text-secondary: 28 13% 49%;
+    --text-muted: 28 16% 58%;
+    --primary: 30 42% 37%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 33 33% 94%;
+    --accent: 37 32% 92%;
+    --border-soft: 44 19% 89%;
+    --border-highlight: 25 32% 76%;
+    --ring: 35 49% 88%;
+
+    --chart-1: 14 100% 81%;
+    --chart-2: 45 100% 67%;
+    --chart-3: 125 60% 70%;
+    --chart-4: 45 100% 67%;
+    --chart-5: 269 94% 82%;
+
+    --sidebar-background: 0 20% 99%;
+    --sidebar-foreground: 0 0% 13%;
+    --sidebar-primary: 0 0% 13%;
+    --sidebar-primary-foreground: 0 0% 96%;
+    --sidebar-accent: 39 100% 97%;
+    --sidebar-accent-foreground: 0 0% 13%;
+    --sidebar-border: 0 0% 91%;
+    --sidebar-ring: 0 0% 82%;
+  }
+
+  body {
+    @apply bg-bg-page text-text-primary transition-colors duration-300;
+  }
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 0 0% 9%;
+    --secondary: 0 0% 14.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 0 0% 83.1%;
+    --chart-1: 220 70% 50%;
+    --chart-2: 160 60% 45%;
+    --chart-3: 30 80% 55%;
+    --chart-4: 280 65% 60%;
+    --chart-5: 340 75% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* --- CHD Shape & Layout Utilities --- */
+
+@layer utilities {
+  /* Shapes */
+  .shape-circle { 
+    @apply rounded-full aspect-square flex items-center justify-center text-center;
+  }
+  .shape-pill { 
+    @apply rounded-[9999px]; 
+  }
+  .shape-cut {
+    clip-path: polygon(
+        20px 0, 100% 0, 
+        100% calc(100% - 20px), calc(100% - 20px) 100%, 
+        0 100%, 0 20px
+    );
+  }
+  .clip-arrow-card {
+    clip-path: polygon(0% 0%, 85% 0%, 100% 50%, 85% 100%, 0% 100%, 15% 50%);
+  }
+
+  /* Layouts */
+  .overlap-container {
+    @apply relative isolate;
+  }
+  .float-badge {
+    @apply absolute top-[-20px] right-[-20px] z-10 shadow-lg;
+  }
+  .glass {
+    @apply bg-white/70 backdrop-blur-md border border-white/50;
+  }
+  .perspective-1000 { 
+    perspective: 1000px; 
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}

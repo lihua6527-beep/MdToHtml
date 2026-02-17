@@ -1,0 +1,41 @@
+# 开发记录
+
+## 2026-02-15
+
+### 1. 状态管理闭环 (Status Management Loop)
+- **UI 文本还原**: 恢复“未修改/修改中/已完成”三态展示。
+- **自动流转**: 实现保存时自动将 `pending` 状态切换为 `modified`。
+- **即时反馈**: 优化状态切换逻辑，点击按钮立即更新 UI 并触发保存。
+
+### 2. 项目治理 (Project Governance)
+- **V1 计划书发布**: 确立 V1 版本交付范围（简单并列关系）。
+- **文档库清理**: 归档过时计划书与方案，聚焦 SSOT。
+
+## 2026-02-10
+
+### 1. 样式与布局系统升级 (Style & Layout Upgrade)
+- **卡片样式扩展**: 新增 `blue`, `green`, `purple`, `pink`, `orange` 5套语义化配色，丰富视觉表达。
+- **布局逻辑修复**: 修改 `CHDRenderer` 智能布局算法，强制 `summary` 类型卡片独占一行 (`col-span-4`)，解决与 Grid 布局混排时的错位问题。
+- **Markdown 渲染增强**: 引入 `remark-breaks` 插件，支持 GitHub Flavor 的硬换行逻辑。
+
+### 2. 编辑器交互增强 (Editor Interaction)
+- **Section 级控制**: 新增 Section 设置面板。
+  - **字体统一 (Unify Fonts)**: 支持一键调整 Section 内所有卡片的标题与正文大小。
+  - **区块着色 (Section Color)**: 支持为 Section 容器添加背景色主题。
+
+### 3. 文档维护 (Documentation)
+- **技术文档更新**: 同步更新 `docs/技术规范/技术栈与算法详情.markdown`，补充新的插件依赖与布局算法变更。
+
+### 4. 编辑器体验与稳定性优化 (Editor Experience & Stability)
+- **TypeScript 修复**: 完善 `MarkdownUpdater` 接口定义，补充 `batchUpdateAttributes` 方法，消除类型报错。
+- **层级管理 (Z-Index)**: 修复浮动编辑器被父容器遮挡的问题。
+  - 提升浮动面板至 `z-[9999]`。
+  - 激活时移除父容器的 `transform/overflow` 属性，避免堆叠上下文陷阱。
+- **事件拦截**: 全面增强 `Card` 组件的事件拦截机制 (`onContextMenu`, `onKeyDown` 等)，防止误触底层交互。
+- **经验沉淀**: 将前端交互与层级管理经验写入 `.cursorrules` (Rule #23)。
+
+### 5. 视觉与协议规范增强 (Visual & Protocol Enhancements)
+- **卡片颜色选择器恢复**: 恢复前端卡片颜色选择功能，支持 `chart-1` 至 `chart-5` 五种主题色。
+- **Section 样式控制增强**: 实现二级标题 (Section) 的背景色配置功能，提供 `section-color` 属性支持，增强容器视觉区分度。
+- **表格样式优化**: 优化 Markdown 表格渲染，增加边框、斑马纹及响应式滚动支持 (`overflow-x-auto`)。
+- **协议合规性工具**: 发布 `docs/技术规范/前端渲染错误诊断手册.md`，辅助 AI 快速定位孤儿文本、非标属性等协议违规问题。

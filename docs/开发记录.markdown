@@ -1,0 +1,36 @@
+# 开发记录
+
+## 2026-02-17
+
+### 1. 卡片形态与布局革新 (Card Shape & Layout Innovation)
+- **计划制定**: 基于《卡片形态与布局革新计划》和 HTML 原型 (`card_shape_prototype.html`)，制定了详细的实施计划书 (`docs/计划书/卡片形态与布局革新实施计划.md`)。
+- **技术选型**:
+    - **形态 (Shape)**: 引入 `circle`, `pill`, `cut`, `arrow` 等 CSS Clip-path 几何形态。
+    - **布局 (Layout)**: 引入 `hub` (环形总分), `carousel` (3D 轮播), `overlap` (破格悬浮) 等自由布局模式。
+    - **兼容性**: 确保新特性在旧版数据下平滑降级，仅在显式声明属性时激活。
+- **工作流确认**: 确认遵循标准 Git 工作流，在 `feature/card-shape-layout` 分支进行开发，并优先归档计划文档。
+- **设计规范与原型**:
+    - **文档输出**: 新增《编辑器风格分析与重构指南》与《卡片革新执行清单》以指导 UI 开发。
+    - **交互原型**: 创建 `layout_editor_preview.html` (布局编辑器) 与 `context_aware_editor_preview.html` (上下文感知编辑器) 验证交互逻辑。
+
+## 2026-02-16
+
+### 1. AI 训练数据采集 (AI Training Data Collection)
+- **编辑历史追踪 (Edit History Tracking)**:
+    - **前端**: 在编辑器中新增 `lastSavedContent` 状态，用于记录修改前的内容。
+    - **后端**: 升级 `/api/dataset` 接口，支持接收 `previous_content` 和 `current_content`。
+- **数据结构增强 (Enhanced Data Structure)**:
+    - **Edit Task**: 当检测到内容修改时，自动记录 `task_type: edit` 的数据对 (Original -> Modified)。
+    - **Metadata**: 为所有数据集条目添加 `status: 'completed'` 和 `reviewed: true` 标记，代表人工审核通过。
+- **验证与测试**:
+    - **代码规范**: 通过 `npm run lint` 检查。
+    - **功能验证**: 确认保存操作能够正确触发数据记录逻辑。
+
+### 2. 文档归档与治理 (Documentation & Governance)
+- **方案归档**: 将本次迭代的《AI数据支持方案》与《AI数据支持交付清单》归档至 `docs/历史归档/`。
+- **开发记录归档**: 将 2026-02-16 之前的开发记录迁移至 `docs/开发记录/` 目录，保持主记录文件清晰。
+
+### 3. Git 故障修复 (Git Troubleshooting)
+- **问题描述**: 在使用 `trae-sandbox` 环境提交时遭遇 "Ghost Commit" (提交成功但无记录)，导致分支无法切换且无法合并 (Unrelated Histories)。
+- **解决方案**: 采用 "Soft Reset 嫁接法" (Checkout -> Reset Soft Master -> Commit -> Merge)，成功将 `feat/cleanup` 分支的 AI 支持代码合并回 `master` 主分支。
+- **文档输出**: 新增 `docs/技术规范/Git工作流与故障修复手册.markdown` 记录该解决方案。
