@@ -8,8 +8,6 @@ coverage/
 
 # Next.js
 .next/
-# Next.js
-.next/
 _next/
 MdToHtml/_next/
 out/
@@ -17,6 +15,17 @@ output/
 MdToHtml/output/
 MdToHtml/logs/
 MdToHtml/.next/
+
+# Large Binary/Archives (Avoid version control)
+*.zip
+*.rar
+*.7z
+*.tar.gz
+*.pdf
+*.docx
+*.exe
+*.dll
+*.iso
 
 # Python
 __pycache__/
