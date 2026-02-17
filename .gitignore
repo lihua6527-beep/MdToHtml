@@ -27,10 +27,22 @@ MdToHtml/.next/
 *.dll
 *.iso
 
-# Python
-__pycache__/
-*.pyc
-# Production
+# Generated Data & Cache
+data/
+MdToHtml/data/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Dependencies
+node_modules/
 build/
 
 # Misc
