@@ -89,8 +89,10 @@ export const Section: React.FC<SectionProps> = ({
   columns = Math.max(1, Math.min(4, columns));
 
   // [Fix: 12-Column Grid System]
-  // We use a fixed 12-column grid for the section container to support 1/3, 1/4, 1/2 splits.
-  // The 'columns' prop (1-4) determines the default col-span for children cards.
+  // We use a fixed 12-column grid for the section container.
+  // We interpret 'col-span' relative to the section's column count to prevent "long strip" (1/12 width) issues.
+  // e.g. In a 3-column layout (multiplier=4), col-span=1 means 1*4=4 (1/3 width), not 1/12.
+  const multiplier = Math.floor(12 / columns);
   const containerClasses = isGrid 
     ? `grid grid-cols-12 gap-6 grid-flow-dense auto-rows-min` 
     : 'flex flex-col gap-6';
@@ -345,7 +347,13 @@ export const Section: React.FC<SectionProps> = ({
               style={card.props['card-style']}
               attributes={card.props}
               inheritedColor={layoutProps['section-color']} // Pass section color to card
-              colSpan={card.props['col-span'] ? parseInt(card.props['col-span']) : defaultColSpan}
+              colSpan={(() => {
+                  const raw = card.props['col-span'] ? parseInt(card.props['col-span']) : defaultColSpan;
+                  // [Fix] Heuristic: If span is < 3, treat as logical units (1 unit, 2 units) -> multiply by multiplier.
+                  // This fixes "Long Strip" (1/12 width) when users specify "1".
+                  // Standard Grid Spans (3, 4, 6, 12) are preserved.
+                  return raw < 3 ? raw * multiplier : raw;
+              })()}
               rowSpan={card.props['row-span'] ? parseInt(card.props['row-span']) : undefined}
               isActive={isActive}
               isSelected={isSelected}

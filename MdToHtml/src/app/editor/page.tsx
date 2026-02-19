@@ -280,9 +280,11 @@ export default function EditorPage() {
                 <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => insertMarkdown('code')} title="代码块">
                     <CodeIcon className="w-4 h-4 text-text-secondary" />
                 </Button>
-                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => insertMarkdown('link')} title="插入链接">
+                <div className="w-px h-4 bg-border-soft mx-1" />
+                <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => insertMarkdown('link')} title="链接">
                     <LinkIcon className="w-4 h-4 text-text-secondary" />
                 </Button>
+
              </div>
 
              <GlobalErrorBoundary>
@@ -320,6 +322,46 @@ export default function EditorPage() {
                   onCardMove={moveCard}
                 />
              </ThemeScope>
+          </div>
+
+          {/* Floating Export Button */}
+          <div className="absolute top-4 right-6 z-50">
+             <Button 
+                variant="default"
+                size="default"
+                className="shadow-lg hover:shadow-xl transition-all duration-300 gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-medium"
+                onClick={async () => {
+                    const btn = document.getElementById('floating-export-btn');
+                    const text = document.getElementById('floating-export-text');
+                    
+                    if (btn && text) {
+                        text.innerText = '正在导出...';
+                        (btn as HTMLButtonElement).disabled = true;
+                    }
+
+                    try {
+                        const res = await fetch('/api/export', { method: 'POST' });
+                        const data = await res.json();
+                        if (data.success) {
+                            alert('导出成功！请查看 output 文件夹。');
+                        } else {
+                            alert('导出失败：' + data.error);
+                        }
+                    } catch (err) {
+                        alert('导出错误：' + err);
+                    } finally {
+                        if (btn && text) {
+                            text.innerText = '导出静态网页';
+                            (btn as HTMLButtonElement).disabled = false;
+                        }
+                    }
+                }}
+                id="floating-export-btn"
+                title="导出为静态网页 (便携版)"
+             >
+                <Download className="w-4 h-4" />
+                <span id="floating-export-text">导出静态网页</span>
+             </Button>
           </div>
        </div>
     </div>

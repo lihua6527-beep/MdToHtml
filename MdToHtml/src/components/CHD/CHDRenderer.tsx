@@ -152,6 +152,42 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
             result.push(currentSection);
         }
 
+        // [Smart Sizing Logic] - ENABLED (v2.0)
+        // Automatically determine column count based on number of cards if not specified.
+        result.forEach(section => {
+            // Skip if explicit layout is set
+            if (section.layoutProps.columns || 
+                section.layoutProps.cols || 
+                (section.layoutProps.layout && section.layoutProps.layout !== 'grid' && !section.layoutProps.layout.startsWith('cols-'))) {
+                return;
+            }
+
+            const cardCount = section.cards.length;
+            let smartColumns = 2; // Default
+
+            if (cardCount === 1) {
+                smartColumns = 1;
+            } else if (cardCount === 2) {
+                smartColumns = 2;
+            } else if (cardCount === 3) {
+                smartColumns = 3;
+            } else if (cardCount === 4) {
+                smartColumns = 4;
+            } else if (cardCount >= 5) {
+                // For 5+ cards, user says "3 or 4 both fine". 
+                // 3 columns = 3 + 2 (2 rows) for 5 cards
+                // 3 columns = 3 + 3 (2 rows) for 6 cards
+                smartColumns = 3; 
+                if (cardCount === 4 || cardCount === 8) {
+                    smartColumns = 4;
+                }
+            }
+
+            // Apply smart columns
+            // We set it on layoutProps so Section component picks it up
+            section.layoutProps.columns = String(smartColumns);
+        });
+
         // [Smart Sizing Logic] - DISABLED
         // This legacy logic assumes a 2/4 column grid and conflicts with the new 12-column system.
         // It prevents the Section component from applying correct default widths.
@@ -232,6 +268,19 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
     );
   }
 
+  // Handle empty state gracefully
+  if (!markdown || markdown.trim().length === 0 || (sections.length === 0 && Object.keys(frontmatter).length === 0)) {
+     return (
+        <div className="w-full h-full flex flex-col items-center justify-center text-text-secondary/50 min-h-[50vh]">
+            <div className="w-16 h-16 mb-4 rounded-full bg-secondary/20 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 opacity-50"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+            </div>
+            <h3 className="text-xl font-bold text-text-primary mb-2">文档为空</h3>
+            <p className="text-sm">该文档没有内容。请在编辑器中添加内容。</p>
+        </div>
+     );
+  }
+
   return (
     <div className="w-full min-h-full pb-20">
       {/* Title / Header */}
@@ -296,19 +345,16 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
       )}
 
       {/* Sections */}
-      <div className="px-8 space-y-12">
+      <div className="px-8 space-y-12 max-w-[1600px] mx-auto">
         {sections.map((section, index) => (
           <Section 
             key={index} 
-            title={section.title} 
-            layoutProps={section.layoutProps}
-            cards={section.cards}
-            blockIndex={section.blockIndex}
+            {...section} 
+            activeLine={activeLine}
+            onCardClick={onCardClick}
             editMode={editMode}
             selectedBlockIndex={selectedBlockIndex}
             onSelectBlock={onSelectBlock}
-            onCardClick={onCardClick}
-            activeLine={activeLine}
             onCardUpdate={onCardUpdate}
             onBatchCardUpdate={onBatchCardUpdate}
             onContentUpdate={onContentUpdate}

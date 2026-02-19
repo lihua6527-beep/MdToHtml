@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Edit, Save, Eye, Layout, ArrowLeft, CheckCircle, AlertTriangle, X } from 'lucide-react';
+import { ChevronLeft, Edit, Save, Eye, Layout, ArrowLeft, CheckCircle, AlertTriangle, X, Download } from 'lucide-react';
 import { CHDRenderer } from '@/components/CHD/CHDRenderer';
 import { useMarkdownInteraction } from '@/hooks/useMarkdownInteraction';
 import { Button } from '@/components/ui/button';
@@ -49,6 +49,16 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
     if (content) {
        const result = RuleBasedScorer.evaluate(content);
        setScoreResult(result);
+       
+       // Auto-show score details if critical errors found or score is very low
+       if (result.totalScore === 0 || result.issues.some(i => i.severity === 'error')) {
+           setShowScoreDetails(true);
+       }
+    } else {
+        // Handle empty content specifically
+        const result = RuleBasedScorer.evaluate('');
+        setScoreResult(result);
+        setShowScoreDetails(true);
     }
   }, [content]);
 
@@ -277,23 +287,23 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
 
                             {/* Issues List */}
                             {scoreResult.issues.length > 0 ? (
-                                <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
                                     {scoreResult.issues.map((issue, idx) => (
-                                        <div key={idx} className="bg-bg-page rounded p-2 text-xs border border-border-soft">
-                                            <div className="flex items-center gap-1.5 mb-1">
+                                        <div key={idx} className="bg-bg-page rounded p-3 text-xs border border-border-soft">
+                                            <div className="flex items-center gap-1.5 mb-1.5">
                                                 <span className={clsx(
-                                                    "w-1.5 h-1.5 rounded-full flex-shrink-0",
+                                                    "w-2 h-2 rounded-full flex-shrink-0",
                                                     issue.severity === 'error' ? "bg-red-500" : 
                                                     issue.severity === 'warning' ? "bg-amber-500" : "bg-blue-500"
                                                 )} />
-                                                <span className="font-medium text-text-primary">Line {issue.line}</span>
+                                                <span className="font-bold text-text-primary">Line {issue.line}</span>
                                                 <span className={clsx(
-                                                    "ml-auto text-[10px] px-1 rounded uppercase font-bold",
+                                                    "ml-auto text-[10px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider",
                                                     issue.severity === 'error' ? "bg-red-100 text-red-600" : 
                                                     issue.severity === 'warning' ? "bg-amber-100 text-amber-600" : "bg-blue-100 text-blue-600"
                                                 )}>{issue.severity}</span>
                                             </div>
-                                            <p className="text-text-secondary leading-relaxed">{issue.message}</p>
+                                            <p className="text-text-secondary leading-relaxed break-words whitespace-pre-wrap">{issue.message}</p>
                                         </div>
                                     ))}
                                 </div>
@@ -407,6 +417,46 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                 </Button>
             )}
           </div>
+       </div>
+
+       {/* Floating Export Button */}
+       <div className="absolute top-16 right-6 z-50">
+          <Button 
+             variant="default"
+             size="default"
+             className="shadow-lg hover:shadow-xl transition-all duration-300 gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-medium"
+             onClick={async () => {
+                 const btn = document.getElementById('floating-export-btn');
+                 const text = document.getElementById('floating-export-text');
+                 
+                 if (btn && text) {
+                     text.innerText = '正在导出...';
+                     (btn as HTMLButtonElement).disabled = true;
+                 }
+
+                 try {
+                     const res = await fetch('/api/export', { method: 'POST' });
+                     const data = await res.json();
+                     if (data.success) {
+                         alert('导出成功！请查看 output 文件夹。');
+                     } else {
+                         alert('导出失败：' + data.error);
+                     }
+                 } catch (err) {
+                     alert('导出错误：' + err);
+                 } finally {
+                     if (btn && text) {
+                         text.innerText = '导出静态网页';
+                         (btn as HTMLButtonElement).disabled = false;
+                     }
+                 }
+             }}
+             id="floating-export-btn"
+             title="导出为静态网页 (便携版)"
+          >
+             <Download className="w-4 h-4" />
+             <span id="floating-export-text">导出静态网页</span>
+          </Button>
        </div>
 
        {/* Content */}

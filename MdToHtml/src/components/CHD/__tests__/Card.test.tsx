@@ -35,28 +35,14 @@ describe('Card Component', () => {
     expect(cardDiv).toHaveClass('bg-white');
   });
 
-  it('ignores card-color attribute and stays white', () => {
+  it('applies card-color attribute', () => {
     const { container } = render(<Card {...defaultProps} attributes={{ 'card-color': 'chart-1' }} />);
     
     const cardDiv = container.firstChild as HTMLElement;
 
-    // 1. Should still be white
-    expect(cardDiv).toHaveClass('bg-white');
-    
-    // 2. Should NOT have chart color border
-    expect(cardDiv).not.toHaveClass('border-chart-1');
-
-    // 3. Should NOT have overlay div
-    // The content wrapper is usually the first child if no overlay exists
-    // But let's check children count or class
-    // In our new implementation, the overlay div is conditionally rendered: {cardColor !== 'default' && ...}
-    // Since cardColor is forced to 'default', the overlay should not be there.
-    
-    // The first child should be the content wrapper "relative z-10..."
-    const firstChild = cardDiv.children[0];
-    expect(firstChild).toHaveClass('relative');
-    expect(firstChild).toHaveClass('z-10');
-    expect(firstChild).not.toHaveClass('absolute'); // Overlay is absolute
+    // Should have chart color class (bg-chart-1/10 and border-chart-1/20 based on implementation)
+    expect(cardDiv).toHaveClass('bg-chart-1/10');
+    expect(cardDiv).toHaveClass('border-chart-1/20');
   });
   
   /* Removed per user request: Color picker UI is gone

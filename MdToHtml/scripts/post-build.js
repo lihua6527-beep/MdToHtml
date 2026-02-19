@@ -47,11 +47,11 @@ try {
     // The original script was: next build && xcopy ... && node scripts/organize_output.js
     // So we should run organize_output.js here or call it from package.json
     
-    // Check if organize_output.js exists
-    const organizeScript = path.join(__dirname, 'organize_output.js');
-    if (fs.existsSync(organizeScript)) {
-        console.log('Running organize_output.js...');
-        require('./organize_output.js');
+    // Check if generate_portable_output.js exists
+    const portableScript = path.join(__dirname, 'generate_portable_output.js');
+    if (fs.existsSync(portableScript)) {
+        console.log('Running generate_portable_output.js...');
+        require('./generate_portable_output.js');
     }
     
 } catch (err) {

@@ -93,6 +93,22 @@ export const Card: React.FC<CardProps> = ({
   const dragStartRef = useRef<{x: number, y: number} | null>(null);
   const dockRef = useRef<HTMLDivElement>(null);
 
+  // --- Context Menu State ---
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number } | null>(null);
+
+  useEffect(() => {
+    const handleClick = () => setContextMenu(null);
+    window.addEventListener('click', handleClick);
+    return () => window.removeEventListener('click', handleClick);
+  }, []);
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (!editMode) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY });
+  };
+
   // Font Sizes & Alignment
   const titleSize = attributes['title-size'] || (style === 'stat' ? 'text-4xl' : 'text-2xl');
   const contentSize = attributes['content-size'] || (style === 'stat' ? 'text-sm' : 'text-base');
@@ -331,9 +347,32 @@ export const Card: React.FC<CardProps> = ({
   };
 
   return (
+    <>
+    {/* Context Menu */}
+    {contextMenu && (
+        <div 
+            className="fixed z-[10000] bg-white border border-border-soft shadow-xl rounded-lg py-1 min-w-[140px] animate-in fade-in zoom-in-95 duration-100"
+            style={{ top: contextMenu.y, left: contextMenu.x }}
+            onClick={(e) => e.stopPropagation()}
+        >
+            <button 
+                className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete?.();
+                    setContextMenu(null);
+                }}
+            >
+                <Trash2 size={16} />
+                删除卡片
+            </button>
+        </div>
+    )}
+
     <div 
       className={twMerge(baseClasses, styleVariants[style as CardStyle] || styleVariants.normal, colorVariants[forcedCardColor], spanClasses, activeClass, selectedClass)}
       onClick={handleCardClick}
+      onContextMenu={handleContextMenu}
       style={gridStyle}
     >
       {/* Background Overlay (Explicit DIV for robust rendering) */}
@@ -671,5 +710,6 @@ export const Card: React.FC<CardProps> = ({
       </div>
       </div>
     </div>
+    </>
   );
 };

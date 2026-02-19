@@ -13,6 +13,27 @@ export class RuleBasedScorer {
    */
   static evaluate(content: string): ScoreResponse {
     const issues: Issue[] = [];
+    
+    // 0. 空内容检查 (Critical)
+    if (!content || content.trim().length === 0) {
+        return {
+            totalScore: 0,
+            dimensions: {
+                structure: 0,
+                atomicity: 0,
+                metadata: 0,
+                syntax: 0,
+                styling: 0
+            },
+            issues: [{
+                line: 1,
+                type: 'critical_empty_content',
+                message: '文档内容为空，无法评分。请确保文件包含有效的 Markdown 内容。',
+                severity: 'error'
+            }]
+        };
+    }
+
     const lines = content.split('\n');
     
     // 1. 结构规范性 (30分) - CHD 核心结构

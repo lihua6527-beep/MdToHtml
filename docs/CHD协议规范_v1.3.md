@@ -1,12 +1,7 @@
 ---
 title: "CHD约束协议 (Card-based Hierarchical Document)"
 subtitle: "面向人机协同的文档工程规范 DSL"
-highlights:
-  - "三级刚性结构：Document > Section > Card"
-  - "卡片化单元：最小语义处理单位"
-  - "元数据驱动：YAML Frontmatter 定义全局属性"
-  - "AI友好设计：将解析复杂度降低99%"
-version: "1.2"
+version: "1.4"
 ---
 
 ## 1. 协议概述
@@ -76,11 +71,21 @@ version: "1.3"               # 协议版本
 为了支持更丰富的布局和语义，CHD 支持在标题后使用扩展属性语法 `{key="value"}`。
 
 ### 3.1 布局控制 (Layout)
-应用于 Section (`##`)，控制其下 Cards 的排列方式。
+
+**智能布局 (Smart Layout) [v1.4 新增]：**
+CHD 渲染引擎内置了智能布局算法，当 Section (`##`) 未显式指定 `layout` 或 `columns` 时，会自动根据卡片数量计算最佳列数，实现“两头发力”的优化体验。
+
+- **3 张卡片**：自动设置为 **3 列** (col-span=4)。
+- **4 张卡片**：自动设置为 **4 列** (col-span=3)。
+- **5 张卡片**：自动设置为 **3 列** (3+2 布局)，确保两行排列平衡。
+- **6 张卡片**：自动设置为 **3 列** (3+3 布局)。
+
+**显式布局覆盖：**
+若需强制特定布局，可使用 `columns` 属性：
 
 ```markdown
-## 方法设计 {layout="cols-2"}
-## 实验结果 {columns=3}
+## 方法设计 {columns=2}   <-- 强制两列
+## 实验结果 {columns=3}   <-- 强制三列
 ```
 
 ### 3.2 卡片样式与形态 (Card Style & Shape)
