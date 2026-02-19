@@ -117,4 +117,53 @@ outputItems.forEach(item => {
     }
 });
 
+// Generate index.html in output directory
+console.log('Generating index.html in output directory...');
+const indexPath = path.join(outputDir, 'index.html');
+const slugs = Array.from(validSlugs).sort();
+
+const listItems = slugs.map(slug => {
+    // Check if the directory exists in output
+    if (fs.existsSync(path.join(outputDir, slug))) {
+        return `<li><a href="${slug}/index.html">${slug}</a></li>`;
+    }
+    return '';
+}).join('\n');
+
+const indexContent = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>已生成的文档列表</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; line-height: 1.5; }
+        h1 { border-bottom: 1px solid #eee; padding-bottom: 0.5rem; }
+        ul { list-style-type: none; padding: 0; }
+        li { margin: 0.5rem 0; padding: 0.5rem; border: 1px solid #eee; border-radius: 4px; transition: background 0.2s; }
+        li:hover { background: #f9f9f9; }
+        a { text-decoration: none; color: #0066cc; display: block; }
+        a:hover { text-decoration: underline; }
+        .footer { margin-top: 2rem; font-size: 0.8rem; color: #666; border-top: 1px solid #eee; padding-top: 1rem; }
+    </style>
+</head>
+<body>
+    <h1>已生成的文档列表</h1>
+    <p>以下是 output 文件夹中生成的静态文档：</p>
+    <ul>
+        ${listItems}
+    </ul>
+    <div class="footer">
+        <p>提示：若要重新生成，请运行根目录下的 <code>build_static.bat</code> 脚本。</p>
+    </div>
+</body>
+</html>`;
+
+try {
+    fs.writeFileSync(indexPath, indexContent, 'utf8');
+    console.log(`Generated ${indexPath}`);
+} catch (e) {
+    console.error('Failed to generate index.html:', e);
+}
+
 console.log('Organization complete.');
