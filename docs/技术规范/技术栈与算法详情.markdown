@@ -1,5 +1,19 @@
 # 技术栈与算法详情 (Tech Stack & Algorithms)
 
+## 0. 核心理念与技术映射 (Philosophy to Tech Mapping)
+
+> **你的系统本质上是在回答一个问题： 当AI能生成无限内容时，如何确保输出的品质与一致性？**
+> 答案是： **协议化输入、自动化评分、可视化调优、多态化输出**。
+
+本项目通过以下技术栈具体实现了上述理念：
+
+| 核心理念 | 关键技术实现 | 对应模块/文件 |
+| :--- | :--- | :--- |
+| **协议化输入** | CHD (Canonical HTML Deck) 协议, Markdown AST 解析 | `src/lib/chdParser.ts`, `CHD_protocol.md` |
+| **自动化评分** | 基于规则的文档质量打分引擎 | `src/lib/scorer.ts` |
+| **可视化调优** | CodeMirror 双向绑定编辑器, 实时预览 | `src/components/Editor/`, `src/components/CHD/` |
+| **多态化输出** | Next.js SSG 静态生成, 响应式 Grid 布局 | `app/api/save/`, `src/components/CHD/Section.tsx` |
+
 ## 1. 技术栈 (Tech Stack)
 
 ### 1.1 前端渲染引擎 (Frontend Rendering Engine)
