@@ -12,6 +12,8 @@ import { parseCHDBlocks } from '@/lib/chdParser';
 import { RuleBasedScorer } from '@/lib/scorer';
 import { ScoreResponse } from '@/types/model-interface';
 import { clsx } from 'clsx';
+import { HtmlBundler } from '@/lib/export/HtmlBundler';
+import { useTheme } from '@/components/ThemeProvider';
 
 interface InteractivePostProps {
   initialContent: string;
@@ -20,11 +22,13 @@ interface InteractivePostProps {
 }
 
 const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug, decodedSlug }) => {
+  const { theme } = useTheme();
   const [content, setContent] = useState(initialContent);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   const { updateAttribute, updateContent, updateTitle, updateFrontmatter, moveCard, deleteCard, addCard, undo, canUndo, operationLog, batchUpdateAttributes } = useMarkdownInteraction(content, setContent);
   const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   
   // Record Visit History
   useEffect(() => {
@@ -386,6 +390,39 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
             
             <div className="h-4 w-px bg-border-soft mx-2" />
 
+            {/* Export Button (Top Bar) */}
+            <Button 
+                variant="ghost" 
+                size="sm"
+                className="gap-2 text-text-secondary hover:text-primary mr-2"
+                onClick={async () => {
+                    setIsExporting(true);
+                    try {
+                    const title = decodedSlug || 'Untitled';
+                    const blob = await HtmlBundler.bundle(content, title, theme);
+                    const url = URL.createObjectURL(blob);
+                    
+                    const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${title}.html`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    } catch (err: any) {
+                        console.error('Export failed:', err);
+                        alert('导出失败：' + (err.message || '未知错误'));
+                    } finally {
+                        setIsExporting(false);
+                    }
+                }}
+                disabled={isExporting}
+                title="导出为静态网页 (HTML)"
+            >
+                <Download className={`w-4 h-4 ${isExporting ? 'animate-bounce' : ''}`} />
+                <span className="hidden sm:inline">{isExporting ? '导出中...' : '导出 HTML'}</span>
+            </Button>
+
             {isEditing ? (
                 <>
                     <Button 
@@ -419,45 +456,12 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
           </div>
        </div>
 
-       {/* Floating Export Button */}
+       {/* Floating Export Button Removed - Moved to Top Bar */}
+       {/* 
        <div className="absolute top-16 right-6 z-50">
-          <Button 
-             variant="default"
-             size="default"
-             className="shadow-lg hover:shadow-xl transition-all duration-300 gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-medium"
-             onClick={async () => {
-                 const btn = document.getElementById('floating-export-btn');
-                 const text = document.getElementById('floating-export-text');
-                 
-                 if (btn && text) {
-                     text.innerText = '正在导出...';
-                     (btn as HTMLButtonElement).disabled = true;
-                 }
-
-                 try {
-                     const res = await fetch('/api/export', { method: 'POST' });
-                     const data = await res.json();
-                     if (data.success) {
-                         alert('导出成功！请查看 output 文件夹。');
-                     } else {
-                         alert('导出失败：' + data.error);
-                     }
-                 } catch (err) {
-                     alert('导出错误：' + err);
-                 } finally {
-                     if (btn && text) {
-                         text.innerText = '导出静态网页';
-                         (btn as HTMLButtonElement).disabled = false;
-                     }
-                 }
-             }}
-             id="floating-export-btn"
-             title="导出为静态网页 (便携版)"
-          >
-             <Download className="w-4 h-4" />
-             <span id="floating-export-text">导出静态网页</span>
-          </Button>
+          ...
        </div>
+       */}
 
        {/* Content */}
        <div className="flex-1">

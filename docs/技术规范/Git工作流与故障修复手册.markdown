@@ -58,5 +58,61 @@
 4.  **定期清理**:
     - 若发现误提交了大文件，使用 `git rm --cached <file>` 移除跟踪但保留本地文件。
 
-## 3. 常用开发流程
-（此处可扩展其他 Git 最佳实践）
+
+## 3. 大规模重构与合并策略 (Large Refactoring & Merge Strategy) [v2.0 新增]
+
+针对涉及大量网页内容重写、UI 换肤或核心引擎升级的场景，为避免“合并地狱” (Merge Hell)，需遵循以下 SOP。
+
+### 3.1 核心原则 (Core Principles)
+
+1.  **特性分支隔离 (Feature Branch Isolation)**
+    *   **规则**: 严禁直接在 `master` 上修改代码。
+    *   **操作**: 每次开发新功能或重构，必须新建分支：
+        ```bash
+        git checkout -b feat/new-ui-refactor  # 命名建议：feat/xxx 或 refactor/xxx
+        ```
+
+2.  **原子化提交 (Atomic Commits)**
+    *   **规则**: 禁止“囤积”代码一次性提交。每完成一个独立的小功能或修复（如“修改了 Header 样式”），立即提交。
+    *   **价值**: 冲突发生时，Git 可精准定位到具体 commit，而非整个文件的大块冲突。
+    *   **操作**:
+        ```bash
+        git add src/components/Header.tsx
+        git commit -m "refactor(ui): update header style"
+        ```
+
+3.  **频繁同步主分支 (Keep Up-to-Date)**
+    *   **场景**: 开发周期超过 1 天，且 `master` 分支可能有变动。
+    *   **操作**: 每天开工前或提交前，执行“反向合并”：
+        ```bash
+        git checkout master
+        git pull origin master
+        git checkout feat/new-ui-refactor
+        git merge master  # 在本地分批解决冲突，避免最后合并时爆发
+        ```
+
+### 3.2 实施策略 (Implementation Strategies)
+
+*   **策略 A: 增量替换 (Strangler Fig Pattern) [推荐]**
+    *   **做法**: 不直接修改旧文件（如 `OldComponent.tsx`），而是新建 `NewComponent.tsx`。
+    *   **流程**: 逐步在页面中替换引用 -> 确认旧文件无引用 -> 删除旧文件。
+    *   **优势**: 极大降低 Git 冲突概率，因为本质上是“新增文件”而非“修改文件”。
+
+*   **策略 B: 文件锁定 (File Locking)**
+    *   **做法**: 团队协作时，明确通知“今天我要重写 UserPage，请大家暂时别动”。
+
+### 3.3 推荐合并命令 (Merge Command)
+
+在准备合并回 `master` 时，使用 `--no-ff` (No Fast Forward) 模式，强制生成合并节点，保留分支历史轨迹，方便回溯和 Revert。
+
+```bash
+# 1. 切换回主分支
+git checkout master
+
+# 2. 拉取最新代码（防御性编程）
+git pull origin master
+
+# 3. 执行不快进合并
+git merge --no-ff feat/new-ui-refactor -m "merge: integrate new ui refactor"
+```
+

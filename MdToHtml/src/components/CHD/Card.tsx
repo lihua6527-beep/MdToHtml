@@ -49,7 +49,7 @@ const STYLE_LABELS: Record<CardStyle, string> = {
 };
 
 const CARD_COLORS: { value: CardColor; label: string; class: string }[] = [
-  { value: 'default', label: '默认', class: 'bg-white border-border-soft' },
+  { value: 'default', label: '默认', class: 'bg-bg-card border-border-soft' },
   { value: 'chart-1', label: '配色一', class: 'bg-chart-1' },
   { value: 'chart-2', label: '配色二', class: 'bg-chart-2' },
   { value: 'chart-3', label: '配色三', class: 'bg-chart-3' },

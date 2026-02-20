@@ -15,6 +15,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import { CHDRenderer } from '@/components/CHD/CHDRenderer';
 import { ThemeScope } from '@/components/ThemeScope';
 import { useMarkdownInteraction } from '@/hooks/useMarkdownInteraction';
+import { HtmlBundler } from '@/lib/export/HtmlBundler';
 
 export default function EditorPage() {
   const { theme } = useTheme();
@@ -33,6 +34,8 @@ export default function EditorPage() {
   
   // Drag & Drop State
   const [isDragging, setIsDragging] = useState(false);
+  // Export State
+  const [isExporting, setIsExporting] = useState(false);
 
   // Refs
   const editorRef = useRef<CodeMirrorEditorHandle>(null);
@@ -205,6 +208,38 @@ export default function EditorPage() {
                 variant="ghost" 
                 size="sm" 
                 className="gap-2 text-text-primary hover:bg-primary/10 hover:text-primary"
+                onClick={async () => {
+                    setIsExporting(true);
+                    try {
+                        const title = currentFilename.replace(/\.md$/i, '') || 'Untitled';
+                        const blob = await HtmlBundler.bundle(content, title, theme);
+                        const url = URL.createObjectURL(blob);
+                        
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${title}.html`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    } catch (err: any) {
+                        console.error('Export failed:', err);
+                        alert('导出失败：' + (err.message || '未知错误'));
+                    } finally {
+                        setIsExporting(false);
+                    }
+                }}
+                disabled={isExporting}
+                title="导出为静态网页 (HTML)"
+             >
+                <Download className={`w-4 h-4 ${isExporting ? 'animate-bounce' : ''}`} />
+                <span className="hidden sm:inline">{isExporting ? '导出中...' : '导出 HTML'}</span>
+             </Button>
+             <div className="w-px h-4 bg-border-soft" />
+             <Button 
+                variant="ghost" 
+                size="sm" 
+                className="gap-2 text-text-primary hover:bg-primary/10 hover:text-primary"
                 onClick={() => {
                     const slug = currentFilename.replace(/\.md$/i, '') || 'my-document';
                     window.open(`/${slug}`, '_blank');
@@ -324,45 +359,7 @@ export default function EditorPage() {
              </ThemeScope>
           </div>
 
-          {/* Floating Export Button */}
-          <div className="absolute top-4 right-6 z-50">
-             <Button 
-                variant="default"
-                size="default"
-                className="shadow-lg hover:shadow-xl transition-all duration-300 gap-2 bg-primary text-primary-foreground hover:bg-primary/90 rounded-md font-medium"
-                onClick={async () => {
-                    const btn = document.getElementById('floating-export-btn');
-                    const text = document.getElementById('floating-export-text');
-                    
-                    if (btn && text) {
-                        text.innerText = '正在导出...';
-                        (btn as HTMLButtonElement).disabled = true;
-                    }
-
-                    try {
-                        const res = await fetch('/api/export', { method: 'POST' });
-                        const data = await res.json();
-                        if (data.success) {
-                            alert('导出成功！请查看 output 文件夹。');
-                        } else {
-                            alert('导出失败：' + data.error);
-                        }
-                    } catch (err) {
-                        alert('导出错误：' + err);
-                    } finally {
-                        if (btn && text) {
-                            text.innerText = '导出静态网页';
-                            (btn as HTMLButtonElement).disabled = false;
-                        }
-                    }
-                }}
-                id="floating-export-btn"
-                title="导出为静态网页 (便携版)"
-             >
-                <Download className="w-4 h-4" />
-                <span id="floating-export-text">导出静态网页</span>
-             </Button>
-          </div>
+          {/* Floating Export Button Removed - Moved to Top Bar */}
        </div>
     </div>
   );

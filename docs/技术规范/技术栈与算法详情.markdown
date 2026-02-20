@@ -170,6 +170,32 @@
     *   **机制**: 在 Section 的 `layoutProps` 中存储 `section-color` 字段 (如 `bg-blue-50/50`)。
     *   **渲染**: `Section` 组件读取该属性并将其作为 Tailwind 类名动态注入到 `<section>` 容器的 `className` 中。
 
+### 3.9 单文件导出与主题一致性 (Single File Export & Theme Consistency)
+**位置**: `src/lib/export/HtmlBundler.tsx` & `src/lib/export/CssExtractor.ts`
+
+为了满足“编辑分离、导出内聚”的核心理念，并解决导出文件与编辑器主题不一致的问题，系统实现了基于客户端的单文件打包方案：
+
+1.  **资源内聚 (Resource Bundling)**:
+    *   **HTML**: 使用 `renderToStaticMarkup` 将 React 组件树渲染为静态 HTML 字符串。
+    *   **CSS**: `CssExtractor` 遍历当前页面的 `document.styleSheets`，提取所有 CSS 规则（包括 Tailwind 原子类和组件样式），内联到 `<style>` 标签中。
+    *   **Images**: (规划中) 将图片资源转换为 Base64 编码内嵌入 HTML。
+
+2.  **主题一致性 (Theme Consistency)**:
+    *   **问题**: 浏览器 `prefers-color-scheme` 可能与用户在编辑器中手动选择的主题（如 Ocean, Mint）不一致，且自定义 CSS 变量（如 `--bg-page`）无法自动跨文件传递。
+    *   **解决方案**: `HtmlBundler.bundle` 方法新增 `theme` 参数（如 `ocean`）。
+    *   **实现**: 
+        *   在导出时捕获当前应用的 `theme` 状态。
+        *   将 `data-theme="{theme}"` 属性直接注入到导出模版的 `<html>` 标签中。
+        *   移除所有基于系统偏好 (`prefers-color-scheme`) 的自动切换逻辑，强制导出文件的主题与编辑时保持 100% 一致，实现真正的“所见即所得”。
+
+3.  **布局还原 (Layout Fidelity)**:
+    *   **容器升级**: 导出页面的容器宽度从默认的 `max-w-4xl` 提升至 `90rem` (约 1440px)，并强制 `min-height: 100vh`，以匹配编辑器在宽屏下的沉浸式体验。
+    *   **样式修正**: 修正了 `Card` 组件的背景色映射，从 Shadcn 默认的 `bg-card` 改为项目自定义的 `bg-bg-card`，确保在任何主题下都能正确显示背景色。
+
+4.  **性能优化**:
+    *   **Context Isolation**: 仅针对当前编辑的文档进行打包，不涉及服务器端构建，秒级生成。
+    *   **Client-Side Blob**: 全部操作在浏览器端完成，生成 `Blob` 对象并触发下载，无服务器带宽消耗。
+
 ---
 
 ## 4. 部署与运维 (Deployment & Ops)
