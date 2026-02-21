@@ -99,7 +99,6 @@ version: "1.0"               # 协议版本
 - `highlight`: 高亮强调
 - `stat`: 数据统计/大数字展示
 - `quote`: 引用/评价
-- `warning`: 警告/注意
 - `code`: 纯代码展示
 - `summary`: 综述/摘要（用于章节首部）
 
