@@ -4,7 +4,7 @@ const isProd = process.env.NODE_ENV === 'production';
 const nextConfig = {
   output: isProd ? 'export' : undefined, // Enable static export only in production build
   // To build static site, use a specific build script that handles API exclusion
-  trailingSlash: true, // Generate folder/index.html instead of file.html
+  trailingSlash: false, // Generate file.html instead of folder/index.html
   // assetPrefix removed: handled by post-build script for correct relative paths
   images: {
     unoptimized: true, // Required for static export

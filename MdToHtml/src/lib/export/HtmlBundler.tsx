@@ -4,6 +4,7 @@ import { CHDRenderer } from '@/components/CHD/CHDRenderer';
 import { CssExtractor } from './CssExtractor';
 import { HTML_TEMPLATE } from './template';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { ThemeId, DEFAULT_THEME } from '@/lib/themes';
 
 export class HtmlBundler {
   /**
@@ -13,7 +14,7 @@ export class HtmlBundler {
    * @param title The title of the document.
    * @returns A Blob containing the complete HTML file.
    */
-  static async bundle(markdown: string, title: string, theme: string = 'system'): Promise<Blob> {
+  static async bundle(markdown: string, title: string, theme: ThemeId = DEFAULT_THEME): Promise<Blob> {
     // 1. Render HTML Component to Static Markup
     // We wrap it in ThemeProvider to ensure theme context is available if needed
     // We strictly use editMode={false} to ensure a clean read-only view

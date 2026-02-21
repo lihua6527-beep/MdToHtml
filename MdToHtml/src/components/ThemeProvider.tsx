@@ -13,8 +13,8 @@ const ThemeContext = createContext<ThemeContextType>({
   setTheme: () => {},
 });
 
-export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
-  const [theme, setTheme] = useState<ThemeId>(DEFAULT_THEME);
+export const ThemeProvider = ({ children, defaultTheme = DEFAULT_THEME }: { children: React.ReactNode; defaultTheme?: ThemeId }) => {
+  const [theme, setTheme] = useState<ThemeId>(defaultTheme);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
