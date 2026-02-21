@@ -256,6 +256,48 @@ async function processFiles() {
         fs.writeFileSync(filePath, fullHtml, 'utf8');
     }
     
+    // 6. Cleanup and Organization
+    console.log('正在整理文件...');
+    const SYSTEM_DIR = path.join(OUTPUT_DIR, 'system');
+    if (!fs.existsSync(SYSTEM_DIR)) {
+        fs.mkdirSync(SYSTEM_DIR, { recursive: true });
+    }
+
+    const files = fs.readdirSync(OUTPUT_DIR);
+    
+    // System files to move
+    const systemFiles = ['404.html', 'index.html', 'editor.html', 'preview.html', 'test.html'];
+    
+    // Directories to remove
+    const dirsToRemove = ['_next', 'api'];
+
+    files.forEach(file => {
+        const filePath = path.join(OUTPUT_DIR, file);
+        const stat = fs.statSync(filePath);
+
+        // Move system files
+        if (systemFiles.includes(file)) {
+            const destPath = path.join(SYSTEM_DIR, file);
+            // If we didn't process these files (like 404), we might want to process them too?
+            // For now, just move them.
+            fs.renameSync(filePath, destPath);
+            return;
+        }
+
+        // Remove directories
+        if (stat.isDirectory()) {
+            if (dirsToRemove.includes(file)) {
+                fs.rmSync(filePath, { recursive: true, force: true });
+            } else if (file === 'system') {
+                // Keep system dir
+            } else {
+                 // Check if it's a leftover folder from next export (should not happen with trailingSlash: false)
+                 // But if it is, and not in our whitelist, remove it?
+                 // User said "input与output一一对应", so only files matching input should remain.
+            }
+        }
+    });
+
     console.log('静态网页处理完成。');
 }
 
