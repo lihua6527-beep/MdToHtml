@@ -222,4 +222,18 @@
 - **Hook 接口一致性 (Hook Interface Consistency)**:
   - **规范**: 修改自定义 Hook (如 `useMarkdownInteraction`) 增加新功能时，必须同步更新其返回接口定义 (`interface MarkdownUpdater`)，避免 TypeScript 类型错误。
 
+# 24. 文档生命周期管理 (Document Lifecycle Management)
+- **版本管理原则**: 
+  - **严禁直接删除**: 任何旧版本的文档在被新版本替代时，**必须** 移动到 `docs/archive/` (或 `docs/归档/`) 目录下，并加上时间戳或版本号后缀 (e.g. `原文件名_v1.0_20231001.md`)。
+  - **保留历史**: 始终保留演进历史，以便追溯决策过程。
 
+# 25. 阶段性战略规划 (Strategic Phases)
+- **Phase 1: 标准化与表现力 (Standardization & Richness)**
+  - **目标**: 完成编辑器核心功能，实现“所见即所得”的卡片式排版；建立标准化的 CHD 协议输入。
+  - **当前状态**: **进行中 (Focus)**。
+  - **约束**: 在此阶段严禁引入复杂的 AI 模型或个性化推荐，专注于基础架构与渲染引擎的稳定性。
+- **Phase 2: 数据积累与小模型 (Data Accumulation & TinyModel)**
+  - **目标**: 积累用户交互数据 (User Actions)，训练轻量级模型 (TinyModel) 辅助排版。
+  - **触发条件**: Phase 1 及其配套的“合成数据生成器”成熟后。
+- **Phase 3: 个性化与智能生成 (Personalization & AIGC)**
+  - **目标**: 基于用户画像实现完全的个性化页面生成与内容填充。
