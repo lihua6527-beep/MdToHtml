@@ -13,7 +13,7 @@ import { Maximize2, Palette, MoreHorizontal, LayoutGrid, Type, ArrowLeft, ArrowR
 
 // --- Types ---
 
-type CardStyle = 'normal' | 'highlight' | 'stat' | 'quote' | 'warning' | 'code' | 'summary' | 'orange';
+type CardStyle = 'normal' | 'highlight' | 'stat' | 'quote' | 'code' | 'summary' | 'orange';
 type CardColor = 'default' | 'chart-1' | 'chart-2' | 'chart-3' | 'chart-4' | 'chart-5';
 
 interface CardProps {
@@ -42,7 +42,6 @@ const STYLE_LABELS: Record<CardStyle, string> = {
   highlight: '高亮',
   stat: '指标',
   quote: '引用',
-  warning: '警告',
   code: '代码',
   summary: '摘要',
   orange: '强调'
@@ -280,9 +279,6 @@ export const Card: React.FC<CardProps> = ({
     
     // Quote: Left accent, white background
     quote: "bg-white shadow-sm border-l-[4px] border-l-secondary text-text-secondary italic",
-    
-    // Warning: White background, red border
-    warning: "bg-white shadow-sm border border-red-200 text-accent",
     
     // Code: White background, monospace
     code: "bg-white shadow-inner text-text-secondary font-mono text-sm border border-gray-200",

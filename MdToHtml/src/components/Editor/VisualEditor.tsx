@@ -392,7 +392,6 @@ export const VisualEditor = () => {
                          <option value="stat">Stat</option>
                          <option value="highlight">Highlight</option>
                          <option value="quote">Quote</option>
-                         <option value="warning">Warning</option>
                          <option value="code">Code</option>
                      </select>
                  </div>

@@ -273,7 +273,7 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                     </button>
 
                     {showScoreDetails && (
-                        <div className="absolute top-full right-0 mt-2 w-80 bg-bg-card border border-border-soft rounded-xl shadow-lg p-4 z-50 animate-in fade-in slide-in-from-top-2">
+                        <div className="absolute top-full left-0 mt-2 w-80 bg-bg-card border border-border-soft rounded-xl shadow-lg p-4 z-50 animate-in fade-in slide-in-from-top-2">
                             <div className="flex justify-between items-center mb-3">
                                 <h4 className="font-bold text-sm text-text-primary">评分详情</h4>
                                 <button onClick={() => setShowScoreDetails(false)} className="text-text-muted hover:text-text-primary">
