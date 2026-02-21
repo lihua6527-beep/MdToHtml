@@ -47,12 +47,20 @@ try {
     // The original script was: next build && xcopy ... && node scripts/organize_output.js
     // So we should run organize_output.js here or call it from package.json
     
-    // Check if generate_portable_output.js exists
-    const portableScript = path.join(__dirname, 'generate_portable_output.js');
-    if (fs.existsSync(portableScript)) {
-        console.log('Running generate_portable_output.js...');
-        require('./generate_portable_output.js');
+    // Check if process_single_file.js exists
+    const singleFileScript = path.join(__dirname, 'process_single_file.js');
+    if (fs.existsSync(singleFileScript)) {
+        console.log('Running process_single_file.js...');
+        require('./process_single_file.js');
     }
+    
+    // Check if generate_portable_output.js exists
+    // Note: process_single_file.js now handles the renaming and cleaning, so we might not need this anymore
+    // But for safety, we can leave it or disable it if it conflicts.
+    // Given the user wants "Single File Export", process_single_file.js is the new logic.
+    // generate_portable_output.js was doing the renaming and .txt cleaning.
+    // process_single_file.js does renaming, .txt cleaning, AND content injection.
+    // So we should strictly prefer process_single_file.js and maybe skip generate_portable_output.js if the former ran.
     
 } catch (err) {
     console.error('Post-build script failed:', err);
