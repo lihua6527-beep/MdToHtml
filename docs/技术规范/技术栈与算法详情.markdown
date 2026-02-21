@@ -73,18 +73,22 @@
 2.  **严格匹配**: 只有以 `###` 开头的节点才被视为有效卡片。
 3.  **尾部修剪**: 自动去除每个卡片内容末尾的 `---` 分隔符。
 
-### 2.3 静态资源自动化巡检 (Static Asset Automated Inspection)
-**位置**: `scripts/verify-static-build.js`
+### 2.3 静态资源自动化巡检与单文件导出 (Static Asset Inspection & Single-File Export)
+**位置**: `scripts/process_single_file.js` & `/api/save-export`
 
-为了在预发布阶段拦截渲染错误，系统引入了轻量级自动化巡检机制：
+为了确保输出产物的独立性与渲染一致性，系统采用了**双重导出策略**：
 
-1.  **静态生成**: 触发 `next build` 将 Markdown 编译为静态 HTML (`out/slug/index.html`)。
-2.  **DOM 解析**: 使用 `Cheerio` 加载生成的 HTML 文件，模拟浏览器 DOM 树。
-3.  **断言策略**:
-    *   **存在性**: 检查文件是否存在。
-    *   **内容非空**: 验证 `body` 内容长度。
-    *   **错误关键词**: 扫描是否包含 "Application Error" 或 "Minified React error" 等运行时错误标记。
-4.  **优势**: 相比 Headless Browser，此方案无需下载 Chromium，执行速度快，且能精准定位静态生成阶段的逻辑错误。
+1.  **单文件结构 (Single-File Structure)**: 
+    *   配置 `trailingSlash: false`，使 Next.js 生成 `slug.html` 而非 `slug/index.html`。
+    *   **同步导出 (Sync Export)**: 编辑器端的“导出 HTML”按钮会触发客户端渲染，抓取当前完美的 DOM/CSS 状态，生成内联样式的 HTML，并通过 `/api/save-export` 接口同步保存到 `output/` 目录。这确保了静态产物与编辑器预览的**像素级一致 (Pixel-perfect)**。
+
+2.  **目录治理 (Directory Governance)**:
+    *   **系统归档**: 自动将 `index.html`, `404.html` 等非内容页面移动到 `output/system/`。
+    *   **中文解码**: 自动将 URL 编码的文件名重命名为可读中文。
+    *   **依赖清理**: 删除 `_next` 等外部依赖目录，确保 HTML 文件的自包含性。
+
+3.  **自动化巡检 (Legacy)**:
+    *   (已废弃/降级) `verify-static-build.js` 曾用于检查 `next build` 产物，现主要依赖上述同步导出机制保证质量。
 
 ---
 
