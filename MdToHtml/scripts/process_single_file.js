@@ -6,7 +6,7 @@ const ReactDOMServer = require('react-dom/server');
 
 // Next.js build output directory
 const NEXT_BUILD_DIR = path.join(__dirname, '../.next');
-const OUTPUT_DIR = path.join(__dirname, '../output');
+const OUTPUT_DIR = path.join(__dirname, '../../output');
 const POSTS_DIR = path.join(__dirname, '../posts');
 
 // Ensure output directory exists
@@ -278,9 +278,14 @@ async function processFiles() {
         // Move system files
         if (systemFiles.includes(file)) {
             const destPath = path.join(SYSTEM_DIR, file);
-            // If we didn't process these files (like 404), we might want to process them too?
-            // For now, just move them.
+            if (fs.existsSync(destPath)) fs.unlinkSync(destPath);
             fs.renameSync(filePath, destPath);
+            return;
+        }
+
+        // Remove .txt files
+        if (file.endsWith('.txt')) {
+            fs.unlinkSync(filePath);
             return;
         }
 
@@ -288,12 +293,6 @@ async function processFiles() {
         if (stat.isDirectory()) {
             if (dirsToRemove.includes(file)) {
                 fs.rmSync(filePath, { recursive: true, force: true });
-            } else if (file === 'system') {
-                // Keep system dir
-            } else {
-                 // Check if it's a leftover folder from next export (should not happen with trailingSlash: false)
-                 // But if it is, and not in our whitelist, remove it?
-                 // User said "input与output一一对应", so only files matching input should remain.
             }
         }
     });

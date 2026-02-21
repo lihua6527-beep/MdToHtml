@@ -213,6 +213,23 @@ export default function EditorPage() {
                     try {
                         const title = currentFilename.replace(/\.md$/i, '') || 'Untitled';
                         const blob = await HtmlBundler.bundle(content, title, theme);
+                        
+                        // Sync to output directory
+                        try {
+                            const htmlContent = await blob.text();
+                            await fetch('/api/save-export', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    filename: `${title}.html`,
+                                    content: htmlContent
+                                })
+                            });
+                            console.log('Export synced to output directory');
+                        } catch (saveErr) {
+                            console.error('Failed to sync export to output:', saveErr);
+                        }
+
                         const url = URL.createObjectURL(blob);
                         
                         const a = document.createElement('a');
