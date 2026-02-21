@@ -41,6 +41,10 @@ ENV/
 env.bak/
 venv.bak/
 
+# User Content
+input/
+MdToHtml/input/
+
 # Dependencies
 node_modules/
 build/
