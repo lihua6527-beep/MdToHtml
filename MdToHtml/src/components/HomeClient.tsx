@@ -2,7 +2,9 @@
 
 import React, { useState, useCallback } from 'react';
 import { DocumentList } from '@/components/DocumentList';
-import { Upload, FileText, CheckCircle2 } from 'lucide-react';
+import { Upload, FileText, CheckCircle2, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { PathSettingsPanel } from '@/components/PathSettingsPanel';
 
 interface Post {
   slug: string;
@@ -18,6 +20,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -122,6 +125,16 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
                <h1 className="text-3xl font-bold text-text-primary mb-2">欢迎使用 CHD Renderer</h1>
                <p className="text-text-secondary">请从左侧选择文档进行预览。</p>
              </div>
+             
+             <Button
+                variant="ghost"
+                size="icon"
+                className="text-text-secondary hover:text-primary"
+                onClick={() => setShowSettings(true)}
+                title="环境配置与路径"
+            >
+                <Settings className="w-5 h-5" />
+            </Button>
           </header>
           
           {/* Empty State / Drop Target */}
@@ -146,6 +159,9 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
           </div>
         </div>
       </div>
+      
+      {/* Settings Panel */}
+      <PathSettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
     </div>
   );
 };

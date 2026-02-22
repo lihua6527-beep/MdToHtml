@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import PathManager from '@/lib/path-manager';
 
 export async function POST(request: NextRequest) {
   console.log('API /api/save-session hit');
@@ -18,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Ensure data directory exists
-    const dataRoot = path.join(process.cwd(), '../data');
+    const dataRoot = PathManager.getDataPath();
     console.log('Data root:', dataRoot);
     
     if (!fs.existsSync(dataRoot)) {

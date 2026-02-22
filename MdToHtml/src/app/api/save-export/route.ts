@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import PathManager from '@/lib/path-manager';
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,8 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 确保 output 目录存在
-    // process.cwd() 通常是 MdToHtml 目录，output 在上一级
-    const outputDir = path.join(process.cwd(), '../output');
+    const outputDir = PathManager.getOutputPath();
     
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });

@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import PathManager from '@/lib/path-manager';
 
 export async function GET() {
   try {
-    const inputDir = path.join(process.cwd(), '../input');
+    const inputDir = PathManager.getInputPath();
+    console.log('[API/Files] Scanning input directory:', inputDir);
     
     if (!fs.existsSync(inputDir)) {
+      console.warn('[API/Files] Input directory does not exist:', inputDir);
       return NextResponse.json({ files: [] });
     }
 

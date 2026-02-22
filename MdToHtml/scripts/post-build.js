@@ -1,8 +1,26 @@
 const fs = require('fs');
 const path = require('path');
 
+// Try to load config.json
+let outputPath = null;
+try {
+    const configPath = path.join(__dirname, '../config.json');
+    if (fs.existsSync(configPath)) {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        if (config.outputPath) {
+            outputPath = path.isAbsolute(config.outputPath) 
+                ? config.outputPath 
+                : path.join(__dirname, '..', config.outputPath);
+        }
+    }
+} catch (e) {
+    console.warn('Failed to load config.json in post-build:', e.message);
+}
+
 const SOURCE = path.join(__dirname, '../out');
-const DEST = path.join(__dirname, '../../output');
+// Default DEST is ../../output (relative to scripts/../ -> MdToHtml/../ -> Project Root/output)
+// If config.json defines outputPath, use it.
+const DEST = outputPath || path.join(__dirname, '../../output');
 
 function copyRecursiveSync(src, dest) {
     const exists = fs.existsSync(src);

@@ -4,9 +4,25 @@ const { JSDOM } = require('jsdom');
 const React = require('react');
 const ReactDOMServer = require('react-dom/server');
 
+// Try to load config.json
+let outputDirConfig = null;
+try {
+    const configPath = path.join(__dirname, '../config.json');
+    if (fs.existsSync(configPath)) {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        if (config.outputPath) {
+            outputDirConfig = path.isAbsolute(config.outputPath) 
+                ? config.outputPath 
+                : path.join(__dirname, '..', config.outputPath);
+        }
+    }
+} catch (e) {
+    console.warn('Failed to load config.json in process_single_file:', e.message);
+}
+
 // Next.js build output directory
 const NEXT_BUILD_DIR = path.join(__dirname, '../.next');
-const OUTPUT_DIR = path.join(__dirname, '../../output');
+const OUTPUT_DIR = outputDirConfig || path.join(__dirname, '../../output');
 const POSTS_DIR = path.join(__dirname, '../posts');
 
 // Ensure output directory exists

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import PathManager from '@/lib/path-manager';
 
 export async function POST(request: Request) {
   try {
@@ -29,7 +30,7 @@ export async function POST(request: Request) {
         }
     }
 
-    const postsDir = path.join(process.cwd(), '../input');
+    const postsDir = PathManager.getInputPath();
     
     // Ensure input directory exists
     if (!fs.existsSync(postsDir)) {

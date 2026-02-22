@@ -392,7 +392,7 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
 
             {/* Export Button (Top Bar) */}
             <Button 
-                variant="ghost" 
+                variant="outline" 
                 size="sm"
                 className="gap-2 text-text-secondary hover:text-primary mr-2"
                 onClick={async () => {

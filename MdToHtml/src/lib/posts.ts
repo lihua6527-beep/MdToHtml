@@ -1,10 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
+import PathManager from '@/lib/path-manager';
 
 // Use absolute path to ensure reliability across environments
-// Assuming 'input' is at the project root level, same as 'MdToHtml'
-const postsDirectory = path.join(process.cwd(), '../input');
+const postsDirectory = PathManager.getInputPath();
 
 export function getPostSlugs() {
   if (!fs.existsSync(postsDirectory)) {

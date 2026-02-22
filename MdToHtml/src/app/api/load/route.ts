@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import PathManager from '@/lib/path-manager';
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const inputDir = path.join(process.cwd(), '../input');
+    const inputDir = PathManager.getInputPath();
     const filePath = path.join(inputDir, filename);
 
     if (!fs.existsSync(filePath)) {
