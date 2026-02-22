@@ -67,3 +67,15 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Electron Build Artifacts
+dist/
+dist_build/
+dist_build_v2/
+release/
+release_v2/
+MdToHtml/dist/
+MdToHtml/dist_build/
+MdToHtml/dist_build_v2/
+MdToHtml/release/
+MdToHtml/release_v2/

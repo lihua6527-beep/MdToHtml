@@ -43,7 +43,16 @@
 
 ## 2. 技术栈 (Tech Stack)
 
-### 2.1 前端渲染引擎 (Frontend Rendering Engine)
+### 2.1 桌面端混合架构 (Desktop Hybrid Architecture) - [New]
+- **Core**: Electron (Main Process) + Next.js (Renderer Process)
+- **Server**: Express.js (Running in Main Process)
+  - 替代 Next.js API Routes，提供文件系统读写能力。
+  - 通过 `get-port` 自动扫描可用端口。
+- **Packaging**: electron-builder
+  - 支持 Windows (NSIS) 打包。
+  - 实现了 "便携优先 > 配置覆盖 > 文档兜底" 的路径管理策略 (`PathManager`)。
+
+### 2.2 前端渲染引擎 (Frontend Rendering Engine)
 - **Framework**: [Next.js 14 (App Router)](https://nextjs.org/) - 提供服务端渲染 (SSR) 和静态生成 (SSG) 能力，确保文档加载速度和 SEO。
 - **Core Library**: [React 18](https://react.dev/) - 利用 Server Components 与 Client Components 的混合架构，分离静态内容与动态交互。
 - **Styling**: 
