@@ -1,4 +1,8 @@
-# P2_工程-桌面端打包与部署计划
+# P2_工程-桌面端打包与部署计划 (Status: Completed/Archived)
+
+> **Status**: **Completed** (Release v2 Released)
+> **Date**: 2026-02-23
+> **Outcome**: Successfully packaged Windows EXE with path selection and desktop export capabilities.
 
 ## 1. 目标与定位 (Goal & Positioning)
 本计划旨在将 MdToHtml Pro 项目打包为可分发的 Windows 桌面应用程序。

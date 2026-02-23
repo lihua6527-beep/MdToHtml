@@ -1,4 +1,8 @@
-# P1_功能-单文件导出完善计划
+# P1_功能-单文件导出完善计划 (Status: Completed/Archived)
+
+> **Status**: **Completed**
+> **Date**: 2026-02-23
+> **Outcome**: Single file export feature is fully implemented and verified.
 
 ## 1. 背景
 基于 `单文件导出方案与编辑期一体化分析.md`，目前已完成部分组件开发，需进一步完善资源内联与下载流程。

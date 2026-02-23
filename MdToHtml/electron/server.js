@@ -322,6 +322,59 @@ app.post('/api/save-session', (req, res) => {
   }
 });
 
+// POST /api/history (Undo/Redo State Persistence)
+app.post('/api/history', (req, res) => {
+  try {
+    const { sessionId, history } = req.body;
+    if (!sessionId || !history) {
+      return res.status(400).json({ error: 'SessionId and history are required' });
+    }
+
+    // Use a temp directory for history to avoid cluttering the user's workspace
+    // But for simplicity in this file-based system, let's use a hidden .history folder in the input dir
+    // or the system temp dir. User asked for "temporary JSON file".
+    // Let's use os.tmpdir() + /MdToHtml/history
+    const os = require('os');
+    const tempDir = path.join(os.tmpdir(), 'MdToHtml', 'history');
+    
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+
+    const filePath = path.join(tempDir, `${sessionId}.json`);
+    fs.writeFileSync(filePath, JSON.stringify(history), 'utf8');
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error saving history:', error);
+    res.status(500).json({ error: 'Failed to save history' });
+  }
+});
+
+// GET /api/history
+app.get('/api/history', (req, res) => {
+  try {
+    const { sessionId } = req.query;
+    if (!sessionId) {
+      return res.status(400).json({ error: 'SessionId is required' });
+    }
+
+    const os = require('os');
+    const tempDir = path.join(os.tmpdir(), 'MdToHtml', 'history');
+    const filePath = path.join(tempDir, `${sessionId}.json`);
+
+    if (fs.existsSync(filePath)) {
+      const history = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+      res.json({ history });
+    } else {
+      res.json({ history: null });
+    }
+  } catch (error) {
+    console.error('Error loading history:', error);
+    res.status(500).json({ error: 'Failed to load history' });
+  }
+});
+
 // Fallback to index.html for SPA routing (if using dynamic routes, but static export usually has .html files)
 // Since we use static export, dynamic routes like [slug] become [slug].html if generated, 
 // OR we might need to rely on client-side routing if we export index.html and handle it there.

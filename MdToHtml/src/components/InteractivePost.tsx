@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronLeft, Edit, Save, Eye, Layout, ArrowLeft, CheckCircle, AlertTriangle, X, Download } from 'lucide-react';
 import { CHDRenderer } from '@/components/CHD/CHDRenderer';
 import { useMarkdownInteraction } from '@/hooks/useMarkdownInteraction';
+import { useHistory } from '@/hooks/useHistory';
 import { Button } from '@/components/ui/button';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { parseCHDBlocks } from '@/lib/chdParser';
@@ -23,10 +24,21 @@ interface InteractivePostProps {
 
 const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug, decodedSlug }) => {
   const { theme } = useTheme();
-  const [content, setContent] = useState(initialContent);
+  // Use useHistory for state management instead of simple useState
+  const { 
+    state: content, 
+    pushState: setContent, 
+    undo, 
+    redo, 
+    canUndo, 
+    canRedo 
+  } = useHistory(initialContent, { sessionId: decodedSlug });
+  
   const [isEditing, setIsEditing] = useState(false);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
-  const { updateAttribute, updateContent, updateTitle, updateFrontmatter, moveCard, deleteCard, addCard, undo, canUndo, operationLog, batchUpdateAttributes } = useMarkdownInteraction(content, setContent);
+  
+  // Note: We use useHistory's undo/redo, so we ignore the ones from useMarkdownInteraction
+  const { updateAttribute, updateContent, updateTitle, updateFrontmatter, moveCard, deleteCard, addCard, operationLog, batchUpdateAttributes } = useMarkdownInteraction(content, setContent);
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   
@@ -110,6 +122,25 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
         setSelectedBlockIndex(null);
     }
   }, [isEditing]);
+
+  // Keyboard Shortcuts for Undo/Redo
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        undo();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isEditing, undo, redo]);
 
   const router = useRouter();
 
@@ -364,18 +395,30 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                   </div>
               )}
 
-              {/* Undo Button - Top Left Area */}
+              {/* Undo/Redo Group */}
               {isEditing && (
+                <div className="flex items-center gap-1">
                   <Button
                     onClick={undo}
                     disabled={!canUndo}
                     variant="ghost"
                     size="sm"
                     className="gap-2 text-text-secondary hover:text-primary disabled:opacity-30"
-                    title="撤销 (Undo)"
+                    title="撤销 (Ctrl+Z)"
                   >
-                    <ArrowLeft className="w-4 h-4" /> 撤销
+                    <ArrowLeft className="w-4 h-4" />
                   </Button>
+                  <Button
+                    onClick={redo}
+                    disabled={!canRedo}
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 text-text-secondary hover:text-primary disabled:opacity-30"
+                    title="重做 (Ctrl+Y)"
+                  >
+                    <ArrowLeft className="w-4 h-4 rotate-180" />
+                  </Button>
+                </div>
               )}
           </div>
           
