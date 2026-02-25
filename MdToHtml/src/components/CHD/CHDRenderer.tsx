@@ -16,7 +16,9 @@ export interface CHDRendererProps {
   onError?: (error: string) => void;
   editMode?: boolean;
   selectedBlockIndex?: number | null;
+  activeSectionBlockIndex?: number; // Added for robust section selection
   onSelectBlock?: (index: number | null) => void;
+  onSelectSection?: (index: number, title: string, layoutProps: Record<string, any>) => void; // Enhanced handler
   onCardUpdate?: (lineIndex: number, newAttrs: Record<string, any>) => void;
   onBatchCardUpdate?: (updates: Array<{blockIndex: number, key: string, value: any}>) => void;
   onContentUpdate?: (lineIndex: number, newContent: string) => void;
@@ -39,7 +41,9 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
   onError, 
   editMode = false, 
   selectedBlockIndex,
+  activeSectionBlockIndex,
   onSelectBlock,
+  onSelectSection,
   onCardUpdate,
   onBatchCardUpdate,
   onContentUpdate,
@@ -85,7 +89,8 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
                     title,
                     layoutProps,
                     cards: [],
-                    blockIndex: index
+                    blockIndex: index,
+                    startLine: block.startLine // Pass startLine for click-to-select
                 };
             } else if (block.type === 'card' || block.type === 'code') {
                 if (!currentSection) {
@@ -126,8 +131,17 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
 
                     cleanContent = cleanBody.replace(/\n\s*---\s*$/, ''); 
                     
+                    // [Protocol Resolution 2026-02-24]
+                    // Enforce Section-Level Consistency: All cards in a section MUST inherit style/color from the section.
+                    // This overrides any individual card settings to reduce AI dimensionality.
                     if (currentSection.layoutProps['card-style']) {
                         cardProps['card-style'] = currentSection.layoutProps['card-style'];
+                    }
+                    if (currentSection.layoutProps['section-color']) {
+                        // Map section-color to card-color
+                        cardProps['card-color'] = currentSection.layoutProps['section-color'];
+                        // Also ensure 'color' prop is set for compatibility
+                        cardProps['color'] = currentSection.layoutProps['section-color'];
                     }
                 }
 
@@ -354,7 +368,9 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
             onCardClick={onCardClick}
             editMode={editMode}
             selectedBlockIndex={selectedBlockIndex}
+            activeSectionBlockIndex={activeSectionBlockIndex}
             onSelectBlock={onSelectBlock}
+            onSelectSection={onSelectSection}
             onCardUpdate={onCardUpdate}
             onBatchCardUpdate={onBatchCardUpdate}
             onContentUpdate={onContentUpdate}

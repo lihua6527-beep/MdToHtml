@@ -1,0 +1,18 @@
+
+### 2.5 自动保存机制 (Auto-Save Mechanism)
+- **文件**: `src/components/InteractivePost.tsx`
+- **逻辑**:
+  - **防抖 (Debounce)**: 使用 `setTimeout` 实现 5 秒延迟保存。
+  - **状态同步**: 监听 `content` 和 `isEditing` 状态变化。
+  - **静默保存**: `saveFile(true)` 参数控制是否弹出提示框。
+- **优势**: 
+  - 减少服务器请求频率。
+  - 提升用户体验，避免频繁打断。
+  - 确保数据实时持久化，防止意外丢失。
+
+### 2.6 属性解析器优化 (Attribute Parser Optimization)
+- **文件**: `src/lib/attributeParser.ts`
+- **逻辑**:
+  - **正则表达式更新**: `const regex = /\{([^}]*)\}?$/;`
+  - **支持未闭合属性**: 允许在输入过程中解析以 `{` 开头但未闭合的属性字符串。
+  - **防止乱码**: 在渲染标题时，通过 `cleanText` 过滤掉未闭合的属性字符串，确保标题显示整洁。

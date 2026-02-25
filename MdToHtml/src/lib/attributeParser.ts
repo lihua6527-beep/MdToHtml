@@ -1,5 +1,7 @@
 export const parseAttributes = (text: string) => {
-  const regex = /\{([^}]+)\}/;
+  // Regex to match {key=value} pattern
+  // Support both closed {} and unclosed { at the end of line (for active typing)
+  const regex = /\{([^}]*)\}?$/;
   const match = text.match(regex);
   const props: Record<string, string> = {};
   

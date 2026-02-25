@@ -119,16 +119,16 @@ export class RuleBasedScorer {
              const styleMatch = line.match(/card-style=["']([^"']+)["']/);
              if (styleMatch) {
                  const style = styleMatch[1];
-                 const validStyles = ['normal', 'highlight', 'stat', 'quote', 'code', 'summary', 'orange'];
-                 if (!validStyles.includes(style)) {
-                     score -= 5;
-                     issues.push({
-                         line: lineNum,
-                         type: 'styling_invalid_card_style',
-                         message: `不支持的 card-style: "${style}"。有效值: ${validStyles.join(', ')}。`,
-                         severity: 'warning'
-                     });
-                 }
+                 const validStyles = ['normal', 'highlight', 'quote', 'code'];
+                if (!validStyles.includes(style)) {
+                    score -= 5;
+                    issues.push({
+                        line: lineNum,
+                        type: 'styling_invalid_card_style',
+                        message: `不支持的 card-style: "${style}"。有效值: ${validStyles.join(', ')}。`,
+                        severity: 'warning'
+                    });
+                }
                  
                  // Stat card constraint
                  if (style === 'stat') {

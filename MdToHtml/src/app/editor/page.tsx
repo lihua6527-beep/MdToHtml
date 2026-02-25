@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { INITIAL_CONTENT } from '@/components/Editor/MarkdownEditor';
 import { CodeMirrorEditor, CodeMirrorEditorHandle } from '@/components/Editor/CodeMirrorEditor';
 import { GlobalErrorBoundary } from '@/components/GlobalErrorBoundary';
@@ -16,9 +16,13 @@ import { CHDRenderer } from '@/components/CHD/CHDRenderer';
 import { ThemeScope } from '@/components/ThemeScope';
 import { useMarkdownInteraction } from '@/hooks/useMarkdownInteraction';
 import { HtmlBundler } from '@/lib/export/HtmlBundler';
+import { BottomToolbar, CardStyle } from '@/components/CHD/BottomToolbar';
+import { AVAILABLE_THEMES } from '@/lib/themes';
+import { parseAttributes } from '@/lib/attributeParser';
+import { CardShape } from '@/lib/shapes';
 
 export default function EditorPage() {
-  const { theme } = useTheme();
+  const { theme, setTheme } = useTheme();
   
   // Editor State
   const [content, setContent] = useState<string>('');
@@ -29,10 +33,140 @@ export default function EditorPage() {
   // Track last saved content for diff logging
   const [lastSavedContent, setLastSavedContent] = useState<string>('');
   
+  // Selection State for BottomToolbar
+  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
+  const [selectedSectionTitle, setSelectedSectionTitle] = useState<string | null>(null);
+  const [activeSectionProps, setActiveSectionProps] = useState<{
+      layout: string;
+      color: string;
+      columns: number;
+      titleSpacing: string;
+      blockIndex: number;
+  }>({ layout: 'grid', color: 'default', columns: 2, titleSpacing: '2', blockIndex: -1 });
+
+  const [activeCardProps, setActiveCardProps] = useState<{
+      shape: CardShape;
+      style: CardStyle;
+      badge: string;
+  }>({ shape: 'rect', style: 'normal', badge: '' });
+
   // Interaction Hook
-  const { updateAttribute, updateContent, moveCard, batchUpdateAttributes } = useMarkdownInteraction(content, setContent);
+  const { updateAttribute, updateContent, updateTitle, moveCard, batchUpdateAttributes, addCard, deleteCard } = useMarkdownInteraction(content, setContent);
   
-  // Drag & Drop State
+  useEffect(() => {
+      if (!content) return;
+      // We wrap this in a try-catch to avoid parsing errors blocking the UI
+      try {
+        const blocks = parseCHDBlocks(content);
+        
+        // Find block containing activeLine
+        const currentBlock = blocks.find(b => activeLine >= b.startLine && activeLine <= b.endLine);
+        
+        // [Architecture Fix: Inertia Selection]
+        // 1. If activeLine is inside the currently selected card, do nothing (preserve selection).
+        if (selectedBlockIndex !== null) {
+            const currentSelectedCard = blocks[selectedBlockIndex];
+            if (currentSelectedCard && activeLine >= currentSelectedCard.startLine && activeLine <= currentSelectedCard.endLine) {
+                return;
+            }
+        }
+        
+        // 2. If activeLine is inside the currently selected section HEADER, do nothing.
+        // But what if activeLine is in the "gap" after the header?
+        // We want to KEEP the section selected if we are in the gap.
+        // So we should only CHANGE selection if we hit a NEW block.
+        
+        if (currentBlock) {
+             // We hit a known block. Is it different from current selection?
+             
+             if (currentBlock.type === 'card' || currentBlock.type === 'code') {
+                 // Switch to Card Selection
+                 const idx = blocks.indexOf(currentBlock);
+                 if (idx !== selectedBlockIndex) {
+                    console.log('[Selection Update] Switching to Card:', idx);
+                    // ... (update logic)
+                    setSelectedBlockIndex(idx);
+                    // Extract Card Props...
+                    const lines = content.split('\n');
+                    const titleLine = lines[currentBlock.startLine];
+                    const { props } = parseAttributes(titleLine.replace(/^(#+)\s+/, ''));
+                    setActiveCardProps({
+                        shape: (props.shape as CardShape) || 'rect',
+                        style: (props['card-style'] as CardStyle) || 'normal',
+                        badge: props.badge || ''
+                    });
+                    // Find parent section...
+                    let sectionBlock = null;
+                    let sectionIdx = -1;
+                    for (let i = idx - 1; i >= 0; i--) {
+                        if (blocks[i].type === 'section') {
+                            sectionBlock = blocks[i];
+                            sectionIdx = i;
+                            break;
+                        }
+                    }
+                    if (sectionBlock) {
+                        const { cleanText, props: sProps } = parseAttributes(sectionBlock.title);
+                        setSelectedSectionTitle(cleanText);
+                        setActiveSectionProps({
+                            layout: sProps.layout || 'grid',
+                            color: sProps['section-color'] || 'default',
+                            columns: parseInt(sProps.columns || sProps.cols || '2'),
+                            titleSpacing: sProps['title-spacing'] || '2',
+                            blockIndex: sectionIdx
+                        });
+                    } else {
+                         setSelectedSectionTitle('Overview');
+                         setActiveSectionProps({ layout: 'grid', color: 'default', columns: 2, titleSpacing: '2', blockIndex: -1 });
+                    }
+                 }
+             } else if (currentBlock.type === 'section') {
+                 // Switch to Section Selection
+                 const idx = blocks.indexOf(currentBlock);
+                 if (idx !== activeSectionProps.blockIndex || selectedBlockIndex !== null) {
+                    console.log('[Selection Update] Switching to Section:', idx);
+                    setSelectedBlockIndex(null); // No card selected
+                    const { cleanText, props: sProps } = parseAttributes(currentBlock.title);
+                              const titleToSet = cleanText || currentBlock.title.replace(/\{.*?\}/g, '').trim() || '未命名分区';
+                              setSelectedSectionTitle(titleToSet);
+                    setActiveSectionProps({
+                        layout: sProps.layout || 'grid',
+                        color: sProps['section-color'] || 'default',
+                        columns: parseInt(sProps.columns || sProps.cols || '2'),
+                        titleSpacing: sProps['title-spacing'] || '2',
+                        blockIndex: idx
+                    });
+                    setActiveCardProps({ shape: 'rect', style: 'normal', badge: '' });
+                 }
+             }
+        } else {
+            // activeLine is in a gap (no block).
+            // Do we clear selection?
+            // NO. This is the key fix. If we are in a gap, we KEEP the previous selection.
+            // This allows clicking "empty space" in a section without deselecting the section.
+            console.log('[Selection Update] In gap - preserving selection');
+        }
+      } catch (e) {
+           console.warn('Selection update failed', e);
+       }
+   }, [activeLine, content, selectedBlockIndex, activeSectionProps.blockIndex]);
+  
+  // Ensure state consistency when blockIndex changes
+  useEffect(() => {
+      // If we have a valid section selection, ensure selectedSectionTitle is synced
+      if (activeSectionProps.blockIndex !== -1 && selectedBlockIndex === null) {
+           const blocks = parseCHDBlocks(content);
+           const sectionBlock = blocks[activeSectionProps.blockIndex];
+           if (sectionBlock && sectionBlock.type === 'section') {
+               const { cleanText } = parseAttributes(sectionBlock.title);
+               const titleToSet = cleanText || sectionBlock.title.replace(/\{.*?\}/g, '').trim() || '未命名分区';
+               if (selectedSectionTitle !== titleToSet) {
+                   console.log('[Sync] Updating Section Title:', titleToSet);
+                   setSelectedSectionTitle(titleToSet);
+               }
+           }
+      }
+  }, [activeSectionProps.blockIndex, selectedBlockIndex, content]);
   const [isDragging, setIsDragging] = useState(false);
   // Export State
   const [isExporting, setIsExporting] = useState(false);
@@ -61,6 +195,68 @@ export default function EditorPage() {
     }, 30000);
     return () => clearInterval(interval);
   }, [content, isMounted]);
+
+  // Extract Sections for BottomToolbar Dropdown (Matching CHDRenderer Logic)
+  const sections = useMemo(() => {
+      try {
+          // If content is empty/loading, return empty array immediately
+          if (!content) return [];
+
+          const blocks = parseCHDBlocks(content);
+          const result: Array<{ title: string, blockIndex: number }> = [];
+
+          blocks.forEach((block, index) => {
+              if (block.type === 'section') {
+                  result.push({
+                      title: block.title,
+                      blockIndex: index
+                  });
+              }
+          });
+          
+          // Debug Log: Only log if sections found or if explicitly checking
+          if (result.length > 0) {
+             console.log('[EditorPage] Parsed Sections:', result.length);
+          } else {
+             console.warn('[EditorPage] No sections found in content length:', content.length);
+          }
+          
+          return result;
+      } catch (e) {
+          console.error('[EditorPage] Section parsing failed:', e);
+          return [];
+      }
+  }, [content]);
+
+  // Handle Section Selection from Toolbar (Fallback)
+  const handleToolbarSectionSelect = (blockIndex: number) => {
+      try {
+          const blocks = parseCHDBlocks(content);
+          const sectionBlock = blocks[blockIndex];
+          if (sectionBlock && sectionBlock.type === 'section') {
+              const { cleanText, props: sProps } = parseAttributes(sectionBlock.title);
+              
+              console.log('[EditorPage] Toolbar Selection:', cleanText);
+              
+              setSelectedSectionTitle(cleanText || '未命名分区');
+              setActiveSectionProps({
+                  layout: sProps.layout || 'grid',
+                  color: sProps['section-color'] || 'default',
+                  columns: parseInt(sProps.columns || sProps.cols || '2'),
+                  titleSpacing: sProps['title-spacing'] || '2',
+                  blockIndex: blockIndex
+              });
+              
+              setSelectedBlockIndex(null);
+              setActiveCardProps({ shape: 'rect', style: 'normal', badge: '' });
+              
+              // Sync cursor
+              setActiveLine(sectionBlock.startLine);
+          }
+      } catch (e) {
+          console.error('Toolbar selection failed', e);
+      }
+  };
 
   // Drag & Drop Handlers
   const handleDragEnter = (e: React.DragEvent) => {
@@ -285,6 +481,14 @@ export default function EditorPage() {
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
        >
+          {/* Debug Overlay */}
+          <div className="fixed bottom-24 left-4 bg-black/80 text-white p-2 rounded text-xs z-50 pointer-events-none font-mono">
+              Line: {activeLine} <br/>
+              Block: {selectedBlockIndex ?? 'null'} <br/>
+              Section: {activeSectionProps.blockIndex ?? 'null'} <br/>
+              Title: {selectedSectionTitle}
+          </div>
+
           {/* Drag Overlay */}
           {isDragging && (
             <div 
@@ -351,19 +555,120 @@ export default function EditorPage() {
           </div>
 
           {/* Right: Preview Region */}
-          <div className="w-1/2 bg-bg-page overflow-y-auto transition-colors duration-300">
+          <div className="w-1/2 bg-bg-page overflow-y-auto transition-colors duration-300 pb-[180px]">
              <ThemeScope className="min-h-full p-8">
                 <CHDRenderer 
                   markdown={content} 
                   activeLine={activeLine}
                   onCardClick={(line) => {
+                    console.log('[EditorPage] onCardClick received line:', line);
                     setActiveLine(line);
+                    
+                    // Direct Selection Logic (Force selection update)
+                    try {
+                        const blocks = parseCHDBlocks(content);
+                        // Find block containing the clicked line
+                        const currentBlock = blocks.find(b => line >= b.startLine && line <= b.endLine);
+                        console.log('[EditorPage] Direct Selection - Found block:', currentBlock?.type, currentBlock?.id);
+
+                        if (currentBlock) {
+                            if (currentBlock.type === 'section') {
+                                setSelectedBlockIndex(null); // Deselect any card
+                                const { cleanText, props: sProps } = parseAttributes(currentBlock.title);
+                                console.log('[EditorPage] Selecting Section Title:', cleanText);
+                                setSelectedSectionTitle(cleanText);
+                                setActiveSectionProps({
+                                    layout: sProps.layout || 'grid',
+                                    color: sProps['section-color'] || 'default',
+                                    columns: parseInt(sProps.columns || sProps.cols || '2'),
+                                    titleSpacing: sProps['title-spacing'] || '2',
+                                    blockIndex: blocks.indexOf(currentBlock)
+                                });
+                                // Reset card props
+                                setActiveCardProps({ shape: 'rect', style: 'normal', badge: '' });
+                            } else if (currentBlock.type === 'card' || currentBlock.type === 'code') {
+                                // Find index
+                                const idx = blocks.indexOf(currentBlock);
+                                setSelectedBlockIndex(idx);
+                                // Parse props
+                                const lines = content.split('\n');
+                                const titleLine = lines[currentBlock.startLine];
+                                const { props } = parseAttributes(titleLine.replace(/^(#+)\s+/, ''));
+                                setActiveCardProps({
+                                    shape: (props.shape as CardShape) || 'rect',
+                                    style: (props['card-style'] as CardStyle) || 'normal',
+                                    badge: props.badge || ''
+                                });
+                                // Find parent section for context
+                                let sectionBlock = null;
+                                let sectionIdx = -1;
+                                for (let i = idx - 1; i >= 0; i--) {
+                                    if (blocks[i].type === 'section') {
+                                        sectionBlock = blocks[i];
+                                        sectionIdx = i;
+                                        break;
+                                    }
+                                }
+                                if (sectionBlock) {
+                                    const { cleanText, props: sProps } = parseAttributes(sectionBlock.title);
+                                    setSelectedSectionTitle(cleanText);
+                                    setActiveSectionProps({
+                                        layout: sProps.layout || 'grid',
+                                        color: sProps['section-color'] || 'default',
+                                        columns: parseInt(sProps.columns || sProps.cols || '2'),
+                                        titleSpacing: sProps['title-spacing'] || '2',
+                                        blockIndex: sectionIdx
+                                    });
+                                }
+                            }
+                        }
+                    } catch (e) {
+                        console.error('[EditorPage] Direct Selection Failed', e);
+                    }
+
                     // Also scroll editor to this line
                     if (editorRef.current) {
                       editorRef.current.scrollToLine(line);
                     }
                   }}
                   editMode={true}
+                  selectedBlockIndex={selectedBlockIndex}
+                  activeSectionBlockIndex={activeSectionProps.blockIndex}
+                  onSelectBlock={(index) => {
+                      setSelectedBlockIndex(index);
+                      // Optionally scroll to block
+                      // We need to map block index to line number if we want to scroll
+                  }}
+                  onSelectSection={(blockIndex, title, layoutProps) => {
+                      console.log('[EditorPage] Explicit Section Selection:', { blockIndex, title });
+                      
+                      // 1. Set Title Directly (Robust against parsing failures)
+                      setSelectedSectionTitle(title || '未命名分区');
+                      
+                      // 2. Set Props Directly (Robust against stale closures)
+                      setActiveSectionProps({
+                          layout: layoutProps.layout || 'grid',
+                          color: layoutProps['section-color'] || 'default',
+                          columns: parseInt(layoutProps.columns || layoutProps.cols || '2'),
+                          titleSpacing: layoutProps['title-spacing'] || '2',
+                          blockIndex: blockIndex
+                      });
+
+                      // 3. Clear Card Selection
+                      setSelectedBlockIndex(null); 
+                      setActiveCardProps({ shape: 'rect', style: 'normal', badge: '' });
+
+                      // 4. Sync Editor Cursor (Optional, for context)
+                      try {
+                          const blocks = parseCHDBlocks(content);
+                          const sectionBlock = blocks[blockIndex];
+                          if (sectionBlock) {
+                               setActiveLine(sectionBlock.startLine);
+                          }
+                      } catch (e) {
+                          console.warn('Failed to sync cursor to section', e);
+                      }
+                  }}
                   onCardUpdate={(idx, attrs) => {
                       Object.entries(attrs).forEach(([key, value]) => {
                           updateAttribute(idx, key, value);
@@ -371,13 +676,127 @@ export default function EditorPage() {
                   }}
                   onBatchCardUpdate={batchUpdateAttributes}
                   onContentUpdate={updateContent}
+                  onTitleUpdate={updateTitle}
                   onCardMove={moveCard}
+                  onCardDelete={deleteCard}
+                  onCardAdd={addCard}
                 />
              </ThemeScope>
           </div>
 
           {/* Floating Export Button Removed - Moved to Top Bar */}
        </div>
+
+    {/* Bottom Toolbar */}
+    <BottomToolbar
+         currentThemeIndex={AVAILABLE_THEMES.findIndex(t => t.id === theme) !== -1 ? AVAILABLE_THEMES.findIndex(t => t.id === theme) : 0}
+         onThemeChange={(index) => {
+             if (AVAILABLE_THEMES[index]) {
+                 setTheme(AVAILABLE_THEMES[index].id);
+             }
+         }}
+         selectedBlockIndex={selectedBlockIndex}
+         selectedSectionTitle={selectedSectionTitle}
+         sections={sections}
+         onSelectSection={handleToolbarSectionSelect}
+         
+         // Section Props
+         sectionLayout={activeSectionProps.layout}
+         onSectionLayoutChange={(layout) => {
+             if (activeSectionProps.blockIndex !== -1) {
+                 updateAttribute(activeSectionProps.blockIndex, 'layout', layout);
+             }
+         }}
+         sectionColor={activeSectionProps.color}
+         onSectionColorChange={(color) => {
+             if (activeSectionProps.blockIndex !== -1) {
+                 updateAttribute(activeSectionProps.blockIndex, 'section-color', color);
+             }
+         }}
+         sectionColumns={activeSectionProps.columns}
+         onSectionColumnsChange={(cols) => {
+             if (activeSectionProps.blockIndex !== -1) {
+                 updateAttribute(activeSectionProps.blockIndex, 'columns', cols.toString());
+             }
+         }}
+         sectionTitleSpacing={activeSectionProps.titleSpacing}
+         onSectionTitleSpacingChange={(spacing) => {
+             try {
+                 const blocks = parseCHDBlocks(content);
+                 const updates: Array<{blockIndex: number, key: string, value: any}> = [];
+                 
+                 // Apply spacing to ALL sections globally
+                 blocks.forEach((block, idx) => {
+                     if (block.type === 'section') {
+                         updates.push({
+                             blockIndex: idx,
+                             key: 'title-spacing',
+                             value: spacing
+                         });
+                     }
+                 });
+                 
+                 if (updates.length > 0) {
+                     console.log('[Global Spacing Update] Applying to', updates.length, 'sections');
+                     batchUpdateAttributes(updates);
+                 }
+                 
+                 // Update local state immediately for feedback
+                 setActiveSectionProps(prev => ({ ...prev, titleSpacing: spacing }));
+             } catch (e) {
+                 console.error('Failed to update global spacing', e);
+             }
+         }}
+         
+         // Card Props
+         cardShape={activeCardProps.shape}
+         onCardShapeChange={(shape) => {
+             if (selectedBlockIndex !== null) {
+                 updateAttribute(selectedBlockIndex, 'shape', shape);
+             }
+         }}
+         cardStyle={activeCardProps.style}
+         onCardStyleChange={(style) => {
+             if (selectedBlockIndex !== null) {
+                 updateAttribute(selectedBlockIndex, 'card-style', style);
+             }
+         }}
+         cardBadge={activeCardProps.badge}
+         onCardBadgeChange={(badge) => {
+             if (selectedBlockIndex !== null) {
+                 updateAttribute(selectedBlockIndex, 'badge', badge);
+             }
+         }}
+
+         // Actions
+         onCardAdd={() => {
+             // Add card to current section
+             // We need to find the section index. 
+             // If a card is selected, use its parent section.
+             // If a section is selected, use it.
+             if (selectedBlockIndex !== null) {
+                 // Card selected -> find parent section
+                 // We need to traverse back from selectedBlockIndex
+                 // But CHDRenderer handles onCardAdd with section index.
+                 // Here we just trigger add to current section.
+                 // Since we don't have easy access to blocks here without parsing again,
+                 // let's rely on CHDRenderer's onCardAdd or pass a generic "add" that handles it.
+                 // Actually BottomToolbar calls onCardAdd without args.
+                 // We should probably pass the section index if we know it.
+                 if (activeSectionProps.blockIndex !== -1) {
+                     addCard(activeSectionProps.blockIndex);
+                 }
+             } else if (activeSectionProps.blockIndex !== -1) {
+                 addCard(activeSectionProps.blockIndex);
+             }
+         }}
+         onCardDelete={() => {
+             if (selectedBlockIndex !== null) {
+                 deleteCard(selectedBlockIndex);
+                 setSelectedBlockIndex(null);
+             }
+         }}
+    />
     </div>
   );
 }

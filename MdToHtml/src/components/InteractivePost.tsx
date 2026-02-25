@@ -8,13 +8,17 @@ import { CHDRenderer } from '@/components/CHD/CHDRenderer';
 import { useMarkdownInteraction } from '@/hooks/useMarkdownInteraction';
 import { useHistory } from '@/hooks/useHistory';
 import { Button } from '@/components/ui/button';
-import { ThemeSwitcher } from '@/components/ThemeSwitcher';
+import { FloatingUndoRedo } from '@/components/FloatingUndoRedo';
 import { parseCHDBlocks } from '@/lib/chdParser';
 import { RuleBasedScorer } from '@/lib/scorer';
 import { ScoreResponse } from '@/types/model-interface';
 import { clsx } from 'clsx';
 import { HtmlBundler } from '@/lib/export/HtmlBundler';
 import { useTheme } from '@/components/ThemeProvider';
+import { BottomToolbar, CardStyle } from '@/components/CHD/BottomToolbar';
+import { AVAILABLE_THEMES } from '@/lib/themes';
+import { parseAttributes } from '@/lib/attributeParser';
+import { CardShape } from '@/lib/shapes';
 
 interface InteractivePostProps {
   initialContent: string;
@@ -23,7 +27,7 @@ interface InteractivePostProps {
 }
 
 const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug, decodedSlug }) => {
-  const { theme } = useTheme();
+  const { theme, setTheme } = useTheme();
   // Use useHistory for state management instead of simple useState
   const { 
     state: content, 
@@ -76,6 +80,121 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
         setScoreResult(result);
         setShowScoreDetails(true);
     }
+  }, [content]);
+
+  // Toolbar State
+  const [activeSectionProps, setActiveSectionProps] = useState<{
+      layout: string;
+      color: string;
+      columns: number;
+      titleSpacing: string;
+      showDivider: boolean;
+      blockIndex: number;
+  }>({ layout: 'grid', color: 'default', columns: 2, titleSpacing: '2', showDivider: false, blockIndex: -1 });
+
+  const [activeCardProps, setActiveCardProps] = useState<{
+      shape: CardShape;
+      style: CardStyle;
+      badge: string;
+      blockIndex: number;
+  }>({ shape: 'rect', style: 'normal', badge: '', blockIndex: -1 });
+  
+  const [selectedSectionTitle, setSelectedSectionTitle] = useState('');
+
+  // Sync Toolbar State with Selection
+  useEffect(() => {
+    if (!content || selectedBlockIndex === null) {
+        setActiveSectionProps(prev => ({ ...prev, blockIndex: -1 }));
+        setActiveCardProps(prev => ({ ...prev, blockIndex: -1 }));
+        setSelectedSectionTitle('');
+        return;
+    }
+
+    const blocks = parseCHDBlocks(content);
+    const currentBlock = blocks[selectedBlockIndex];
+    
+    if (!currentBlock) return;
+
+    if (currentBlock.type === 'section') {
+        // Section Selected
+        // Regex to extract props from title line
+        const lines = content.split('\n');
+        const titleLine = lines[currentBlock.startLine];
+        const { props, cleanText } = parseAttributes(titleLine.replace(/^#+\s+/, ''));
+        
+        setActiveSectionProps({
+            layout: props.layout || 'grid',
+            color: props['section-color'] || 'default',
+            columns: parseInt(props.columns || '2'),
+            titleSpacing: props['title-spacing'] || '2',
+            showDivider: props['show-divider'] === 'true',
+            blockIndex: selectedBlockIndex
+        });
+        setSelectedSectionTitle(cleanText || '无标题分区');
+        setActiveCardProps(prev => ({ ...prev, blockIndex: -1 }));
+    } else if (currentBlock.type === 'card' || currentBlock.type === 'code') {
+        // Card Selected
+        const lines = content.split('\n');
+        const titleLine = lines[currentBlock.startLine];
+        const { props } = parseAttributes(titleLine.replace(/^#+\s+/, ''));
+        
+        setActiveCardProps({
+            shape: (props.shape as CardShape) || 'rect',
+            style: (props['card-style'] as CardStyle) || 'normal',
+            badge: props.badge || '',
+            blockIndex: selectedBlockIndex
+        });
+
+        // Find Parent Section
+        let parentSectionIndex = -1;
+        for (let i = selectedBlockIndex - 1; i >= 0; i--) {
+            if (blocks[i].type === 'section') {
+                parentSectionIndex = i;
+                break;
+            }
+        }
+
+        if (parentSectionIndex !== -1) {
+            const parentBlock = blocks[parentSectionIndex];
+            const pTitleLine = lines[parentBlock.startLine];
+            const { props: sectionProps, cleanText } = parseAttributes(pTitleLine.replace(/^#+\s+/, ''));
+            
+            setActiveSectionProps({
+                layout: sectionProps.layout || 'grid',
+                color: sectionProps['section-color'] || 'default',
+                columns: parseInt(sectionProps.columns || '2'),
+                titleSpacing: sectionProps['title-spacing'] || '2',
+                showDivider: sectionProps['show-divider'] === 'true',
+                blockIndex: parentSectionIndex
+            });
+            setSelectedSectionTitle(cleanText || '无标题分区');
+        } else {
+             setActiveSectionProps(prev => ({ ...prev, blockIndex: -1 }));
+             setSelectedSectionTitle('');
+        }
+    } else {
+        setActiveSectionProps(prev => ({ ...prev, blockIndex: -1 }));
+        setActiveCardProps(prev => ({ ...prev, blockIndex: -1 }));
+        setSelectedSectionTitle('');
+    }
+  }, [content, selectedBlockIndex]);
+
+  // Extract Sections for BottomToolbar
+  const sections = useMemo(() => {
+    if (!content) return [];
+    const blocks = parseCHDBlocks(content);
+    const lines = content.split('\n');
+    return blocks
+        .map((b, idx) => ({ block: b, index: idx }))
+        .filter(item => item.block.type === 'section')
+        .map(item => {
+            const titleLine = lines[item.block.startLine];
+            const { cleanText } = parseAttributes(titleLine.replace(/^#+\s+/, ''));
+            return {
+                title: cleanText || '无标题分区',
+                blockIndex: item.index
+            };
+        });
   }, [content]);
 
   // Parse Document Status from Frontmatter
@@ -270,20 +389,22 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
 
   const handleSave = () => saveFile(false);
 
+  // Auto-save
+  useEffect(() => {
+    if (!isEditing || !content) return;
+
+    const timer = setTimeout(() => {
+        saveFile(true); // Silent save
+    }, 5000); // 5 seconds debounce
+
+    return () => clearTimeout(timer);
+  }, [content, isEditing]);
+
   return (
     <div className="flex flex-col min-h-screen">
        {/* Navigation Header */}
        <div className="sticky top-0 z-50 h-14 bg-bg-card/80 backdrop-blur-md border-b border-border-soft flex items-center px-4 justify-between shadow-sm print:hidden">
           <div className="flex items-center gap-4">
-              <Link 
-                href="/"
-                className="flex items-center gap-1 text-sm font-medium text-text-secondary hover:text-primary transition-colors px-3 py-1.5 rounded-md hover:bg-secondary/20"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                返回首页
-              </Link>
-              
-              <div className="h-4 w-px bg-border-soft/50" />
               {/* Score Indicator */}
               {scoreResult && (
                 <div className="relative flex items-center">
@@ -394,39 +515,12 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                       </button>
                   </div>
               )}
-
-              {/* Undo/Redo Group */}
-              {isEditing && (
-                <div className="flex items-center gap-1">
-                  <Button
-                    onClick={undo}
-                    disabled={!canUndo}
-                    variant="ghost"
-                    size="sm"
-                    className="gap-2 text-text-secondary hover:text-primary disabled:opacity-30"
-                    title="撤销 (Ctrl+Z)"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    onClick={redo}
-                    disabled={!canRedo}
-                    variant="ghost"
-                    size="sm"
-                    className="gap-2 text-text-secondary hover:text-primary disabled:opacity-30"
-                    title="重做 (Ctrl+Y)"
-                  >
-                    <ArrowLeft className="w-4 h-4 rotate-180" />
-                  </Button>
-                </div>
-              )}
           </div>
           
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
              <div className="text-sm font-bold text-text-primary truncate max-w-[200px]">
                 {decodedSlug}
              </div>
-             <ThemeSwitcher />
           </div>
 
           <div className="flex items-center gap-2">
@@ -516,17 +610,20 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
           </div>
        </div>
 
-       {/* Floating Export Button Removed - Moved to Top Bar */}
-       {/* 
-       <div className="absolute top-16 right-6 z-50">
-          ...
-       </div>
-       */}
+       {/* Floating Undo/Redo */}
+       {isEditing && (
+          <FloatingUndoRedo 
+            onUndo={undo} 
+            onRedo={redo} 
+            canUndo={canUndo} 
+            canRedo={canRedo} 
+          />
+       )}
 
        {/* Content */}
-       <div className="flex-1">
+       <div className={clsx("flex-1", isEditing && "pb-[180px]")}>
           <CHDRenderer 
-            markdown={content} 
+            markdown={content}  
             editMode={isEditing}
             selectedBlockIndex={selectedBlockIndex}
             onSelectBlock={setSelectedBlockIndex}
@@ -543,6 +640,110 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
             onCardAdd={addCard}
           />
        </div>
+
+       {/* Bottom Toolbar */}
+       {isEditing && (
+            <BottomToolbar
+                currentThemeIndex={AVAILABLE_THEMES.findIndex(t => t.id === theme) !== -1 ? AVAILABLE_THEMES.findIndex(t => t.id === theme) : 0}
+                onThemeChange={(index) => {
+                    if (AVAILABLE_THEMES[index]) {
+                        setTheme(AVAILABLE_THEMES[index].id);
+                    }
+                }}
+                selectedBlockIndex={selectedBlockIndex}
+                
+                // Section Props
+                sectionLayout={activeSectionProps.layout}
+                onSectionLayoutChange={(layout) => {
+                    if (activeSectionProps.blockIndex !== -1) {
+                        updateAttribute(activeSectionProps.blockIndex, 'layout', layout);
+                    }
+                }}
+                sectionColor={activeSectionProps.color}
+                onSectionColorChange={(color) => {
+                    if (activeSectionProps.blockIndex !== -1) {
+                        updateAttribute(activeSectionProps.blockIndex, 'section-color', color);
+                    }
+                }}
+                sectionColumns={activeSectionProps.columns}
+                onSectionColumnsChange={(cols) => {
+                    if (activeSectionProps.blockIndex !== -1) {
+                        updateAttribute(activeSectionProps.blockIndex, 'columns', cols.toString());
+                    }
+                }}
+                sectionTitleSpacing={activeSectionProps.titleSpacing}
+                onSectionTitleSpacingChange={(spacing) => {
+                    console.log('[Global Spacing] Updating to:', spacing);
+                    // [Global Update] Update all sections with the new spacing
+                    const blocks = parseCHDBlocks(content);
+                    const updates = blocks
+                        .filter(b => b.type === 'section')
+                        .map(b => ({
+                            blockIndex: blocks.indexOf(b),
+                            key: 'title-spacing',
+                            value: spacing
+                        }));
+                    
+                    if (updates.length > 0) {
+                        batchUpdateAttributes(updates);
+                        // Optimistically update local state to reflect change immediately
+                        setActiveSectionProps(prev => ({ ...prev, titleSpacing: spacing }));
+                    }
+                }}
+                sectionShowDivider={activeSectionProps.showDivider}
+                onSectionShowDividerChange={(show) => {
+                    console.log('[Global Divider] Updating to:', show);
+                    // [Global Update] Update all sections with the new divider setting
+                    const blocks = parseCHDBlocks(content);
+                    const updates = blocks
+                        .filter(b => b.type === 'section')
+                        .map(b => ({
+                            blockIndex: blocks.indexOf(b),
+                            key: 'show-divider',
+                            value: String(show) // Convert boolean to string for markdown attribute
+                        }));
+                    
+                    if (updates.length > 0) {
+                        batchUpdateAttributes(updates);
+                        // Optimistically update local state
+                        setActiveSectionProps(prev => ({ ...prev, showDivider: show }));
+                    }
+                }}
+                selectedSectionTitle={selectedSectionTitle}
+                onCardAdd={() => {
+                    if (activeSectionProps.blockIndex !== -1) {
+                         addCard(activeSectionProps.blockIndex);
+                    } else {
+                         addCard(content.split('\n').length); 
+                    }
+                }}
+
+                // Card Props
+                cardShape={activeCardProps.shape}
+                onCardShapeChange={(shape) => {
+                    if (activeCardProps.blockIndex !== -1) {
+                        updateAttribute(activeCardProps.blockIndex, 'shape', shape);
+                    }
+                }}
+                cardStyle={activeCardProps.style}
+                onCardStyleChange={(style) => {
+                    if (activeCardProps.blockIndex !== -1) {
+                        updateAttribute(activeCardProps.blockIndex, 'card-style', style);
+                    }
+                }}
+                cardBadge={activeCardProps.badge}
+                onCardBadgeChange={(badge) => {
+                    if (activeCardProps.blockIndex !== -1) {
+                        updateAttribute(activeCardProps.blockIndex, 'badge', badge);
+                    }
+                }}
+                
+                // Section List for Fallback Selection
+                sections={sections}
+                onSelectSection={(idx) => setSelectedBlockIndex(idx)}
+                activeCardBlockIndex={activeCardProps.blockIndex}
+            />
+       )}
     </div>
   );
 };

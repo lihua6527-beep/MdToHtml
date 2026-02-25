@@ -34,11 +34,13 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorHandle, CodeMirrorEditorProp
         // CodeMirror lines are 1-indexed
         // Ensure line is within bounds
         const doc = view.state.doc;
-        const targetLine = Math.max(1, Math.min(line, doc.lines));
+        // Convert 0-based input line to 1-based line for CodeMirror
+        const targetLine = Math.max(1, Math.min(line + 1, doc.lines));
         
         const lineInfo = doc.line(targetLine);
         
         view.dispatch({
+          selection: { anchor: lineInfo.from },
           effects: EditorView.scrollIntoView(lineInfo.from, {
             y: 'center'
           })
@@ -75,7 +77,8 @@ const CodeMirrorEditor = forwardRef<CodeMirrorEditorHandle, CodeMirrorEditorProp
         const view = viewUpdate.view;
         const mainSelection = view.state.selection.main;
         const line = view.state.doc.lineAt(mainSelection.head).number;
-        onCursorChange(line);
+        // Convert 1-based line from CodeMirror to 0-based index for application logic
+        onCursorChange(line - 1);
       }
     };
 

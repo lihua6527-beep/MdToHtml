@@ -9,11 +9,14 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Maximize2, Palette, MoreHorizontal, LayoutGrid, Type, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Edit, Check, Trash2, GripHorizontal, GripVertical, Minus, Plus, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { Maximize2, Palette, MoreHorizontal, LayoutGrid, Type, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Edit, Check, Trash2, Minus, Plus, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { getShapeStyle, CardShape } from '../../lib/shapes';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
 
 // --- Types ---
 
-type CardStyle = 'normal' | 'highlight' | 'stat' | 'quote' | 'code' | 'summary' | 'orange';
+type CardStyle = 'normal' | 'highlight' | 'quote' | 'code';
 type CardColor = 'default' | 'chart-1' | 'chart-2' | 'chart-3' | 'chart-4' | 'chart-5';
 
 interface CardProps {
@@ -40,11 +43,8 @@ interface CardProps {
 const STYLE_LABELS: Record<CardStyle, string> = {
   normal: '标准',
   highlight: '高亮',
-  stat: '指标',
   quote: '引用',
   code: '代码',
-  summary: '摘要',
-  orange: '强调'
 };
 
 const CARD_COLORS: { value: CardColor; label: string; class: string }[] = [
@@ -80,17 +80,12 @@ export const Card: React.FC<CardProps> = ({
   onDelete
 }) => {
   const [isEditingContent, setIsEditingContent] = useState(false);
+  const [badgeError, setBadgeError] = useState('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempContent, setTempContent] = useState(content);
   const [tempTitle, setTempTitle] = useState(title);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
-
-  // --- Dock Dragging State ---
-  const [dockPosition, setDockPosition] = useState<{x: number, y: number} | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStartRef = useRef<{x: number, y: number} | null>(null);
-  const dockRef = useRef<HTMLDivElement>(null);
 
   // --- Context Menu State ---
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number } | null>(null);
@@ -109,8 +104,8 @@ export const Card: React.FC<CardProps> = ({
   };
 
   // Font Sizes & Alignment
-  const titleSize = attributes['title-size'] || (style === 'stat' ? 'text-4xl' : 'text-2xl');
-  const contentSize = attributes['content-size'] || (style === 'stat' ? 'text-sm' : 'text-base');
+  const titleSize = attributes['title-size'] || (style === 'highlight' ? 'text-3xl' : 'text-2xl');
+  const contentSize = attributes['content-size'] || (style === 'highlight' ? 'text-sm text-slate-500' : 'text-base');
   const titleAlign = attributes['title-align'] || 'center';
   const contentAlign = attributes['content-align'] || 'left';
   
@@ -119,8 +114,7 @@ export const Card: React.FC<CardProps> = ({
   let rawColor = (attributes['card-color'] as string) || inheritedColor || 'default';
   
   // Normalize potentially complex values if legacy data exists (though we should enforce strict values)
-  if (rawColor.includes('bg-chart-')) {
-     // Extract chart-X from class string if necessary, but ideally we stick to simple values
+  if (typeof rawColor === 'string' && rawColor.includes('bg-chart-')) {
      const match = rawColor.match(/chart-\d/);
      if (match) rawColor = match[0];
   }
@@ -130,10 +124,26 @@ export const Card: React.FC<CardProps> = ({
     ? rawColor as CardColor
     : 'default';
 
-  // [Fix: Remove Legacy Layout Locks]
-  // Previously, specific styles (like summary/stat) might force col-span.
-  // We now strictly respect the passed 'colSpan' prop which comes from Section's grid system.
-  // The 'style' prop should ONLY affect visual styling, not layout dimensions.
+  // Style Variants (Simplified to 4 core styles)
+  const shapeVariants: Record<CardStyle, string> = {
+    normal: "bg-white shadow-sm border border-border-soft hover:shadow-md text-text-primary",
+    highlight: "bg-white shadow-md border-2 border-slate-200 hover:border-slate-300 text-text-primary", // Visuals handled by dynamic defaults
+    quote: "bg-slate-50/50 shadow-sm border-l-[6px] border-l-slate-300 text-text-secondary italic pl-4",
+    code: "bg-slate-100/50 shadow-inner text-text-secondary font-mono text-sm border border-border-soft",
+  };
+
+  const getCardStyle = () => {
+    const baseStyle = shapeVariants[style as CardStyle] || shapeVariants.normal;
+    
+    // Apply color if not default
+    if (forcedCardColor !== 'default') {
+        // When a color is applied, we adjust the text color for contrast if needed
+        // For chart colors, we usually want white or dark text depending on the theme
+        return twMerge(baseStyle, `bg-${forcedCardColor} border-none text-white`);
+    }
+    
+    return baseStyle;
+  };
 
 
   const adjustFontSize = (target: 'title' | 'content', direction: 'up' | 'down') => {
@@ -182,57 +192,6 @@ export const Card: React.FC<CardProps> = ({
     }
   }, [isEditingTitle]);
 
-  // --- Dragging Logic ---
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (!isDragging || !dragStartRef.current) return;
-      
-      const dx = e.clientX - dragStartRef.current.x;
-      const dy = e.clientY - dragStartRef.current.y;
-      
-      setDockPosition(prev => {
-        const currentX = prev ? prev.x : (window.innerWidth / 2);
-        const currentY = prev ? prev.y : (window.innerHeight - 100); // approx bottom-8
-        return {
-          x: currentX + dx,
-          y: currentY + dy
-        };
-      });
-      
-      dragStartRef.current = { x: e.clientX, y: e.clientY };
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      dragStartRef.current = null;
-    };
-
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMouseMove);
-      window.addEventListener('mouseup', handleMouseUp);
-    }
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      window.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [isDragging]);
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setIsDragging(true);
-    dragStartRef.current = { x: e.clientX, y: e.clientY };
-    
-    // Initialize dockPosition if it's null (first drag)
-    if (!dockPosition && dockRef.current) {
-       const rect = dockRef.current.getBoundingClientRect();
-       setDockPosition({
-         x: rect.left + rect.width / 2, // center point
-         y: rect.top
-       });
-    }
-  };
-
   const handleContentSave = (e?: React.MouseEvent) => {
       e?.stopPropagation();
       setIsEditingContent(false);
@@ -264,31 +223,11 @@ export const Card: React.FC<CardProps> = ({
   };
 
   // 1. Height Logic: 'h-full' to ensure cards in the same row stretch to equal height.
-  const baseClasses = "rounded-card transition-all duration-300 hover:shadow-card flex flex-col overflow-hidden h-full cursor-pointer relative group";
+  // Refactored: Split baseClasses into layout-only and visual parts for Composition Pattern
+  const layoutClasses = "transition-all duration-300 h-full cursor-pointer relative group";
   
   // 2. Color Logic (Theme Optimized) - STRICTLY CHART COLORS ONLY
-  const styleVariants: Record<CardStyle, string> = {
-    // Normal: Clean white background, soft border
-    normal: "bg-white shadow-sm border border-border-soft hover:shadow-md text-text-primary",
-    
-    // Highlight: White background, distinct border
-    highlight: "bg-white shadow-sm border border-secondary/40 hover:border-secondary/60 text-text-primary",
-    
-    // Stat: Centered, bold, white background
-    stat: "bg-white shadow-sm border border-border-soft text-center justify-center items-center py-6 text-text-primary",
-    
-    // Quote: Left accent, white background
-    quote: "bg-white shadow-sm border-l-[4px] border-l-secondary text-text-secondary italic",
-    
-    // Code: White background, monospace
-    code: "bg-white shadow-inner text-text-secondary font-mono text-sm border border-gray-200",
-    
-    // Summary: White background
-    summary: "bg-white shadow-sm border border-amber-200 text-text-primary",
-
-    // Orange: Hero/Intro style (from mature template)
-    orange: "bg-white shadow-sm border border-orange-200 text-text-primary",
-  };
+  // [Removed duplicate shapeVariants definition]
 
   const colorVariants: Record<CardColor, string> = {
     default: "", 
@@ -342,6 +281,11 @@ export const Card: React.FC<CardProps> = ({
       ...(attributes['align-self'] ? { alignSelf: attributes['align-self'] } : {}),
   };
 
+  // --- Composition Pattern Logic ---
+  const shape = (attributes.shape as CardShape) || 'rect';
+  const isCustomShape = shape && shape !== 'rect';
+  const shapeStyle = getShapeStyle(shape);
+
   return (
     <>
     {/* Context Menu */}
@@ -366,204 +310,64 @@ export const Card: React.FC<CardProps> = ({
     )}
 
     <div 
-      className={twMerge(baseClasses, styleVariants[style as CardStyle] || styleVariants.normal, colorVariants[forcedCardColor], spanClasses, activeClass, selectedClass)}
+      className={twMerge(
+          layoutClasses, 
+          spanClasses, 
+          activeClass, 
+          selectedClass,
+          // Standard Card Styles (only applied if NOT custom shape)
+          !isCustomShape && [
+              "rounded-card hover:shadow-card flex flex-col overflow-hidden",
+              shapeVariants[style as CardStyle] || shapeVariants.normal, 
+              colorVariants[forcedCardColor]
+          ],
+          // Custom Shape Wrapper Styles
+          isCustomShape && "drop-shadow-md", // Apply drop-shadow to wrapper for shapes
+          // Circle specific aspect ratio
+          shape === 'circle' && "aspect-square flex flex-col items-center justify-center text-center p-6"
+      )}
       onClick={handleCardClick}
       onContextMenu={handleContextMenu}
       style={gridStyle}
     >
-      {/* Background Overlay (Explicit DIV for robust rendering) */}
-      {forcedCardColor !== 'default' && (
+      {/* Floating Badge (Visual) */}
+      {shape === 'floating' && attributes.badge && (
+          <div className="absolute -top-5 -right-5 z-20 transform rotate-12 shadow-lg animate-in zoom-in duration-300 pointer-events-none">
+              <span className="bg-amber-400 text-amber-900 font-bold text-sm w-14 h-14 rounded-full border-4 border-white shadow-lg flex items-center justify-center leading-tight">
+                  {attributes.badge}
+              </span>
+          </div>
+      )}
+
+      {/* 1. Shape Layer (Custom Shapes Only) */}
+      {isCustomShape && (
+          <div 
+            className={twMerge(
+                "absolute inset-0 z-0",
+                shapeVariants[style as CardStyle] || shapeVariants.normal,
+                colorVariants[forcedCardColor],
+                "shadow-none border-none" // Remove box-shadow/border from shape layer as it might be clipped weirdly or we rely on drop-shadow
+            )}
+            style={shapeStyle}
+          />
+      )}
+
+      {/* 2. Background Overlay (Standard Cards Only) */}
+      {!isCustomShape && forcedCardColor !== 'default' && (
           <div className={twMerge("absolute inset-0 pointer-events-none z-0", bgVariants[forcedCardColor])} />
       )}
       
-      {/* Content Wrapper (Relative z-10 to stay above background) */}
-      <div className="relative z-10 w-full h-full flex flex-col">
+      {/* 3. Content Wrapper (Relative z-10 to stay above background) */}
+      <div className={twMerge(
+          "relative z-10 w-full h-full flex flex-col",
+          // Arrow shape padding compensation
+          shape === 'arrow' && "pl-8 pr-4"
+      )}>
 
-      {/* Floating Dock - Global Property Panel */}
-      {editMode && isSelected && !isEditingContent && (
-        <div 
-            ref={dockRef}
-            className="fixed z-[9999] animate-in slide-in-from-bottom-10 duration-300"
-            style={{
-                left: dockPosition ? dockPosition.x : '50%',
-                top: dockPosition ? dockPosition.y : undefined,
-                bottom: dockPosition ? undefined : '2rem',
-                transform: dockPosition ? 'translate(-50%, 0)' : 'translate(-50%, 0)'
-            }}
-        >
-          <div 
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            onMouseUp={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-            onDoubleClick={(e) => e.stopPropagation()}
-            onContextMenu={(e) => e.stopPropagation()}
-            onKeyDown={(e) => e.stopPropagation()}
-            className="bg-white/95 backdrop-blur-md shadow-2xl border border-border-soft rounded-2xl p-3 flex flex-col gap-3 text-sm min-w-[580px] cursor-default"
-          >
-            
-            {/* Row 1: Fixed Controls (Drag, Actions, Typography) */}
-            <div className="flex items-center justify-between gap-4 border-b border-border-soft pb-2">
-                <div className="flex items-center gap-3">
-                    {/* Drag Handle */}
-                    <div 
-                        className="cursor-move text-text-muted hover:text-text-primary px-1"
-                        onMouseDown={handleMouseDown}
-                    >
-                        <GripVertical size={20} />
-                    </div>
-
-                    {/* Actions Group */}
-                    <div className="flex gap-2">
-                        {/* Vertical Moves */}
-                        <div className="flex flex-col gap-1">
-                                <button onClick={(e) => { e.stopPropagation(); onMove?.('up'); }} className="p-1.5 hover:bg-primary/10 rounded-md text-text-secondary hover:text-primary transition-colors" title="上移"><ArrowUp size={16} /></button>
-                                <button onClick={(e) => { e.stopPropagation(); onMove?.('down'); }} className="p-1.5 hover:bg-primary/10 rounded-md text-text-secondary hover:text-primary transition-colors" title="下移"><ArrowDown size={16} /></button>
-                        </div>
-                        {/* Horizontal Moves */}
-                        <div className="flex flex-col gap-1">
-                                <button onClick={(e) => { e.stopPropagation(); onMove?.('left'); }} className="p-1.5 hover:bg-primary/10 rounded-md text-text-secondary hover:text-primary transition-colors" title="左移"><ArrowLeft size={16} /></button>
-                                <button onClick={(e) => { e.stopPropagation(); onMove?.('right'); }} className="p-1.5 hover:bg-primary/10 rounded-md text-text-secondary hover:text-primary transition-colors" title="右移"><ArrowRight size={16} /></button>
-                        </div>
-                    </div>
-                    
-                    <div className="h-8 w-px bg-border-soft mx-1" />
-
-                    <div className="flex gap-2">
-                        <button onClick={(e) => { e.stopPropagation(); setIsEditingContent(true); }} className="flex flex-col items-center justify-center p-2 hover:bg-primary/10 rounded-md text-text-secondary hover:text-primary transition-colors gap-1" title="编辑内容">
-                            <Edit size={18} />
-                            <span className="text-[10px]">编辑</span>
-                        </button>
-                        <button onClick={(e) => { e.stopPropagation(); if(confirm('确认删除?')) onDelete?.(); }} className="flex flex-col items-center justify-center p-2 hover:bg-red-50 rounded-md text-text-secondary hover:text-red-500 transition-colors gap-1" title="删除">
-                            <Trash2 size={18} />
-                            <span className="text-[10px]">删除</span>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Typography Group */}
-                <div className="flex items-center gap-4">
-                    <div className="flex flex-col gap-2">
-                        {/* Title Controls */}
-                        <div className="flex items-center gap-3">
-                            <span className="text-text-secondary text-xs w-6">标题</span>
-                            {/* Size */}
-                            <div className="flex items-center bg-bg-page rounded-lg border border-border-soft overflow-hidden h-6">
-                                <button onClick={(e) => { e.stopPropagation(); adjustFontSize('title', 'down'); }} className="px-1.5 hover:bg-primary/5 text-text-secondary h-full flex items-center"><Minus size={10} /></button>
-                                <span className="w-6 text-center text-[10px] font-mono leading-none">{TEXT_SIZES.indexOf(titleSize)}</span>
-                                <button onClick={(e) => { e.stopPropagation(); adjustFontSize('title', 'up'); }} className="px-1.5 hover:bg-primary/5 text-text-secondary h-full flex items-center"><Plus size={10} /></button>
-                            </div>
-                            {/* Alignment */}
-                            <div className="flex items-center bg-bg-page rounded-lg border border-border-soft overflow-hidden h-6">
-                                <button onClick={(e) => { e.stopPropagation(); setAlignment('title', 'left'); }} className={clsx("px-1.5 h-full flex items-center transition-colors", titleAlign === 'left' ? "bg-primary/10 text-primary" : "text-text-muted hover:bg-primary/5")}><AlignLeft size={12} /></button>
-                                <div className="w-px h-3 bg-border-soft" />
-                                <button onClick={(e) => { e.stopPropagation(); setAlignment('title', 'center'); }} className={clsx("px-1.5 h-full flex items-center transition-colors", titleAlign === 'center' ? "bg-primary/10 text-primary" : "text-text-muted hover:bg-primary/5")}><AlignCenter size={12} /></button>
-                            </div>
-                        </div>
-                        
-                        {/* Content Controls */}
-                        <div className="flex items-center gap-3">
-                            <span className="text-text-secondary text-xs w-6">正文</span>
-                            {/* Size */}
-                            <div className="flex items-center bg-bg-page rounded-lg border border-border-soft overflow-hidden h-6">
-                                <button onClick={(e) => { e.stopPropagation(); adjustFontSize('content', 'down'); }} className="px-1.5 hover:bg-primary/5 text-text-secondary h-full flex items-center"><Minus size={10} /></button>
-                                <span className="w-6 text-center text-[10px] font-mono leading-none">{TEXT_SIZES.indexOf(contentSize)}</span>
-                                <button onClick={(e) => { e.stopPropagation(); adjustFontSize('content', 'up'); }} className="px-1.5 hover:bg-primary/5 text-text-secondary h-full flex items-center"><Plus size={10} /></button>
-                            </div>
-                            {/* Alignment */}
-                            <div className="flex items-center bg-bg-page rounded-lg border border-border-soft overflow-hidden h-6">
-                                <button onClick={(e) => { e.stopPropagation(); setAlignment('content', 'left'); }} className={clsx("px-1.5 h-full flex items-center transition-colors", contentAlign === 'left' ? "bg-primary/10 text-primary" : "text-text-muted hover:bg-primary/5")}><AlignLeft size={12} /></button>
-                                <div className="w-px h-3 bg-border-soft" />
-                                <button onClick={(e) => { e.stopPropagation(); setAlignment('content', 'center'); }} className={clsx("px-1.5 h-full flex items-center transition-colors", contentAlign === 'center' ? "bg-primary/10 text-primary" : "text-text-muted hover:bg-primary/5")}><AlignCenter size={12} /></button>
-                                <div className="w-px h-3 bg-border-soft" />
-                                <button onClick={(e) => { e.stopPropagation(); setAlignment('content', 'right'); }} className={clsx("px-1.5 h-full flex items-center transition-colors", contentAlign === 'right' ? "bg-primary/10 text-primary" : "text-text-muted hover:bg-primary/5")}><AlignRight size={12} /></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Row 2: Variable Content (Styles & Colors & Width) */}
-            <div className="flex items-start gap-6">
-                {/* Style Selector */}
-                <div className="flex flex-col gap-2 flex-1">
-                    <span className="text-xs font-bold text-text-muted uppercase tracking-wider">卡片样式</span>
-                    <div className="flex flex-wrap gap-1.5">
-                        {(['normal', 'highlight', 'stat', 'quote', 'warning', 'code', 'summary', 'orange'] as CardStyle[]).map(s => (
-                            <button
-                                key={s}
-                                onClick={(e) => { e.stopPropagation(); onAttributeChange?.({ 'card-style': s }); }}
-                                className={clsx(
-                                    "px-2.5 py-1 rounded-full text-xs font-medium border transition-all",
-                                    s === style 
-                                        ? "bg-primary text-white border-primary shadow-sm" 
-                                        : "bg-bg-page text-text-secondary border-border-soft hover:border-primary/50 hover:text-primary"
-                                )}
-                            >
-                                {STYLE_LABELS[s]}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="w-px bg-border-soft self-stretch" />
-
-                {/* Color Picker */}
-                <div className="flex flex-col gap-2">
-                    <span className="text-xs font-bold text-text-muted uppercase tracking-wider">卡片颜色</span>
-                    <div className="flex items-center gap-1.5">
-                        {CARD_COLORS.map(c => (
-                            <button
-                                key={c.value}
-                                onClick={(e) => { e.stopPropagation(); onAttributeChange?.({ 'card-color': c.value }); }}
-                                className={clsx(
-                                    "w-6 h-6 rounded-full border transition-all hover:scale-110",
-                                    c.class,
-                                    forcedCardColor === c.value ? "ring-2 ring-primary ring-offset-2 scale-110" : "border-transparent hover:border-border-soft"
-                                )}
-                                title={c.label}
-                            />
-                        ))}
-                    </div>
-                </div>
-
-                 <div className="w-px bg-border-soft self-stretch" />
-                 
-                {/* Layout/Width (Moved to Row 2) */}
-                <div className="flex flex-col gap-2">
-                    <span className="text-xs font-bold text-text-muted uppercase tracking-wider">宽度占比</span>
-                    <div className="flex items-center gap-1">
-                        {[
-                            { label: '1/1', title: '全宽 (1/1)', value: 12 },
-                            { label: '1/2', title: '半宽 (1/2)', value: 6 },
-                            { label: '1/3', title: '三分之一 (1/3)', value: 4 },
-                            { label: '1/4', title: '四分之一 (1/4)', value: 3 }
-                        ].map(opt => (
-                            <button 
-                              key={opt.label}
-                              onClick={(e) => { e.stopPropagation(); onAttributeChange?.({ 'col-span': String(opt.value) }); }}
-                              className={clsx(
-                                  "px-2 h-8 flex items-center justify-center rounded-lg border transition-all text-xs font-medium min-w-[32px]",
-                                  (colSpan === opt.value)
-                                    ? "bg-primary/10 border-primary text-primary"
-                                    : "bg-bg-page border-border-soft text-text-muted hover:border-primary/50 hover:text-primary"
-                              )}
-                              title={opt.title}
-                            >
-                              {opt.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <div className={clsx(
         "px-6 pt-6 pb-3",
-        style === 'stat' && "pb-0 pt-0", // Stat handles its own padding
         style === 'code' && "bg-black/5 border-b border-border-soft py-3",
         // Alignment classes
         titleAlign === 'center' && "text-center flex justify-center",
@@ -603,8 +407,7 @@ export const Card: React.FC<CardProps> = ({
                 // Typography based on Theme
                 style === 'warning' && "text-accent",
                 style === 'code' && "text-text-muted text-sm font-mono",
-                style !== 'code' && style !== 'warning' && style !== 'stat' && "text-primary",
-                style === 'stat' && "text-primary mb-2",
+                style !== 'code' && style !== 'warning' && "text-primary",
                 // Dynamic Font Size
                 titleSize,
                 editMode && isSelected && "hover:bg-primary/5 cursor-text border border-transparent hover:border-primary/20 rounded px-1 -mx-1 transition-colors"
@@ -624,7 +427,6 @@ export const Card: React.FC<CardProps> = ({
         contentAlign === 'center' && "text-center",
         contentAlign === 'left' && "text-left",
         
-        style === 'stat' && "pt-0 pb-6 text-text-muted font-medium uppercase tracking-wide",
         style === 'code' && "p-4 overflow-x-auto text-sm", 
         style === 'quote' && "pt-3",
         isWideAndShort && "flex justify-center items-center pt-0 text-center",

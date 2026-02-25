@@ -97,10 +97,8 @@ version: "1.0"               # 协议版本
 **支持的样式类型 (`card-style`)：**
 - `normal`: 默认文本卡片
 - `highlight`: 高亮强调
-- `stat`: 数据统计/大数字展示
 - `quote`: 引用/评价
 - `code`: 纯代码展示
-- `summary`: 综述/摘要（用于章节首部）
 
 **支持的尺寸属性：**
 - `col-span`: 跨列数 (Grid 布局下生效，如 `col-span=2`)

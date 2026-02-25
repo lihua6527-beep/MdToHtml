@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { parseCHDBlocks, CHDBlock } from '@/lib/chdParser';
 
 export interface OperationLogEntry {
@@ -52,6 +52,45 @@ export function useMarkdownInteraction(
     // Simple history tracking - improve later for robust undo/redo
     onUpdate(newMarkdown);
   }, [onUpdate]);
+
+  // Auto-sanitize card styles: Enforce strict style rules
+  useEffect(() => {
+    if (!markdown) return;
+
+    const lines = markdown.split('\n');
+    let hasChanges = false;
+    const validStyles = ['normal', 'highlight', 'quote', 'code'];
+
+    const newLines = lines.map(line => {
+      // Only check Card headers (Level 3+)
+      const levelMatch = line.match(/^(###+)\s/);
+      if (levelMatch) {
+        const level = levelMatch[1];
+        // Extract content after ####
+        const contentWithAttrs = line.substring(levelMatch[0].length);
+        const { cleanText, props } = parseAttributes(contentWithAttrs);
+
+        if (props['card-style'] && !validStyles.includes(props['card-style'])) {
+           hasChanges = true;
+           // Auto-fix: Reset to normal
+           props['card-style'] = 'normal';
+           
+           // Reconstruct
+           const attrString = serializeAttributes(props);
+           return attrString 
+             ? `${level} ${cleanText} {${attrString}}`
+             : `${level} ${cleanText}`;
+        }
+      }
+      return line;
+    });
+
+    if (hasChanges) {
+      console.log('[AutoFix] Sanitized invalid card styles in markdown input');
+      // Use a timeout to break render cycle if necessary, but handleUpdate is safe here if stable
+      handleUpdate(newLines.join('\n'));
+    }
+  }, [markdown, handleUpdate]);
 
   const undo = useCallback(() => {
     // Placeholder for undo logic
