@@ -147,7 +147,7 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({
             onClick={(e) => e.stopPropagation()} // Prevent click-through
         >
             {/* 1. Left Sidebar (Tabs) */}
-            <div className="w-[60px] bg-slate-50 border-r border-border-soft flex flex-col items-center pt-4 gap-3 shrink-0">
+            <div className="w-[60px] bg-slate-50 border-r border-border-soft flex flex-col items-center py-6 gap-4 shrink-0 h-full">
                 <button 
                     onClick={() => setActiveTab('theme')}
                     className={cn(
@@ -156,8 +156,11 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({
                     )}
                 >
                     <Palette size={20} className="mb-0.5" />
-                    <span className="text-sm font-bold scale-90">主题</span>
+                    <span className="text-[10px] font-bold scale-90">主题</span>
                 </button>
+
+                <div className="w-8 h-px bg-slate-200 shrink-0" />
+
                 <button 
                     onClick={() => setActiveTab('layout')}
                     className={cn(
@@ -166,8 +169,11 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({
                     )}
                 >
                     <LayoutTemplate size={20} className="mb-0.5" />
-                    <span className="text-sm font-bold scale-90">布局</span>
+                    <span className="text-[10px] font-bold scale-90">布局</span>
                 </button>
+
+                <div className="w-8 h-px bg-slate-200 shrink-0" />
+
                 <button 
                     onClick={() => setActiveTab('card')}
                     className={cn(
@@ -176,7 +182,7 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({
                     )}
                 >
                     <AppWindow size={20} className="mb-0.5" />
-                    <span className="text-sm font-bold scale-90">卡片</span>
+                    <span className="text-[10px] font-bold scale-90">卡片</span>
                 </button>
             </div>
 

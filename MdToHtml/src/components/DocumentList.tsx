@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { FileText, ChevronRight, Layout, PenTool, Clock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { FileText, ChevronRight, Layout, PenTool, Clock, AlertCircle, CheckCircle2, Settings } from 'lucide-react';
 import { clsx } from 'clsx';
 
 interface Post {
@@ -13,10 +13,12 @@ interface Post {
 
 interface DocumentListProps {
   initialPosts: Post[];
+  onOpenSettings?: () => void;
 }
 
-export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts }) => {
+export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpenSettings }) => {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
 
   useEffect(() => {
     // Client-side sorting based on 'Recently Visited'
@@ -63,8 +65,8 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts }) => {
                <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                       <div className="truncate font-medium">{post.slug}</div>
-                      {post.status === 'pending' && (
-                        <div title="待修改" className="text-amber-500 shrink-0">
+                      {(post.status === 'pending' || post.status === 'incomplete') && (
+                        <div title="未完成" className="text-amber-500 shrink-0">
                             <AlertCircle size={14} />
                         </div>
                       )}
@@ -73,7 +75,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts }) => {
                             <PenTool size={14} />
                         </div>
                       )}
-                      {post.status === 'done' && (
+                      {(post.status === 'done' || post.status === 'completed') && (
                         <div title="已完成" className="text-green-600 shrink-0">
                             <CheckCircle2 size={14} />
                         </div>
@@ -89,14 +91,30 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts }) => {
            ))}
         </div>
 
-        <div className="p-4 border-t border-border-soft shrink-0">
-           <Link 
-             href="/editor"
-             className="flex items-center justify-center w-full px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors text-sm font-medium gap-2"
+        <div className="p-4 border-t border-border-soft shrink-0 relative">
+           {/* Settings Menu Popup */}
+           {showSettingsMenu && (
+               <div className="absolute bottom-16 left-4 w-48 bg-bg-card border border-border-soft rounded-lg shadow-xl p-1 z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
+                   <button 
+                       onClick={() => {
+                           setShowSettingsMenu(false);
+                           onOpenSettings?.();
+                       }}
+                       className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-bg-page transition-colors flex items-center gap-2 text-text-primary"
+                   >
+                       <Settings className="w-4 h-4 text-text-secondary" />
+                       <span>文件路径</span>
+                   </button>
+               </div>
+           )}
+
+           <button 
+             onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+             className="flex items-center gap-2 w-full px-4 py-2 text-text-secondary hover:text-text-primary hover:bg-bg-page rounded-md transition-colors text-sm font-medium"
            >
-             <PenTool className="w-4 h-4" />
-             进入编辑器
-           </Link>
+             <Settings className="w-4 h-4" />
+             设置
+           </button>
         </div>
     </div>
   );

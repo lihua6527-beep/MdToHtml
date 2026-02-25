@@ -220,20 +220,14 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
         return;
     }
 
-    // If status is 'pending' and content changes, switch to 'modified'
-    // But we need to distinguish user edits from status updates themselves
-    // We check the last operation in operationLog
-    if (operationLog.length > 0) {
-        const lastOp = operationLog[operationLog.length - 1];
-        // If last op was updateFrontmatter, it might be us changing status, so ignore to prevent loop if we were strict
-        // But here we only auto-switch if status is 'pending'.
-        // If we change status to 'modified', this effect runs again, but status is 'modified', so no op.
-        if (docStatus === 'pending' && lastOp.type !== 'updateFrontmatter') {
-            // Auto switch to modified
-            updateFrontmatter('status', 'modified');
-        }
+    // Simplified Status Logic:
+    // If status is empty, set to 'incomplete'
+    // If status is 'completed', do NOT auto-switch back to 'incomplete' on edit (User request)
+    // Only manual toggle changes status between 'incomplete' and 'completed'
+    if (!docStatus) {
+        updateFrontmatter('status', 'incomplete');
     }
-  }, [content, docStatus, operationLog, updateFrontmatter]);
+  }, [content, docStatus, updateFrontmatter]);
 
   // Clear selection when exiting edit mode
   React.useEffect(() => {
@@ -263,14 +257,74 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
 
   const router = useRouter();
 
+  const isSavingRef = useRef(false);
+  const contentRef = useRef(content);
+  
+  // Update ref when content changes
+  useEffect(() => {
+    contentRef.current = content;
+  }, [content]);
+
+  // Debounced save function
+  const debouncedSave = useRef(
+    (async (slug: string, contentToSave: string, initialContent: string, operationLog: any[], router: any) => {
+      isSavingRef.current = true;
+      setIsSaving(true);
+      try {
+        console.log('Executing save for:', slug);
+        const res = await fetch('/api/save-session', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                slug, 
+                input: initialContent,
+                output: contentToSave,
+                operations: operationLog
+            })
+        });
+
+        if (res.ok) {
+            await fetch('/api/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slug, content: contentToSave })
+            });
+            console.log('Save successful');
+            router.refresh();
+        } else {
+            console.error('Save session failed');
+        }
+      } catch(e) {
+        console.error('Save error:', e);
+      } finally {
+        isSavingRef.current = false;
+        setIsSaving(false);
+      }
+    })
+  ).current;
+
+  // Debounce wrapper
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const triggerDebouncedSave = (newContent: string) => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+    
+    // Set saving state immediately to block navigation
+    isSavingRef.current = true;
+    setIsSaving(true);
+
+    saveTimeoutRef.current = setTimeout(() => {
+        debouncedSave(decodedSlug, newContent, initialContent, operationLog, router);
+    }, 500);
+  };
+
   const handleStatusChange = (newStatus: string) => {
-      // 1. Immediately update UI state for responsiveness
+      // 1. Immediately update UI state
       setDocStatus(newStatus);
 
-      let newContent = content;
+      // 2. Calculate new content based on REF to avoid closure staleness
+      let newContent = contentRef.current;
       const lines = newContent.split('\n');
       
-      // Manual Frontmatter Update to ensure batching and immediate save
       if (lines[0].trim() === '---') {
           let fmEnd = -1;
           for (let i = 1; i < lines.length; i++) {
@@ -292,8 +346,8 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
               }
               
               // Update training_sample
+              const isDone = ['done', 'completed'].includes(newStatus);
               const trainIndex = fmLines.findIndex(l => l.trim().startsWith('training_sample:'));
-              const isDone = newStatus === 'done';
               if (trainIndex >= 0) {
                   fmLines[trainIndex] = `training_sample: ${isDone}`;
               } else {
@@ -305,86 +359,32 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
           }
       }
       
-      // 2. Update content state
+      // 3. Update content state and ref
       setContent(newContent);
+      contentRef.current = newContent;
       
-      // 3. Trigger Save immediately with the overridden content
-      // Note: We pass contentOverride to ensure saveFile uses the fresh content 
-      // even if setContent (async) hasn't completed.
-      saveFile(true, newContent);
+      // 4. Trigger Debounced Save
+      triggerDebouncedSave(newContent);
+  };
+
+  const handleBack = async () => {
+    if (isSavingRef.current) {
+        // Wait for save to complete
+        const checkSave = setInterval(() => {
+            if (!isSavingRef.current) {
+                clearInterval(checkSave);
+                router.push('/');
+            }
+        }, 100);
+    } else {
+        router.push('/');
+    }
   };
 
   const saveFile = async (silent = false, contentOverride?: string) => {
-     let contentToSave = contentOverride || content;
-
-     // Auto-update status from 'pending'/empty to 'modified' on manual save
-     if (!contentOverride && (docStatus === 'pending' || !docStatus)) {
-        const lines = contentToSave.split('\n');
-        // Simple frontmatter check
-        if (lines[0].trim() === '---') {
-            let fmEnd = -1;
-            for (let i = 1; i < lines.length; i++) {
-                if (lines[i].trim() === '---') {
-                    fmEnd = i;
-                    break;
-                }
-            }
-            
-            if (fmEnd > 0) {
-                const fmLines = lines.slice(1, fmEnd);
-                
-                // Update status
-                const statusIndex = fmLines.findIndex(l => l.trim().startsWith('status:'));
-                if (statusIndex >= 0) {
-                    fmLines[statusIndex] = `status: modified`;
-                } else {
-                    fmLines.push(`status: modified`);
-                }
-                
-                lines.splice(1, fmEnd - 1, ...fmLines);
-                contentToSave = lines.join('\n');
-                
-                // Update local state immediately so UI reflects it
-                setContent(contentToSave);
-            }
-        }
-     }
-
-     setIsSaving(true);
-     try {
-        // Save to file (local dev) and Archive Session
-        const res = await fetch('/api/save-session', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                slug: decodedSlug, 
-                input: initialContent,
-                output: contentToSave,
-                operations: operationLog
-            })
-        });
-
-        if (res.ok) {
-            await fetch('/api/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ slug: decodedSlug, content: contentToSave })
-            });
-
-            if (!silent) {
-                alert('保存并归档成功');
-                setIsEditing(false);
-            }
-            router.refresh();
-        } else {
-            if (!silent) alert('保存失败');
-        }
-     } catch(e) {
-        console.error(e);
-        if (!silent) alert('保存请求出错');
-     } finally {
-        setIsSaving(false);
-     }
+     // Legacy direct save, kept for manual save button if needed
+     const contentToSave = contentOverride || contentRef.current;
+     debouncedSave(decodedSlug, contentToSave, initialContent, operationLog, router);
   };
 
   const handleSave = () => saveFile(false);
@@ -405,6 +405,17 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
        {/* Navigation Header */}
        <div className="sticky top-0 z-50 h-14 bg-bg-card/80 backdrop-blur-md border-b border-border-soft flex items-center px-4 justify-between shadow-sm print:hidden">
           <div className="flex items-center gap-4">
+              {/* Back Button */}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="text-text-secondary hover:text-primary"
+                onClick={handleBack}
+                disabled={isSaving}
+              >
+                  <ArrowLeft size={20} />
+              </Button>
+
               {/* Score Indicator */}
               {scoreResult && (
                 <div className="relative flex items-center">
@@ -474,47 +485,33 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                 </div>
               )}
 
-              {/* Status Toggle Group (After Score) */}
-              {isEditing && (
-                  <div className="flex items-center gap-1 mx-4 bg-secondary/10 p-1 rounded-lg border border-border-soft">
-                      <button
-                          onClick={() => handleStatusChange('pending')}
-                          className={clsx(
-                              "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                              (docStatus === 'pending' || !docStatus) 
-                                ? "bg-amber-100 text-amber-700 shadow-sm" 
-                                : "text-text-secondary hover:bg-secondary/20"
-                          )}
-                          title="文档需要修改"
-                      >
-                          未修改
-                      </button>
-                      <button
-                          onClick={() => handleStatusChange('modified')}
-                          className={clsx(
-                              "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                              docStatus === 'modified' 
-                                ? "bg-blue-100 text-blue-700 shadow-sm" 
-                                : "text-text-secondary hover:bg-secondary/20"
-                          )}
-                          title="文档已进行修改"
-                      >
-                          修改中
-                      </button>
-                      <button
-                          onClick={() => handleStatusChange('done')}
-                          className={clsx(
-                              "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                              docStatus === 'done' 
-                                ? "bg-green-100 text-green-700 shadow-sm" 
-                                : "text-text-secondary hover:bg-secondary/20"
-                          )}
-                          title="文档已完成并标记为训练样本"
-                      >
-                          已完成
-                      </button>
-                  </div>
-              )}
+              {/* Status Toggle Group (Always Visible) */}
+              <div className="flex items-center gap-1 mx-4 bg-secondary/10 p-1 rounded-lg border border-border-soft">
+                  <button
+                      onClick={() => handleStatusChange('incomplete')}
+                      className={clsx(
+                          "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                          ['pending', 'modified', 'incomplete', ''].includes(docStatus || '')
+                            ? "bg-amber-100 text-amber-700 shadow-sm" 
+                            : "text-text-secondary hover:bg-secondary/20"
+                      )}
+                      title="文档需要修改"
+                  >
+                      未完成
+                  </button>
+                  <button
+                      onClick={() => handleStatusChange('completed')}
+                      className={clsx(
+                          "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                          ['done', 'completed'].includes(docStatus || '')
+                            ? "bg-green-100 text-green-700 shadow-sm" 
+                            : "text-text-secondary hover:bg-secondary/20"
+                      )}
+                      title="文档已完成并锁定"
+                  >
+                      已完成
+                  </button>
+              </div>
           </div>
           
           <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">

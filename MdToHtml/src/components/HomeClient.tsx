@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { DocumentList } from '@/components/DocumentList';
 import { Upload, FileText, CheckCircle2, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,29 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Fetch latest posts on mount and focus
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const res = await fetch('/api/files');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.files) {
+             setPosts(data.files);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch posts', e);
+      }
+    };
+
+    fetchPosts();
+
+    const onFocus = () => fetchPosts();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -99,7 +122,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
     <div className="flex h-screen bg-bg-page overflow-hidden transition-colors duration-300">
       {/* Left Sidebar */}
       <div className="w-64 bg-bg-card border-r border-border-soft flex flex-col shrink-0 transition-colors duration-300">
-        <DocumentList initialPosts={posts} />
+        <DocumentList initialPosts={posts} onOpenSettings={() => setShowSettings(true)} />
       </div>
 
       {/* Main Content Area */}
@@ -125,16 +148,6 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
                <h1 className="text-3xl font-bold text-text-primary mb-2">欢迎使用 CHD Renderer</h1>
                <p className="text-text-secondary">请从左侧选择文档进行预览。</p>
              </div>
-             
-             <Button
-                variant="ghost"
-                size="icon"
-                className="text-text-secondary hover:text-primary"
-                onClick={() => setShowSettings(true)}
-                title="环境配置与路径"
-            >
-                <Settings className="w-5 h-5" />
-            </Button>
           </header>
           
           {/* Empty State / Drop Target */}
