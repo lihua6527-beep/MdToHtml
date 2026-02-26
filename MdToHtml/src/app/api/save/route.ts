@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import PathManager from '@/lib/path-manager';
 import MetadataCacheManager from '@/lib/cache-manager';
+import { collectData } from '@/lib/data-collector';
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,6 +21,9 @@ export async function POST(request: NextRequest) {
     // Allow: letters, numbers, chinese, space, underscore, dash, dot, parenthesis
     const safeSlug = slug.replace(/[^a-zA-Z0-9\-\u4e00-\u9fa5\s_.\(\)]/g, '');
     
+    // Collect data for AI training (async, non-blocking ideally, but await here to ensure it runs)
+    await collectData(safeSlug, content);
+
     // Use CacheManager for updates to ensure consistency
     const cacheManager = MetadataCacheManager.getInstance();
     cacheManager.update(safeSlug, content);

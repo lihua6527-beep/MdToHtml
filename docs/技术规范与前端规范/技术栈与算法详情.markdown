@@ -95,6 +95,20 @@
   - **解析层**: 支持未闭合属性解析，防止输入时的解析抖动。
   - **渲染层清洗**: 在 `Section.tsx` 中强制执行 `title.replace(/\{.*?\}/g, '')`，确保即使解析层遗漏，UI 层也能兜底过滤掉配置代码，防止元数据泄漏到最终界面。
 
+### 2.7 AI数据采集 (AI Data Collection)
+- **文件**: `src/lib/data-collector.ts`, `src/app/api/save/route.ts`
+- **目的**: 构建高质量的 AI 训练数据集，捕捉用户编辑过程中的思维链 (Chain of Thought)。
+- **逻辑**:
+  - **触发时机**: 用户手动触发保存 (Save) 时。
+  - **存储结构**:
+    - 目录: `data/training_dataset/[slug]/`
+    - 基准文件 (`initial.md`): 首次采集时的文件内容（作为 Base）。
+    - 增量日志 (`history.jsonl`): 记录每次保存的内容快照与时间戳。
+  - **流程**:
+    1. 检查目标目录是否存在，不存在则创建。
+    2. 若 `initial.md` 不存在，读取当前文件内容（或新内容）写入作为基准。
+    3. 将本次保存的新内容追加写入 `history.jsonl`。
+
 ---
 
 ## 3. 核心算法 (Core Algorithms)
