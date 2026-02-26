@@ -20,6 +20,7 @@ interface RecycleBinProps {
   documentCount?: number;
   capacityLimit?: number;
   onDeleteOldestDocuments?: (count: number) => Promise<void>;
+  onRestore?: () => void;
 }
 
 export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, documentCount = 0, capacityLimit = 100, onDeleteOldestDocuments }) => {
@@ -138,6 +139,7 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
           return newSet;
         });
         setTrashCount(prev => prev - fileNames.length);
+        if (onRestore) onRestore();
       } else {
         alert('恢复失败');
       }

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FileText, ChevronRight, Layout, PenTool, Clock, AlertCircle, CheckCircle2, Settings, Trash2, CheckSquare, Square, Eye, X, ArrowUpDown, Calendar, Monitor, Maximize2, Minimize2, Database } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -24,6 +25,7 @@ interface DocumentListProps {
 }
 
 export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpenSettings, className }) => {
+  const router = useRouter();
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number; slug: string | null }>({ visible: false, x: 0, y: 0, slug: null });
@@ -276,6 +278,9 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
     return (
         <RecycleBin 
             onClose={() => setShowRecycleBin(false)} 
+            onRestore={() => {
+                router.refresh();
+            }}
             className={clsx(isExpanded ? "w-[50vw]" : "w-64", className)}
             documentCount={posts.length}
             capacityLimit={capacityLimit}
