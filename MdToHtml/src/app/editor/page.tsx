@@ -23,6 +23,8 @@ import { parseAttributes } from '@/lib/attributeParser';
 import { CardShape } from '@/lib/shapes';
 import { useCHDSelection } from '@/hooks/useCHDSelection';
 import { CardStyle } from '@/types/chd';
+import { TagStyleType } from '@/components/CHD/TagRenderer';
+import matter from 'gray-matter';
 
 export default function EditorPage() {
   const { theme, setTheme } = useTheme();
@@ -40,6 +42,16 @@ export default function EditorPage() {
   // Selection State for BottomToolbar
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   
+  // Tag Style from Frontmatter
+  const tagStyle = useMemo<TagStyleType>(() => {
+      try {
+          const { data } = matter(content);
+          return (data['tag-style'] as TagStyleType) || 'glass';
+      } catch {
+          return 'glass';
+      }
+  }, [content]);
+  
   // Use useCHDSelection hook for derived state
   const { activeSectionProps, activeCardProps, selectedSectionTitle } = useCHDSelection(content, selectedBlockIndex);
 
@@ -48,7 +60,7 @@ export default function EditorPage() {
   const [activeSectionProps_Legacy, setActiveSectionProps_Legacy] = useState<any>(null); // Placeholder
 
   // Interaction Hook
-  const { updateAttribute, updateContent, updateTitle, moveCard, batchUpdateAttributes, addCard, deleteCard } = useMarkdownInteraction(content, setContent);
+  const { updateAttribute, updateContent, updateTitle, updateFrontmatter, moveCard, batchUpdateAttributes, addCard, deleteCard } = useMarkdownInteraction(content, setContent);
   
   useEffect(() => {
       if (!content) return;
@@ -599,6 +611,7 @@ export default function EditorPage() {
                   onCardMove={moveCard}
                   onCardDelete={deleteCard}
                   onCardAdd={addCard}
+                  tagStyle={tagStyle}
                 />
              </ThemeScope>
           </div>
@@ -614,7 +627,9 @@ export default function EditorPage() {
                  setTheme(AVAILABLE_THEMES[index].id);
              }
          }}
-         selectedBlockIndex={selectedBlockIndex}
+         tagStyle={tagStyle}
+          onTagStyleChange={(s) => updateFrontmatter('tag-style', s)}
+          selectedBlockIndex={selectedBlockIndex}
          selectedSectionTitle={selectedSectionTitle}
          sections={sections}
          onSelectSection={handleToolbarSectionSelect}

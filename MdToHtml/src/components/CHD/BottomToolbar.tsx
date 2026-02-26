@@ -21,16 +21,22 @@ import {
     Plus,
     Trash2,
     ChevronUp,
-    Check
+    Check,
+    Tag
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CardShape } from '@/lib/shapes';
 import { CardStyle } from '@/types/chd';
+import { TAG_STYLES, TagStyleType } from './TagRenderer';
 
 export interface BottomToolbarProps {
     // Current State
     currentThemeIndex: number;
     onThemeChange: (index: number) => void;
+
+    // Tag Style
+    tagStyle?: TagStyleType;
+    onTagStyleChange?: (style: TagStyleType) => void;
     
     // Selection State
     selectedBlockIndex: number | null;
@@ -112,6 +118,8 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({
     onCardStyleChange,
     cardBadge,
     onCardBadgeChange,
+    tagStyle = 'glass',
+    onTagStyleChange,
     onCardAdd,
     onCardDelete,
     titleSize = 'M',
@@ -240,6 +248,29 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({
                                  </div>
                              </div>
                         </div>
+
+                        {/* Tag Style Selector */}
+                        <div className="flex-none flex flex-col gap-3 min-w-[160px] pl-6 border-l border-slate-200">
+                            <div className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">标签风格</div>
+                            <div className="flex flex-wrap gap-2">
+                                {TAG_STYLES.map(style => (
+                                    <button
+                                        key={style.id}
+                                        onClick={() => onTagStyleChange?.(style.id)}
+                                        className={cn(
+                                            "px-2 py-1.5 text-xs font-medium rounded border transition-all flex items-center gap-1.5",
+                                            tagStyle === style.id 
+                                                ? "bg-slate-800 text-white border-slate-800 shadow-md transform scale-105" 
+                                                : "bg-white text-slate-600 border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                                        )}
+                                        title={style.description}
+                                    >
+                                        <Tag size={12} className={cn("opacity-70", tagStyle === style.id && "text-white")} />
+                                        {style.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                         
                         {/* Spacer to push content left */}
                         <div className="flex-1"></div>
@@ -299,22 +330,19 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({
                                     </div>
                                 )}
                             </div>
-                            <div className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">布局模式</div>
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">布局模式 (已锁定)</div>
+                            <div className="grid grid-cols-1 gap-3">
                                 {[
-                                    { id: 'grid', label: '并列', icon: Grid },
-                                    { id: 'timeline', label: '时间轴', icon: List },
-                                    { id: 'hub', label: '环绕', icon: Component },
-                                    { id: 'ring', label: '环形', icon: CircleDot },
-                                    { id: 'carousel', label: '轮播', icon: GalleryHorizontal },
+                                    { id: 'grid', label: '网格布局 (Grid Only)', icon: Grid },
                                 ].map(l => (
                                     <button
                                         key={l.id}
                                         onClick={() => onSectionLayoutChange(l.id)}
                                         className={cn(
-                                            "p-2 border border-border-soft rounded-lg flex flex-col items-center gap-1 transition-all hover:bg-slate-50",
+                                            "p-2 border border-border-soft rounded-lg flex flex-row items-center justify-center gap-2 transition-all hover:bg-slate-50 cursor-default",
                                             sectionLayout === l.id && "bg-primary text-white border-primary shadow-md shadow-primary/20 hover:bg-primary"
                                         )}
+                                        disabled={true}
                                     >
                                         <l.icon size={18} />
                                         <span className="text-sm font-medium">{l.label}</span>

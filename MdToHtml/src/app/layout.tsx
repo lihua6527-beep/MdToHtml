@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
+import 'katex/dist/katex.min.css'; // Global KaTeX styles for formula rendering
 
 export const metadata: Metadata = {
   title: "CHD Document Renderer",

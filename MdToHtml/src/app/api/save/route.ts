@@ -8,7 +8,8 @@ import { collectData } from '@/lib/data-collector';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { slug, content } = body;
+    // Accept operations from body
+    const { slug, content, operations } = body;
 
     if (!slug || !content) {
       return NextResponse.json(
@@ -22,9 +23,11 @@ export async function POST(request: NextRequest) {
     const safeSlug = slug.replace(/[^a-zA-Z0-9\-\u4e00-\u9fa5\s_.\(\)]/g, '');
     
     // Collect data for AI training (async, non-blocking ideally, but await here to ensure it runs)
-    await collectData(safeSlug, content);
+    // Pass operations to collectData
+    await collectData(safeSlug, content, operations);
 
     // Use CacheManager for updates to ensure consistency
+    // CacheManager only cares about content
     const cacheManager = MetadataCacheManager.getInstance();
     cacheManager.update(safeSlug, content);
 

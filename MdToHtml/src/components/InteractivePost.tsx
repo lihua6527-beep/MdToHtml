@@ -22,6 +22,7 @@ import { parseAttributes } from '@/lib/attributeParser';
 import { CardShape } from '@/lib/shapes';
 import { useCHDSelection } from '@/hooks/useCHDSelection';
 import matter from 'gray-matter';
+import { TagStyleType } from '@/components/CHD/TagRenderer';
 
 interface InteractivePostProps {
   initialContent: string;
@@ -153,29 +154,25 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
       setIsSaving(true);
       try {
         console.log('Executing save for:', slug);
-        const res = await fetch('/api/save-session', {
+        // Unified Save Logic: Call /api/save with content AND operations
+        // This replaces the old /api/save-session + /api/save dual call
+        const res = await fetch('/api/save', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 slug, 
-                input: initialContent,
-                output: contentToSave,
+                content: contentToSave,
                 operations: operationLog
             })
         });
 
         if (res.ok) {
-            await fetch('/api/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ slug, content: contentToSave })
-            });
             console.log('Save successful');
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 2000);
             router.refresh();
         } else {
-            console.error('Save session failed');
+            console.error('Save failed');
         }
       } catch(e) {
         console.error('Save error:', e);
@@ -517,6 +514,7 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
             onCardMove={moveCard}
             onCardDelete={deleteCard}
             onCardAdd={addCard}
+            tagStyle={(frontmatter['tag-style'] as TagStyleType) || 'glass'}
           />
        </div>
 
@@ -529,6 +527,8 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                         setTheme(AVAILABLE_THEMES[index].id);
                     }
                 }}
+                tagStyle={(frontmatter['tag-style'] as TagStyleType) || 'glass'}
+                onTagStyleChange={(style) => updateFrontmatter('tag-style', style)}
                 selectedBlockIndex={selectedBlockIndex}
                 
                 // Section Props

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tag Style Showcase - Static Preview</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        'primary-rgb': '59, 130, 246',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+
+    <div class="max-w-5xl mx-auto space-y-12">
+        
+        <!-- Header -->
+        <div class="text-center space-y-4">
+            <h1 class="text-4xl font-extrabold tracking-tight text-slate-900">
+                Tags Rendering Styles (Static Preview)
+            </h1>
+            <p class="text-lg text-slate-600 max-w-2xl mx-auto">
+                Generated static HTML for immediate viewing. Choose your favorite style.
+            </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+          
+            <!-- Style A: Glassmorphism -->
+            <section class="bg-slate-200/50 p-8 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group/card">
+                <div class="absolute top-0 right-0 bg-white/50 px-3 py-1 rounded-bl-lg text-xs font-mono font-bold text-slate-500 border-b border-l border-slate-200">
+                    Style A: Glassmorphism
+                </div>
+                <div class="flex flex-wrap gap-3 justify-center pt-6">
+                    <!-- Sample Tags -->
+                    <div class="group flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none cursor-pointer bg-white/40 border-white/60 text-slate-700 backdrop-blur-md shadow-sm hover:shadow-md hover:bg-white/60 hover:-translate-y-0.5 active:translate-y-0 duration-200">
+                        <i data-lucide="brain" class="w-3.5 h-3.5 text-slate-500 group-hover:text-primary transition-colors"></i>
+                        <span>自然语言处理</span>
+                    </div>
+                    <div class="group flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none cursor-pointer bg-white/40 border-white/60 text-slate-700 backdrop-blur-md shadow-sm hover:shadow-md hover:bg-white/60 hover:-translate-y-0.5 active:translate-y-0 duration-200">
+                        <i data-lucide="box" class="w-3.5 h-3.5 text-slate-500 group-hover:text-primary transition-colors"></i>
+                        <span>Transformer</span>
+                    </div>
+                    <div class="group flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all select-none cursor-pointer bg-white/40 border-white/60 text-slate-700 backdrop-blur-md shadow-sm hover:shadow-md hover:bg-white/60 hover:-translate-y-0.5 active:translate-y-0 duration-200">
+                        <i data-lucide="zap" class="w-3.5 h-3.5 text-slate-500 group-hover:text-primary transition-colors"></i>
+                        <span>高效推理</span>
+                    </div>
+                </div>
+                <p class="mt-6 text-center text-xs text-slate-500">
+                    特点：磨砂质感，半透明，适合放置在图片或彩色背景上。
+                </p>
+            </section>
+
+            <!-- Style B: Tech / Cyber -->
+            <section class="bg-slate-950 p-8 rounded-2xl border border-slate-800 shadow-lg relative overflow-hidden group/card">
+                <div class="absolute top-0 right-0 bg-slate-800 px-3 py-1 rounded-bl-lg text-xs font-mono font-bold text-slate-400 border-b border-l border-slate-700">
+                    Style B: Tech / Cyber
+                </div>
+                <div class="flex flex-wrap gap-3 justify-center pt-6">
+                    <div class="group flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium border transition-all select-none cursor-pointer bg-slate-900 border-slate-700 text-slate-300 shadow-sm hover:border-blue-500/50 hover:text-blue-400 hover:shadow-[0_0_10px_rgba(59,130,246,0.3)] duration-200">
+                        <i data-lucide="terminal" class="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity"></i>
+                        <span class="tracking-wide">Python</span>
+                    </div>
+                    <div class="group flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium border transition-all select-none cursor-pointer bg-slate-900 border-slate-700 text-slate-300 shadow-sm hover:border-blue-500/50 hover:text-blue-400 hover:shadow-[0_0_10px_rgba(59,130,246,0.3)] duration-200">
+                        <i data-lucide="cpu" class="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity"></i>
+                        <span class="tracking-wide">CUDA</span>
+                    </div>
+                    <div class="group flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium border transition-all select-none cursor-pointer bg-slate-900 border-slate-700 text-slate-300 shadow-sm hover:border-blue-500/50 hover:text-blue-400 hover:shadow-[0_0_10px_rgba(59,130,246,0.3)] duration-200">
+                        <i data-lucide="shield" class="w-3.5 h-3.5 opacity-70 group-hover:opacity-100 transition-opacity"></i>
+                        <span class="tracking-wide">Security</span>
+                    </div>
+                </div>
+                <p class="mt-6 text-center text-xs text-slate-400">
+                    特点：深色科技风，高对比度，适合强调技术属性。
+                </p>
+            </section>
+
+            <!-- Style C: Modern Gradient -->
+            <section class="bg-white p-8 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden group/card">
+                <div class="absolute top-0 right-0 bg-slate-50 px-3 py-1 rounded-bl-lg text-xs font-mono font-bold text-slate-500 border-b border-l border-slate-200">
+                    Style C: Modern Gradient
+                </div>
+                <div class="flex flex-wrap gap-3 justify-center pt-6">
+                    <div class="group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all select-none cursor-pointer bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-700 hover:from-blue-100 hover:to-indigo-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-200">
+                        <i data-lucide="globe" class="w-3.5 h-3.5 opacity-80"></i>
+                        <span>Web开发</span>
+                    </div>
+                    <div class="group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all select-none cursor-pointer bg-gradient-to-br from-emerald-50 to-teal-50 text-emerald-700 hover:from-emerald-100 hover:to-teal-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-200">
+                        <i data-lucide="database" class="w-3.5 h-3.5 opacity-80"></i>
+                        <span>数据存储</span>
+                    </div>
+                     <div class="group flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all select-none cursor-pointer bg-gradient-to-br from-rose-50 to-orange-50 text-rose-700 hover:from-rose-100 hover:to-orange-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 duration-200">
+                        <i data-lucide="trending-up" class="w-3.5 h-3.5 opacity-80"></i>
+                        <span>SOTA模型</span>
+                    </div>
+                </div>
+                <p class="mt-6 text-center text-xs text-slate-500">
+                    特点：柔和渐变，多彩亲和，适合现代化 UI。
+                </p>
+            </section>
+
+            <!-- Style D: Minimal Outline -->
+            <section class="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden group/card">
+                <div class="absolute top-0 right-0 bg-slate-50 px-3 py-1 rounded-bl-lg text-xs font-mono font-bold text-slate-500 border-b border-l border-slate-200">
+                    Style D: Minimal Outline
+                </div>
+                <div class="flex flex-wrap gap-3 justify-center pt-6">
+                    <div class="group flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all select-none cursor-pointer bg-transparent border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900 active:bg-slate-100 duration-200">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-colors"></i>
+                        <span>文档生成</span>
+                    </div>
+                    <div class="group flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all select-none cursor-pointer bg-transparent border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900 active:bg-slate-100 duration-200">
+                        <i data-lucide="layers" class="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-colors"></i>
+                        <span>架构设计</span>
+                    </div>
+                     <div class="group flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border transition-all select-none cursor-pointer bg-transparent border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50 hover:text-slate-900 active:bg-slate-100 duration-200">
+                        <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-colors"></i>
+                        <span>已验证</span>
+                    </div>
+                </div>
+                <p class="mt-6 text-center text-xs text-slate-500">
+                    特点：极简描边，干净专业，通用性强。
+                </p>
+            </section>
+          
+            <!-- Style E: 3D / Pop -->
+            <section class="bg-slate-50 p-8 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden md:col-span-2 group/card">
+                <div class="absolute top-0 right-0 bg-white px-3 py-1 rounded-bl-lg text-xs font-mono font-bold text-slate-500 border-b border-l border-slate-200">
+                    Style E: 3D / Pop
+                </div>
+                <div class="flex flex-wrap gap-3 justify-center pt-6">
+                    <div class="group flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold border-b-2 transition-all select-none cursor-pointer bg-white border-slate-200 border-b-slate-300 text-slate-700 hover:-translate-y-0.5 hover:border-b-blue-500 hover:text-blue-500 active:translate-y-0 active:border-b-slate-300 duration-100">
+                        <i data-lucide="rocket" class="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors"></i>
+                        <span>启动加速</span>
+                    </div>
+                    <div class="group flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold border-b-2 transition-all select-none cursor-pointer bg-white border-slate-200 border-b-slate-300 text-slate-700 hover:-translate-y-0.5 hover:border-b-blue-500 hover:text-blue-500 active:translate-y-0 active:border-b-slate-300 duration-100">
+                        <i data-lucide="star" class="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors"></i>
+                        <span>收藏</span>
+                    </div>
+                    <div class="group flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold border-b-2 transition-all select-none cursor-pointer bg-white border-slate-200 border-b-slate-300 text-slate-700 hover:-translate-y-0.5 hover:border-b-blue-500 hover:text-blue-500 active:translate-y-0 active:border-b-slate-300 duration-100">
+                        <i data-lucide="tag" class="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 transition-colors"></i>
+                        <span>标签管理</span>
+                    </div>
+                </div>
+                <p class="mt-6 text-center text-xs text-slate-500">
+                    特点：微立体感，点击反馈强，活泼有趣。
+                </p>
+            </section>
+
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>

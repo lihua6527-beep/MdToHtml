@@ -9,7 +9,7 @@ import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
-import { Maximize2, Palette, MoreHorizontal, LayoutGrid, Type, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Edit, Check, Trash2, Minus, Plus, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { Maximize2, Palette, MoreHorizontal, LayoutGrid, Type, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Edit, Check, Trash2, Minus, Plus, AlignLeft, AlignCenter, AlignRight, Cpu, Zap, TrendingUp, Tag, Award, Layers, Box, Globe } from 'lucide-react';
 import { getShapeStyle, CardShape } from '../../lib/shapes';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -367,17 +367,13 @@ export const Card: React.FC<CardProps> = ({
 
       {/* Header */}
       <div className={clsx(
-        "px-6 pt-6 pb-3",
+        "px-6 pt-6 pb-3 flex flex-col gap-3",
         style === 'code' && "bg-black/5 border-b border-border-soft py-3",
         // Alignment classes
-        titleAlign === 'center' && "text-center flex justify-center",
-        titleAlign === 'left' && "text-left flex justify-start",
+        titleAlign === 'center' && "text-center items-center",
+        titleAlign === 'left' && "text-left items-start",
         // Overrides for specific styles or legacy logic
-        isWideAndShort && "flex justify-center text-center", 
-        // Note: We prioritize explicit user alignment over auto-alignment, 
-        // but keep 'stat' style centered by default if not set.
-        // Actually, styleVariants.stat has 'text-center' which might conflict.
-        // Let's rely on the explicit titleAlign state.
+        isWideAndShort && "items-center text-center", 
         "flex-none" // Header shouldn't shrink
       )}>
         {isEditingTitle && editMode && isSelected ? (
@@ -405,9 +401,8 @@ export const Card: React.FC<CardProps> = ({
               className={clsx(
                 "font-bold tracking-tight font-heading transition-all duration-200 w-full",
                 // Typography based on Theme
-                style === 'warning' && "text-accent",
                 style === 'code' && "text-text-muted text-sm font-mono",
-                style !== 'code' && style !== 'warning' && "text-primary",
+                style !== 'code' && "text-primary",
                 // Dynamic Font Size
                 titleSize,
                 editMode && isSelected && "hover:bg-primary/5 cursor-text border border-transparent hover:border-primary/20 rounded px-1 -mx-1 transition-colors"
@@ -485,7 +480,36 @@ export const Card: React.FC<CardProps> = ({
                     ol: ({node, ...props}) => <ol className="list-decimal pl-4 mb-2 space-y-1 text-left" {...props} />,
                     a: ({node, ...props}) => <a className="text-primary hover:underline" {...props} />,
                     strong: ({node, ...props}) => <strong className="font-bold text-text-primary" {...props} />,
-                    code: ({node, ...props}) => <code className="bg-bg-page px-1.5 py-0.5 rounded text-sm font-mono text-text-secondary" {...props} />,
+                    // CHD Protocol: Strict Code Style Enforcement
+                    // Only allow code style for: 1. Block code, 2. Arrows/Sequences, 3. References, 4. Actual code
+                    code: ({node, inline, className, children, ...props}: any) => {
+                      const match = /language-(\w+)/.exec(className || '');
+                      const text = String(children).trim();
+                      
+                      // 1. Block Code (always allowed)
+                      if (!inline || match) {
+                        return <code className={clsx("bg-bg-page px-1.5 py-0.5 rounded text-sm font-mono text-text-secondary", className)} {...props}>{children}</code>;
+                      }
+
+                      // 2. Allow List Logic for Inline Code
+                      const isArrow = /^(\->|=>|→|←|↔|<->|<=>)$/.test(text);
+                      const isReference = /^\[.+\]$/.test(text); // [1], [Ref]
+                      const isCodeLike = /[=\(\)\{\}\[\]\$\._<>]/.test(text) || // Contains symbols
+                                        /[a-z]+[A-Z][a-z]+/.test(text) ||   // camelCase
+                                        /[a-z]+_[a-z]+/.test(text) ||       // snake_case
+                                        /^[a-zA-Z0-9\.]+$/.test(text);      // Single word (var, file.ext) - permissive
+                      
+                      // 3. Strict Check: If it looks like a sentence or Chinese text, FORCE Bold instead of Code
+                      const isSentence = /\s/.test(text) && text.length > 10;
+                      const hasChinese = /[\u4e00-\u9fa5]/.test(text);
+
+                      if (isArrow || isReference || (isCodeLike && !hasChinese && !isSentence)) {
+                         return <code className="bg-bg-page px-1.5 py-0.5 rounded text-sm font-mono text-text-secondary" {...props}>{children}</code>;
+                      }
+
+                      // Fallback: Render as Bold Text (Correction)
+                      return <strong className="font-bold text-primary/80" title="Auto-corrected from code style">{children}</strong>;
+                    },
                     // Table Styling
                     table: ({node, ...props}) => (
                       <div className="overflow-x-auto my-4 rounded-lg border border-border-soft">

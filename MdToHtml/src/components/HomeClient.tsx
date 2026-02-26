@@ -9,6 +9,7 @@ import { PathSettingsPanel } from '@/components/PathSettingsPanel';
 interface Post {
   slug: string;
   mtime: number;
+  birthtime?: number; // Added for import time sorting
   status?: string;
 }
 
@@ -121,9 +122,11 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
   return (
     <div className="flex h-screen bg-bg-page overflow-hidden transition-colors duration-300">
       {/* Left Sidebar */}
-      <div className="w-64 bg-bg-card border-r border-border-soft flex flex-col shrink-0 transition-colors duration-300">
-        <DocumentList initialPosts={posts} onOpenSettings={() => setShowSettings(true)} />
-      </div>
+      <DocumentList 
+        initialPosts={posts} 
+        onOpenSettings={() => setShowSettings(true)} 
+        className="shrink-0 border-r border-border-soft"
+      />
 
       {/* Main Content Area */}
       <div 

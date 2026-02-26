@@ -50,12 +50,13 @@ AI 必须为每个 Section 指定布局属性。
 
 *   **`layout`**:
     *   `"grid"`: 网格布局（默认）。适合展示多个并列的观点、特征或数据。
-    *   `"single"`: 单栏流式布局。适合长文本、叙事性内容或代码块。
-    *   `"gallery"`: 画廊布局（默认 3 列，无缝隙）。适合图片展示。
+    *   **注**: `single` 和 `gallery` 布局在 v2.0 中已**暂时锁定**，所有内容强制使用 Grid 布局以保证一致性。
 *   **`columns`**: (仅在 grid 布局下有效)
-    *   `2`: 双栏对比。
-    *   `3`: 标准三栏（最常用）。
-    *   `4`: 高密度信息（如核心亮点、数据指标）。
+    *   **智能列数规则 (Smart Columns)**:
+        *   **1-4 张卡片**: 列数 = 卡片数量 (1->1, 2->2, 3->3, 4->4)。
+        *   **5张及以上**: 强制分行，每行 3 列 (如 5 张 -> [3, 2], 6 张 -> [3, 3])。
+        *   **最大列数**: 4 (仅当卡片数为 4 时)。
+    *   **AI 策略**: 通常无需指定 `columns`，由渲染引擎自动计算。仅在需要强制特定视觉效果时指定。
 *   **`section-color`**: (选填)
     *   `"chart-1"` 到 `"chart-5"`: 应用莫兰迪主题色背景。
     *   `"default"`: 默认背景。
@@ -65,22 +66,49 @@ AI 必须为每个 Section 指定布局属性。
 **严禁在 L1 (##) 下直接书写正文，所有内容必须包裹在 L2 (###) 卡片中。**
 
 ```markdown
-### 突破全网拓扑假设 {card-style="highlight" col-span=2 row-span=1}
+### 突破全网拓扑假设 {card-style="highlight"}
 这里是卡片的正文内容...
 ```
 
 *   **`card-style` (样式)**:
     *   `"normal"`: 标准卡片（默认）。适合一般性描述。
-    *   `"highlight"`: 高亮卡片。适合核心观点、重要结论。背景色会有所不同。
-    *   `"stat"`: 统计卡片。**核心数据指标专用**。字体会自动放大居中。
+    *   `"highlight"`: 高亮卡片。适合核心观点、重要结论。
     *   `"quote"`: 引用卡片。适合名言、用户评价、设计理念。
-    *   `"code"`: 代码卡片。适合展示技术栈、算法伪代码、配置参数。
-    *   `"warning"`: 警告卡片。适合展示风险、痛点、错误提示。
-    *   `"summary"`: 摘要卡片。通常用于章节开头的综述。
+    *   `"code"`: 代码卡片。**严格限制**！仅限于展示代码块、伪代码、流程箭头图或配置文件。
+        *   **禁止滥用**: 严禁将普通文本内容设置为 `code` 样式以试图获得特殊高亮（请使用 `highlight` 或 `quote`）。非必要不使用！
+    *   **注**: `stat`, `warning`, `summary` 等样式在 v2.0 中已**精简**，请勿使用。所有内容请归类为上述 4 种样式。
+
+### L2.1: 富文本支持 (Rich Text Support)
+CHD 协议全面支持以下富文本格式。
+**核心原则**: 为了保证内容的可编辑性与语义化，**必须优先使用标准文本格式normal**，严禁使用图片或硬编码 HTML。
+
+*   **数学公式 (Math/LaTeX)**:
+    *   **规范**: 必须使用 LaTeX 语法。**禁止使用公式截图**。
+    *   **行内公式**: 使用 `$ E = mc^2 $`。
+    *   **块级公式**: 使用 `$$` 包裹。
+    *   **适用场景**: 算法推导、物理公式、统计模型。
+    *   **示例**:
+        ```latex
+        $$
+        J(\theta) = -\frac{1}{m} \sum_{i=1}^m [y^{(i)}\log(h_\theta(x^{(i)})) + (1-y^{(i)})\log(1-h_\theta(x^{(i)}))]
+        $$
+        ```
+*   **表格 (Tables)**:
+    *   **规范**: 必须使用标准 GFM Markdown 表格语法。**禁止使用 HTML `<table>` 标签或表格截图**。
+    *   支持标准 GFM (GitHub Flavored Markdown) 表格语法。
+    *   **适用场景**: 数据对比、参数列表、优缺点分析。
+    *   **示例**:
+        ```markdown
+        | 模型 | 准确率 | 召回率 | F1 |
+        | :--- | :---: | :---: | --: |
+        | BERT | 92.5% | 91.0% | 91.7 |
+        | LSTM | 88.3% | 85.2% | 86.7 |
+        ```
+
 *   **`col-span` (跨列)**:
-    *   默认为 `1`。
-    *   `2`, `3`, `4`: 让卡片跨越更多列，用于强调重要性或适应长内容。
-    *   **AI 策略**: 重要的卡片（如“核心贡献”）应设为 `col-span=2` 或 `col-span=3` 以打破网格的单调感。
+    *   **[v2.1 更新] 已弃用 (Deprecated)**。
+    *   为了保证视觉统一性，**所有卡片宽度必须完全一致**。
+    *   禁止 AI 为卡片指定 `col-span` 属性。渲染引擎将自动忽略此属性。
 *   **`row-span` (跨行)**:
     *   默认为 `1`。
     *   `2`: 让卡片在垂直方向上占据更多空间（仅在 grid 布局且由引擎自动排列时有效）。
@@ -102,25 +130,30 @@ You are an expert Information Architect and UI Designer. Your task is to restruc
     - **L2**: Use `### Card Title {attributes}` for content blocks.
     - **NO Orphan Text**: NEVER write text directly under `## Section`. All text MUST be inside `### Card`.
     - **No H4+**: Do not use `####` or deeper headings.
+    - **Math/Tables**: MUST use LaTeX (`$`/`$$`) for formulas and GFM for tables. Do NOT use images.
 
 2.  **Layout Strategy (L1 Attributes)**:
-    - For "Abstract/Highlights/Metrics": Use `{layout="grid" columns=4}`.
-    - For "Introduction/Background": Use `{layout="grid" columns=3}` or `{layout="single"}` (if narrative).
-    - For "Methodology/Architecture": Use `{layout="grid" columns=2}` or `{layout="grid" columns=3}`.
-    - For "Comparison/Results": Use `{layout="grid" columns=3}`.
+    - **FORCE GRID**: Always use `{layout="grid"}`. Other layouts (`single`, `gallery`) are DISABLED.
+    - **Columns**:
+        - 1-4 cards -> `columns=N` (e.g. 3 cards -> 3 columns).
+        - 5+ cards -> `columns=3`.
+    - **Color**: Use `section-color="chart-N"` for visual distinction.
 
 3.  **Card Styling (L2 Attributes)**:
-    - **Key Metrics** (e.g., "Accuracy 98%", "Speed 10x"): MUST use `{card-style="stat"}`.
-    - **Core Concepts/Definitions**: Use `{card-style="highlight"}`.
+    - **Allowed Styles Only**: `normal`, `highlight`, `quote`, `code`.
+    - **Core Concepts/Stats**: Use `{card-style="highlight"}` (Stats style is deprecated).
     - **Quotes/Feedback**: Use `{card-style="quote"}`.
-    - **Code/Algorithms/Tech Stack**: Use `{card-style="code"}`.
+    - **Code/Algorithms**: Use `{card-style="code"}`.
     - **General Text**: Use `{card-style="normal"}`.
-    - **Important Cards**: Add `col-span=2` or `col-span=3` to emphasize them.
+    - **Consistency**: Maintain style consistency within a section (e.g., all `normal` or all `code`). Exception: Footer sections (Summary/References) can vary.
+    - **No Col-Span**: Do NOT use `col-span`. All cards must be equal width.
 
 4.  **Content Refinement**:
-    - **Summarize**: Do not paste long paragraphs. Break them into bullet points or short summaries.
-    - **Title Extraction**: Card titles (`### Title`) should be punchy and descriptive (2-6 words).
-    - **Visual Rhythm**: Mix `col-span=1` and `col-span=2` cards to create a dynamic grid layout, avoiding a boring "wall of text".
+    - **Summarize**: Do not paste long paragraphs. Break them into bullet points.
+    - **Title Extraction**: Card titles (`### Title`) should be punchy (2-6 words).
+    - **Consistency**: Maintain a uniform grid.
+    - **Data**: Use Tables for structured data comparison.
+    - **Formula**: Use LaTeX for mathematical expressions.
 
 # Example Output
 
@@ -132,13 +165,13 @@ tags: ["AI", "Rendering", "Optimization"]
 
 ## Core Highlights {layout="grid" columns=4 section-color="chart-1"}
 
-### 10x Performance {card-style="stat"}
+### 10x Performance {card-style="highlight"}
 Optimized rendering pipeline reduces latency by 90%.
 
-### Zero Config {card-style="highlight" col-span=2}
+### Zero Config {card-style="highlight"}
 Fully automated setup with smart defaults. No manual tuning required.
 
-### 99.9% Uptime {card-style="stat"}
+### 99.9% Uptime {card-style="highlight"}
 Enterprise-grade reliability.
 
 ## Architecture {layout="grid" columns=3}
@@ -146,7 +179,7 @@ Enterprise-grade reliability.
 ### Frontend Layer {card-style="normal"}
 Built with React and Tailwind for maximum flexibility.
 
-### AI Core {card-style="code" col-span=2}
+### AI Core {card-style="code"}
 Powered by a custom transformer model optimized for structural understanding.
 
 ## User Feedback {layout="grid" columns=2}
@@ -167,22 +200,31 @@ I can't imagine working without it anymore.
 *   **要**：将其拆解为 `## 核心亮点` 或 `## 论文概览`。
     *   将“背景”拆为一个卡片。
     *   将“贡献”拆为 2-3 个 `highlight` 卡片。
-    *   将“结果”拆为 `stat` 卡片。
+    *   将“结果”拆为 `highlight` 卡片（并在文中加粗数据）。
 
 ### 4.2 如何处理实验数据 (Experiments)
 *   **不要**：仅仅列出表格。
-*   **要**：使用 `stat` 卡片展示最关键的提升指标（如 "SOTA +2.5%"）。
-*   **要**：使用 `col-span=2` 的 `highlight` 卡片解释数据背后的原因。
+*   **要**：使用 `highlight` 卡片展示最关键的提升指标（如 "**SOTA +2.5%**"）。
+*   **要**：使用 `normal` 卡片解释数据背后的原因。
 
 ### 4.3 如何处理技术架构 (Architecture)
 *   **不要**：用纯文本描述流程。
 *   **要**：使用 `code` 样式卡片展示模块名称或伪代码。
-*   **要**：使用 `columns=3` 的网格布局，按逻辑顺序（输入->处理->输出）排列卡片。
+*   **要**：使用 `columns=3` 的网格布局，按逻辑顺序排列。
 
-### 4.4 视觉节奏 (Visual Rhythm)
-*   避免所有卡片都是 `col-span=1`。
-*   尝试 `1-2-1` 或 `2-1-1` 的排列模式。
-*   在每个 Section 的开头或结尾，使用一个 `col-span=full` (即等于列数) 的卡片作为综述或总结。
+### 4.4 视觉一致性 (Visual Consistency)
+*   **强制网格**: 严格遵守 `1-4 张 = N 列`，`5+ 张 = 3 列` 的规则。
+*   **避免孤儿**: 确保每行卡片数量平衡。例如 5 张卡片会排成 `3 + 2`，这是允许的。
+*   **不要**: 尝试使用 `col-span` 或 `row-span` 来创造“艺术感”。在 v2.0 中，整齐划一是最高优先级。
+*   **Section 内部一致性**: 同一个 Section 下的 Card 样式应尽可能保持统一。例如，如果 Section 是关于“核心概念”的，建议全部使用 `normal` 或 `highlight`；如果是“代码实现”，则全部使用 `code`。避免在一个逻辑段落内无意义地混用多种样式。
+*   **特殊区域例外 (Footer Exceptions)**: 对于文档的结尾部分（如“引言”、“总结”、“参考文献”），允许其样式与正文部分不同。例如，可以使用 `card-style="quote"` 来突出总结性陈述。
+
+### 4.5 内容原子化 (Content Atomicity)
+*   **"One Card, One Point" (一卡一义)**: 严禁将整个章节的所有内容（如多个无序列表项、多段长文本）塞进同一个 `###` 卡片中。
+*   **拆解策略**:
+    *   遇到含有多个 `h4` 或加粗标题的段落，应拆分为多个独立的 `###` 卡片。
+    *   遇到长列表（超过 5 项），应考虑按逻辑分组拆分为多个卡片。
+*   **避免单体巨石 (No Monolithic Cards)**: 保持卡片高度相对一致，以维持 Grid 布局的美观。
 
 ---
 
@@ -190,7 +232,7 @@ I can't imagine working without it anymore.
 
 *   **错误 1**: `## Introduction` 下面直接写了 "This paper proposes..."。
     *   **修正**: 必须包裹在 `### Background {card-style="normal"}` 中。
-*   **错误 2**: `### Result` 卡片里写了 "Accuracy is 95%."。
-    *   **修正**: 改为 `### Accuracy {card-style="stat"}`，内容写 "95%"。
+*   **错误 2**: `### Result` 卡片里使用了 `card-style="stat"`。
+    *   **修正**: v2.0 已移除 `stat` 样式。请使用 `card-style="highlight"`，并直接在内容中加粗数字，如 `**95%** Accuracy`。
 *   **错误 3**: 整个文档只用了一种 `card-style="normal"`。
-    *   **修正**: 根据语义，至少应用 3 种不同的样式（如 `stat` 用于数字，`highlight` 用于重点，`quote` 用于引用）。
+    *   **修正**: 根据语义，至少应用 3 种允许的样式（`normal`, `highlight`, `quote`）。

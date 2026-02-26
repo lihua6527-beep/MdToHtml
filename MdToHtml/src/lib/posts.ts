@@ -44,6 +44,7 @@ export function getAllPosts() {
   return entries.map((entry) => ({
     slug: entry.path.replace(/\.md$/i, ''),
     mtime: entry.mtime,
+    birthtime: entry.birthtime || entry.mtime, // Fallback to mtime if birthtime is missing
     status: entry.status,
     title: entry.title,
     tags: entry.tags,

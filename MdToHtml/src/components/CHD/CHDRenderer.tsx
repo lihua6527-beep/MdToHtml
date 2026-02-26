@@ -6,6 +6,9 @@ import { Section } from './Section';
 import { parseCHDBlocks } from '@/lib/chdParser';
 import { parseAttributes } from '@/lib/attributeParser';
 import { useTheme } from '@/components/ThemeProvider';
+import { Cpu, Zap, TrendingUp, Award, Layers, Box, Globe, Tag } from 'lucide-react';
+import { clsx } from 'clsx';
+import { TagRenderer, TagStyleType } from './TagRenderer';
 
 // --- Types ---
 
@@ -26,6 +29,7 @@ export interface CHDRendererProps {
   onCardMove?: (lineIndex: number, direction: 'left' | 'right' | 'up' | 'down') => void;
   onCardDelete?: (lineIndex: number) => void;
   onCardAdd?: (sectionBlockIndex: number) => void;
+  tagStyle?: TagStyleType;
 }
 
 // --- Helper: Parse Attributes {key="val"} ---
@@ -50,7 +54,8 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
   onTitleUpdate,
   onCardMove,
   onCardDelete,
-  onCardAdd
+  onCardAdd,
+  tagStyle = 'glass'
 }) => {
   const [internalError, setInternalError] = useState<string | null>(null);
 
@@ -176,6 +181,14 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
                 return;
             }
 
+            // [Smart Sizing Logic] - UPDATED (v2.1)
+            // User Requirement: 
+            // 1. Force equal width for all cards (handled in LayoutStrategies or by removing col-span here).
+            // 2. Max 4 cards per row.
+            // 3. Logic:
+            //    - Count <= 4: columns = Count
+            //    - Count >= 5: columns = 3 (e.g. 5 -> 3 cols [3, 2], 6 -> 3 cols [3, 3])
+            
             const cardCount = section.cards.length;
             let smartColumns = 2; // Default
 
@@ -188,18 +201,21 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
             } else if (cardCount === 4) {
                 smartColumns = 4;
             } else if (cardCount >= 5) {
-                // For 5+ cards, user says "3 or 4 both fine". 
-                // 3 columns = 3 + 2 (2 rows) for 5 cards
-                // 3 columns = 3 + 3 (2 rows) for 6 cards
-                smartColumns = 3; 
-                if (cardCount === 4 || cardCount === 8) {
-                    smartColumns = 4;
-                }
+                // User explicitly requested: "If 5, become two 3-cols; if 6, become two 3-cols"
+                // This implies a 3-column grid layout for any count >= 5.
+                smartColumns = 3;
             }
 
             // Apply smart columns
-            // We set it on layoutProps so Section component picks it up
             section.layoutProps.columns = String(smartColumns);
+            
+            // [Protocol Enforcement]
+            // Remove 'col-span' from all cards to ensure equal width.
+            section.cards.forEach((card: any) => {
+                if (card.props['col-span']) {
+                    delete card.props['col-span'];
+                }
+            });
         });
 
         // [Smart Sizing Logic] - DISABLED
@@ -315,6 +331,9 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
                 v{frontmatter.version}
               </div>
            )}
+
+           {/* Frontmatter Tags Rendering */}
+          <TagRenderer tags={frontmatter.tags} style={tagStyle} />
         </div>
       )}
 

@@ -83,8 +83,10 @@ const GridLayoutStrategy: ILayoutStrategy = {
               attributes={card.props}
               inheritedColor={config['section-color']}
               colSpan={(() => {
-                  const raw = card.props['col-span'] ? parseInt(card.props['col-span']) : defaultColSpan;
-                  return raw < 3 ? raw * multiplier : raw;
+                  // [Protocol Enforcement]
+                  // Ignore card.props['col-span'] to ensure equal width for all cards.
+                  // Always use defaultColSpan calculated from total columns.
+                  return defaultColSpan;
               })()}
               rowSpan={card.props['row-span'] ? parseInt(card.props['row-span']) : undefined}
               isActive={isActive}

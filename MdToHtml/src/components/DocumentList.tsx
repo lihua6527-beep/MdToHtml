@@ -2,53 +2,64 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { FileText, ChevronRight, Layout, PenTool, Clock, AlertCircle, CheckCircle2, Settings, Trash2, CheckSquare, Square } from 'lucide-react';
+import { FileText, ChevronRight, Layout, PenTool, Clock, AlertCircle, CheckCircle2, Settings, Trash2, CheckSquare, Square, Eye, X, ArrowUpDown, Calendar, Monitor, Maximize2, Minimize2 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { CHDRenderer } from './CHD/CHDRenderer';
 
 interface Post {
   slug: string;
   mtime: number;
+  birthtime?: number; // Added for import time sorting
   status?: string;
 }
 
 interface DocumentListProps {
   initialPosts: Post[];
   onOpenSettings?: () => void;
+  className?: string;
 }
 
-export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpenSettings }) => {
+export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpenSettings, className }) => {
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number; slug: string | null }>({ visible: false, x: 0, y: 0, slug: null });
+  const [sortMethod, setSortMethod] = useState<'import' | 'visited' | 'modified'>('import');
+  
+  // Layout State
+  const [isExpanded, setIsExpanded] = useState(false);
   
   // Batch selection state
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    // Client-side sorting based on 'Recently Visited'
+    // Client-side sorting
     try {
         const visitedStr = localStorage.getItem('visited_docs');
         const visitedMap: Record<string, number> = visitedStr ? JSON.parse(visitedStr) : {};
 
         const sorted = [...initialPosts].sort((a, b) => {
-            const timeA = visitedMap[a.slug] || 0;
-            const timeB = visitedMap[b.slug] || 0;
-
-            // 1. Visited time (Recent first)
-            if (timeA !== timeB) {
+            if (sortMethod === 'visited') {
+                const timeA = visitedMap[a.slug] || 0;
+                const timeB = visitedMap[b.slug] || 0;
+                if (timeA !== timeB) return timeB - timeA;
+                return b.mtime - a.mtime;
+            } else if (sortMethod === 'import') {
+                // Import time (birthtime) descending
+                const timeA = a.birthtime || a.mtime;
+                const timeB = b.birthtime || b.mtime;
                 return timeB - timeA;
+            } else {
+                // Modified time descending
+                return b.mtime - a.mtime;
             }
-
-            // 2. Modified time (Recent first)
-            return b.mtime - a.mtime;
         });
 
         setPosts(sorted);
     } catch (e) {
         console.error('Failed to sort posts', e);
     }
-  }, [initialPosts]);
+  }, [initialPosts, sortMethod]);
 
   useEffect(() => {
     const handleGlobalClick = () => {
@@ -144,7 +155,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
   };
 
   return (
-    <div className="flex flex-col h-full bg-bg-card">
+    <div className={clsx("flex flex-col h-full bg-bg-card transition-all duration-300 border-r border-border-soft", isExpanded ? "w-[50vw]" : "w-64", className)}>
         {/* Header */}
         <div className="h-14 flex items-center justify-between px-4 border-b border-border-soft shrink-0 bg-bg-card z-10">
            {isSelectionMode ? (
@@ -179,19 +190,28 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
                   <Layout className="w-5 h-5 text-primary" />
                   <span>文档列表</span>
                </div>
-               <button 
-                 onClick={toggleSelectionMode}
-                 className="text-text-secondary hover:text-primary transition-colors p-1 rounded-md hover:bg-bg-page"
-                 title="批量管理"
-               >
-                 <CheckSquare size={18} />
-               </button>
+               <div className="flex items-center gap-1">
+                   <button 
+                     onClick={() => setIsExpanded(!isExpanded)}
+                     className="text-text-secondary hover:text-primary transition-colors p-1 rounded-md hover:bg-bg-page"
+                     title={isExpanded ? "收起列表" : "展开列表"}
+                   >
+                     {isExpanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                   </button>
+                   <button 
+                     onClick={toggleSelectionMode}
+                     className="text-text-secondary hover:text-primary transition-colors p-1 rounded-md hover:bg-bg-page"
+                     title="批量管理"
+                   >
+                     <CheckSquare size={18} />
+                   </button>
+               </div>
              </>
            )}
         </div>
         
         {/* List */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <div className={clsx("flex-1 overflow-y-auto p-2", isExpanded ? "grid grid-cols-2 gap-2 content-start" : "space-y-1")}>
            {posts.map((post) => {
              const isSelected = selectedSlugs.has(post.slug);
              
@@ -232,39 +252,46 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
              }
 
              return (
-                <Link 
+                <div 
                    key={post.slug} 
-                   href={`/${post.slug}`}
                    onContextMenu={(e) => handleContextMenu(e, post.slug)}
-                   className="block px-3 py-2 rounded-md hover:bg-bg-page text-sm text-text-primary/80 hover:text-text-primary transition-colors flex items-center gap-2 group"
+                   className="px-3 py-2 rounded-md hover:bg-bg-page transition-colors flex items-center gap-2 group relative"
                  >
-                   <FileText className="w-4 h-4 text-text-secondary group-hover:text-primary transition-colors" />
-                   <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                          <div className="truncate font-medium">{post.slug}</div>
-                          {(post.status === 'pending' || post.status === 'incomplete') && (
-                            <div title="未完成" className="text-amber-500 shrink-0">
-                                <AlertCircle size={14} />
-                            </div>
-                          )}
-                          {post.status === 'modified' && (
-                            <div title="已修改" className="text-blue-500 shrink-0">
-                                <PenTool size={14} />
-                            </div>
-                          )}
-                          {(post.status === 'done' || post.status === 'completed') && (
-                            <div title="已完成" className="text-green-600 shrink-0">
-                                <CheckCircle2 size={14} />
-                            </div>
-                          )}
-                      </div>
-                      <div className="flex items-center gap-1 text-[10px] text-text-muted mt-0.5">
-                           <Clock size={10} />
-                           <span>{new Date(post.mtime).toLocaleDateString()}</span>
+                   <Link 
+                     href={`/editor/${post.slug}`}
+                     className="flex-1 flex items-center gap-2 min-w-0 text-sm text-text-primary/80 hover:text-text-primary transition-colors"
+                   >
+                       <FileText className="w-4 h-4 text-text-secondary group-hover:text-primary transition-colors shrink-0" />
+                       <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                              <div className="truncate font-medium">{post.slug}</div>
+                              {(post.status === 'pending' || post.status === 'incomplete') && (
+                                <div title="未完成" className="text-amber-500 shrink-0">
+                                    <AlertCircle size={14} />
+                                </div>
+                              )}
+                              {post.status === 'modified' && (
+                                <div title="已修改" className="text-blue-500 shrink-0">
+                                    <PenTool size={14} />
+                                </div>
+                              )}
+                              {(post.status === 'done' || post.status === 'completed') && (
+                                <div title="已完成" className="text-green-600 shrink-0">
+                                    <CheckCircle2 size={14} />
+                                </div>
+                              )}
+                          </div>
+                          <div className="flex items-center gap-1 text-[10px] text-text-muted mt-0.5">
+                               {sortMethod === 'import' ? <Calendar size={10} /> : <Clock size={10} />}
+                               <span>{new Date(sortMethod === 'import' ? (post.birthtime || post.mtime) : post.mtime).toLocaleDateString()}</span>
+                           </div>
                        </div>
-                   </div>
+                   </Link>
+                   
+                   {/* Preview Button Removed */}
+                    
                    <ChevronRight className="w-3 h-3 text-text-secondary/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-                 </Link>
+                 </div>
              );
            })}
         </div>
@@ -301,9 +328,37 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
         <div className="p-4 border-t border-border-soft shrink-0 relative">
            {showSettingsMenu && (
                <div 
-                className="absolute bottom-16 left-4 w-48 bg-bg-card border border-border-soft rounded-lg shadow-xl p-1 z-50 animate-in slide-in-from-bottom-2 fade-in duration-200"
+                className="absolute bottom-16 left-4 w-56 bg-bg-card border border-border-soft rounded-lg shadow-xl p-2 z-50 animate-in slide-in-from-bottom-2 fade-in duration-200"
                 onClick={(e) => e.stopPropagation()}
                >
+                   <div className="text-xs font-semibold text-text-muted mb-2 px-2 uppercase tracking-wider">排序方式</div>
+                   <button 
+                       onClick={() => setSortMethod('import')}
+                       className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2", sortMethod === 'import' ? "bg-primary/10 text-primary" : "hover:bg-bg-page text-text-primary")}
+                   >
+                       <Calendar className="w-4 h-4" />
+                       <span>导入时间</span>
+                       {sortMethod === 'import' && <CheckCircle2 className="w-3 h-3 ml-auto" />}
+                   </button>
+                   <button 
+                       onClick={() => setSortMethod('modified')}
+                       className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2", sortMethod === 'modified' ? "bg-primary/10 text-primary" : "hover:bg-bg-page text-text-primary")}
+                   >
+                       <Clock className="w-4 h-4" />
+                       <span>修改时间</span>
+                       {sortMethod === 'modified' && <CheckCircle2 className="w-3 h-3 ml-auto" />}
+                   </button>
+                   <button 
+                       onClick={() => setSortMethod('visited')}
+                       className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2", sortMethod === 'visited' ? "bg-primary/10 text-primary" : "hover:bg-bg-page text-text-primary")}
+                   >
+                       <ArrowUpDown className="w-4 h-4" />
+                       <span>最近访问</span>
+                       {sortMethod === 'visited' && <CheckCircle2 className="w-3 h-3 ml-auto" />}
+                   </button>
+
+                   <div className="h-px bg-border-soft my-2" />
+
                    <button 
                        onClick={() => {
                            setShowSettingsMenu(false);

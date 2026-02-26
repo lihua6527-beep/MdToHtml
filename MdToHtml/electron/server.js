@@ -277,43 +277,95 @@ app.post('/api/save-session', (req, res) => {
 
     const timestamp = new Date().toISOString();
 
-    // 1. Write current state files
-    fs.writeFileSync(path.join(sessionDir, 'input.md'), input, 'utf8');
-    fs.writeFileSync(path.join(sessionDir, 'output.md'), output, 'utf8');
-    
-    const metadata = {
-        slug,
-        last_updated: timestamp,
-        score: score || null,
-        client_version: '1.0.0',
-        user_agent: req.headers['user-agent'] || 'unknown'
-    };
+    // 1. Initial File (initial.md)
+    // Only write if it doesn't exist.
+    const initialPath = path.join(sessionDir, 'initial.md');
+    if (!fs.existsSync(initialPath)) {
+        // Try to find original file in input directory to use as true initial
+        const inputDir = PathManager.getInputPath();
+        const originalPath = path.join(inputDir, safeSlug.endsWith('.md') ? safeSlug : `${safeSlug}.md`);
+        
+        let initialContent = input; // Fallback to current input
+        if (fs.existsSync(originalPath)) {
+             try {
+                 initialContent = fs.readFileSync(originalPath, 'utf8');
+             } catch (e) {
+                 console.error('Failed to read original file:', e);
+             }
+        }
+        fs.writeFileSync(initialPath, initialContent, 'utf8');
+    }
 
-    fs.writeFileSync(path.join(sessionDir, 'metadata.json'), JSON.stringify(metadata, null, 2), 'utf8');
+    // 2. Modification Record (history.jsonl)
+    // Append the current state as a new line
+    const historyPath = path.join(sessionDir, 'history.jsonl');
     
-    // 2. Append to History Log
-    const historyPath = path.join(sessionDir, 'history.json');
-    let history = [];
+    // Check if we already have this content to avoid redundancy
+    // User Requirement: "Don't copy all info if I just changed layout"
+    // Strategy: If content is identical to last entry, skip saving content.
+    // If operations are present, save operations.
+    
+    let shouldSaveContent = true;
+    let lastContent = null;
     
     if (fs.existsSync(historyPath)) {
         try {
-            history = JSON.parse(fs.readFileSync(historyPath, 'utf8'));
-            if (!Array.isArray(history)) history = [];
+            const fileContent = fs.readFileSync(historyPath, 'utf8');
+            const lines = fileContent.trim().split('\n');
+            if (lines.length > 0) {
+                const lastLine = lines[lines.length - 1];
+                const lastEntry = JSON.parse(lastLine);
+                if (lastEntry.content) {
+                    lastContent = lastEntry.content;
+                    if (lastEntry.content === input) {
+                        shouldSaveContent = false;
+                    }
+                }
+            }
         } catch (e) {
-            history = [];
+            // If error, assume we need to save
+        }
+    } else {
+        // Check initial.md if history is empty
+        const initialPath = path.join(sessionDir, 'initial.md');
+        if (fs.existsSync(initialPath)) {
+             try {
+                 const initialContent = fs.readFileSync(initialPath, 'utf8');
+                 if (initialContent === input) {
+                     shouldSaveContent = false;
+                 }
+             } catch(e) {}
         }
     }
 
-    history.push({
+    // Construct the record
+    const record = {
         timestamp,
         score: score || null,
         operations: operations || []
-    });
+    };
 
-    fs.writeFileSync(historyPath, JSON.stringify(history, null, 2), 'utf8');
-    
-    // Save operations.json for convenience
-    fs.writeFileSync(path.join(sessionDir, 'operations.json'), JSON.stringify(operations || [], null, 2), 'utf8');
+    if (shouldSaveContent) {
+        record.content = input;
+        record.type = 'content_edit';
+    } else {
+        // If content is same, it's likely a layout operation or just a save trigger
+        if (operations && operations.length > 0) {
+             record.type = 'layout_operation';
+             // No content field needed, reduces redundancy
+        } else {
+             // If no operations and no content change, why are we saving?
+             // Maybe metadata update?
+             // Let's skip saving if truly nothing changed
+             if (!score) {
+                 // Skip saving entirely to avoid spam
+                 return res.json({ success: true, path: safeSlug, status: 'skipped_no_change' });
+             }
+             record.type = 'metadata_update';
+        }
+    }
+
+    fs.appendFileSync(historyPath, JSON.stringify(record) + '\n', 'utf8');
     
     res.json({ success: true, path: safeSlug });
   } catch (error) {

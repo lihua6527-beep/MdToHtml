@@ -11,6 +11,7 @@ const CACHE_VERSION = '2.0';
 export interface CacheEntry {
   path: string; // Filename (basename)
   mtime: number;
+  birthtime: number; // Creation time (Import time)
   status?: string;
   title?: string;
   tags?: string[];
@@ -137,6 +138,7 @@ export class MetadataCacheManager {
             const newEntry: CacheEntry = {
               path: file,
               mtime: stats.mtimeMs,
+              birthtime: stats.birthtimeMs,
               status: data.status,
               title: data.title || file.replace(/\.md$/i, ''),
               tags: data.tags,
