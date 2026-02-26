@@ -5,7 +5,7 @@ import PathManager from './path-manager';
 import TrashManager from './trash-manager';
 
 const CACHE_FILE_NAME = '.metadata_cache.json';
-const DEFAULT_CAPACITY = 100; // Updated to 100 as per plan
+const DEFAULT_CAPACITY = 500; // Updated to 500 as per plan
 const CACHE_VERSION = '2.0';
 
 export interface CacheEntry {

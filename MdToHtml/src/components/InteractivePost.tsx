@@ -29,9 +29,10 @@ interface InteractivePostProps {
   slug: string;
   decodedSlug: string;
   initialStatus?: string | null;
+  historyCount?: number;
 }
 
-const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug, decodedSlug, initialStatus }) => {
+const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug, decodedSlug, initialStatus, historyCount = 0 }) => {
   const { theme, setTheme } = useTheme();
   // Use useHistory for state management instead of simple useState
   const { 
@@ -57,7 +58,7 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
     }
   }, [setContent, isEditing]);
 
-  // Note: We use useHistory's undo/redo, so we ignore the ones from useMarkdownInteraction
+  // Note: We use useHistory's undo, so we ignore the ones from useMarkdownInteraction
   const { updateAttribute, updateContent, updateTitle, updateFrontmatter, moveCard, deleteCard, addCard, operationLog, batchUpdateAttributes } = useMarkdownInteraction(content, handleContentUpdate);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -67,7 +68,9 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
   useVisitHistory(decodedSlug);
 
   // Real-time Scoring
-  const { scoreResult, showScoreDetails, setShowScoreDetails } = useScoring(content);
+  // Combine initial history count with current session operations for immediate feedback
+  const effectiveHistoryCount = historyCount + operationLog.length;
+  const { scoreResult, showScoreDetails, setShowScoreDetails } = useScoring(content, effectiveHistoryCount);
 
   // Toolbar State - Replaced with useCHDSelection hook
   const { activeSectionProps, activeCardProps, selectedSectionTitle } = useCHDSelection(content, selectedBlockIndex);
@@ -318,9 +321,30 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                                 <div className="text-xs text-text-secondary flex justify-between">内容原子: <span className="font-mono font-bold text-text-primary">{scoreResult.dimensions.atomicity}</span></div>
                                 <div className="text-xs text-text-secondary flex justify-between">元数据: <span className="font-mono font-bold text-text-primary">{scoreResult.dimensions.metadata}</span></div>
                                 <div className="text-xs text-text-secondary flex justify-between">语法正确: <span className="font-mono font-bold text-text-primary">{scoreResult.dimensions.syntax}</span></div>
+                                <div className="text-xs text-text-secondary flex justify-between">样式布局: <span className="font-mono font-bold text-text-primary">{scoreResult.dimensions.styling}</span></div>
+                                
+                                <div className="col-span-2 h-px bg-border-soft my-1" />
+                                
+                                <div className="text-xs text-text-secondary flex justify-between">静态基准: <span className="font-mono font-bold text-text-primary">{scoreResult.baseScore || 0}</span></div>
+                                <div className="text-xs text-text-secondary flex justify-between">过程加分: <span className="font-mono font-bold text-green-600">+{scoreResult.processBonus || 0}</span></div>
+                                <div className="col-span-2 text-[10px] text-text-muted text-right mt-1">
+                                    基于 {scoreResult.historyCount || 0} 次有效编辑
+                                </div>
                             </div>
 
                             {/* Issues List */}
+                            {scoreResult.totalScore < 80 && (
+                                <div className="mb-4 p-3 bg-blue-50/50 border border-blue-100 rounded-lg text-xs text-blue-700">
+                                    <div className="flex items-center gap-2 mb-1 font-bold">
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                        <span>AI 优化建议</span>
+                                    </div>
+                                    <p className="leading-relaxed opacity-90">
+                                        当前文档评分较低 ({scoreResult.totalScore}分)。建议使用 AI 重新生成文档内容，通常可以获得 85+ 的基准分，再进行人工微调效率更高。
+                                    </p>
+                                </div>
+                            )}
+
                             {scoreResult.issues.length > 0 ? (
                                 <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
                                     {scoreResult.issues.map((issue, idx) => (

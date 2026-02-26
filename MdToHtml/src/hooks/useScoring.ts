@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { RuleBasedScorer } from '@/lib/scorer';
 import { ScoreResponse } from '@/types/model-interface';
 
-export function useScoring(content: string) {
+export function useScoring(content: string, historyCount: number = 0) {
   const [scoreResult, setScoreResult] = useState<ScoreResponse | null>(null);
   const [showScoreDetails, setShowScoreDetails] = useState(false);
 
@@ -11,7 +11,7 @@ export function useScoring(content: string) {
   useEffect(() => {
     // Only evaluate if content is present
     if (content) {
-       const result = RuleBasedScorer.evaluate(content);
+       const result = RuleBasedScorer.evaluate(content, historyCount);
        setScoreResult(result);
        
        // Auto-show score details if critical errors found or score is very low
@@ -20,11 +20,11 @@ export function useScoring(content: string) {
        }
     } else {
         // Handle empty content specifically
-        const result = RuleBasedScorer.evaluate('');
+        const result = RuleBasedScorer.evaluate('', historyCount);
         setScoreResult(result);
         setShowScoreDetails(true);
     }
-  }, [content]);
+  }, [content, historyCount]);
 
   return { scoreResult, showScoreDetails, setShowScoreDetails };
 }

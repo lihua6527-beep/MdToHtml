@@ -22,19 +22,43 @@ export function getPostBySlug(slug: string) {
   const cacheEntry = cacheManager.getAll().find(e => e.path.replace(/\.md$/i, '') === realSlug);
   const status = cacheEntry?.status || null;
 
+  let historyCount = 0;
+  
   if (!fs.existsSync(fullPath)) {
      // Case-insensitive fallback
      const dir = fs.readdirSync(postsDirectory);
      const match = dir.find(f => f.toLowerCase() === `${realSlug.toLowerCase()}.md`);
      if (match) {
-         return { slug: realSlug, content: fs.readFileSync(path.join(postsDirectory, match), 'utf8'), status };
+         // Use the actual filename for data lookup too
+         const actualName = match.replace(/\.md$/i, '');
+         try {
+             const historyPath = path.join(PathManager.getDataPath(), actualName, 'history.jsonl');
+             if (fs.existsSync(historyPath)) {
+                 const content = fs.readFileSync(historyPath, 'utf8');
+                 historyCount = content.split('\n').filter(line => line.trim()).length;
+             }
+         } catch (e) {}
+         
+         return { slug: realSlug, content: fs.readFileSync(path.join(postsDirectory, match), 'utf8'), status, historyCount };
      }
 
      throw new Error(`File not found: ${fullPath}`);
   }
 
   const fileContents = fs.readFileSync(fullPath, 'utf8');
-  return { slug: realSlug, content: fileContents, status };
+
+  // Read History Count for Scoring
+  try {
+      const historyPath = path.join(PathManager.getDataPath(), realSlug, 'history.jsonl');
+      if (fs.existsSync(historyPath)) {
+          const content = fs.readFileSync(historyPath, 'utf8');
+          historyCount = content.split('\n').filter(line => line.trim()).length;
+      }
+  } catch (e) {
+      // Ignore history read errors
+  }
+
+  return { slug: realSlug, content: fileContents, status, historyCount };
 }
 
 export function getAllPosts() {

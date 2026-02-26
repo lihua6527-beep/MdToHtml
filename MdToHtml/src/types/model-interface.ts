@@ -19,6 +19,8 @@ export interface ScoreDimensions {
   syntax: number;
   /** 样式与布局 (权重 30%) */
   styling: number;
+  /** 过程增量 (额外加分) */
+  process?: number;
 }
 
 /**
@@ -71,6 +73,9 @@ export interface InferenceRequest {
  */
 export interface ScoreResponse {
   totalScore: number;
+  baseScore?: number;    // 静态基准分
+  processBonus?: number; // 过程加分
+  historyCount?: number; // 历史交互次数
   dimensions: ScoreDimensions;
   issues: Issue[];
 }

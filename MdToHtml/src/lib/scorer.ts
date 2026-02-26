@@ -9,21 +9,26 @@ export class RuleBasedScorer {
   /**
    * 评估 Markdown 内容
    * @param content 原始 Markdown 字符串
+   * @param historyCount 历史编辑次数 (Process Bonus)
    * @returns 评分响应
    */
-  static evaluate(content: string): ScoreResponse {
+  static evaluate(content: string, historyCount: number = 0): ScoreResponse {
     const issues: Issue[] = [];
     
     // 0. 空内容检查 (Critical)
     if (!content || content.trim().length === 0) {
         return {
             totalScore: 0,
+            baseScore: 0,
+            processBonus: 0,
+            historyCount: 0,
             dimensions: {
                 structure: 0,
                 atomicity: 0,
                 metadata: 0,
                 syntax: 0,
-                styling: 0
+                styling: 0,
+                process: 0
             },
             issues: [{
                 line: 1,
@@ -51,24 +56,49 @@ export class RuleBasedScorer {
     // 5. 样式与布局 (30分) - 视觉呈现与Grid布局
     const stylingScore = this.evaluateStyling(lines, issues);
 
+    // 计算静态基础分 (Static Score)
+    const staticScore = 
+      structureScore * 0.3 +
+      atomicityScore * 0.2 +
+      metadataScore * 0.1 +
+      syntaxScore * 0.1 +
+      stylingScore * 0.3;
+
+    // 应用基准折算 (Baseline Adjustment)
+    // 静态评分满分折算为 90 分，留出 10 分给过程激励
+    let baseScore = Math.round(staticScore * 0.9);
+
+    // 计算过程增量 (Process Bonus)
+    // 每条历史记录 +3 分，上限 15 分
+    const processBonus = Math.min(15, historyCount * 3);
+
+    // 汇总总分
+    let totalScore = baseScore + processBonus;
+
+    // 严重错误惩罚 (Critical Penalty)
+    const criticalErrors = issues.filter(i => i.severity === 'error').length;
+    if (criticalErrors > 0) {
+        // 每个严重错误扣 20 分
+        totalScore = Math.max(0, totalScore - (criticalErrors * 20));
+    }
+
+    // 最终总分截断 (0-100)
+    totalScore = Math.min(100, Math.round(totalScore));
+
     const dimensions: ScoreDimensions = {
       structure: structureScore,
       atomicity: atomicityScore,
       metadata: metadataScore,
       syntax: syntaxScore,
-      styling: stylingScore // New Dimension
+      styling: stylingScore, // New Dimension
+      process: processBonus  // New Process Dimension
     };
-
-    const totalScore = Math.round(
-      structureScore * 0.3 +
-      atomicityScore * 0.2 +
-      metadataScore * 0.1 +
-      syntaxScore * 0.1 +
-      stylingScore * 0.3
-    );
 
     return {
       totalScore,
+      baseScore,
+      processBonus,
+      historyCount,
       dimensions,
       issues
     };
@@ -261,22 +291,17 @@ export class RuleBasedScorer {
         });
       }
       
-      if (!data.date) {
-        score -= 10;
-        issues.push({
-          line: 1,
-          type: 'metadata_missing_date',
-          message: 'Frontmatter 缺失 date 字段。',
-          severity: 'warning'
-        });
-      }
+      // Date field is no longer mandatory in CHD v2.3+
+      // if (!data.date) { ... } removed.
 
     } catch (e) {
+      // Robust Fallback: Even if frontmatter fails, return a partial score
+      // but mark it as a severe issue.
       score = 0;
       issues.push({
         line: 1,
         type: 'metadata_invalid_yaml',
-        message: 'Frontmatter 解析失败，请检查 YAML 语法。',
+        message: 'Frontmatter 解析失败，请检查 YAML 语法。这将导致元数据评分为 0。',
         severity: 'error'
       });
     }

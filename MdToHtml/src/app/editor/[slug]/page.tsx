@@ -21,13 +21,15 @@ export default function Page({ params }: { params: { slug: string } }) {
   let content = '';
   let decodedSlug = slug;
   let status: string | null = null;
+  let historyCount = 0;
 
   try {
     // Attempt to decode just in case, though raw slug should work
     decodedSlug = decodeURIComponent(slug);
     const post = getPostBySlug(decodedSlug);
     content = post.content;
-    status = post.status || null;
+    status = (post as any).status || null;
+    historyCount = (post as any).historyCount || 0;
   } catch (e) {
     decodedSlug = decodeURIComponent(slug);
     content = `# 错误\n未找到文件: ${decodedSlug}\n\n原始标识: ${slug}`;
@@ -43,6 +45,7 @@ export default function Page({ params }: { params: { slug: string } }) {
          slug={slug} 
          decodedSlug={decodedSlug} 
          initialStatus={status}
+         historyCount={historyCount}
        />
     </ThemeScope>
   );

@@ -126,6 +126,23 @@ class PathManager {
     return this.recycleDir;
   }
 
+  // Legacy static accessors for compatibility
+  public static getInputPath(): string {
+    return PathManager.getInstance().getInputPath();
+  }
+
+  public static getOutputPath(): string {
+    return PathManager.getInstance().getOutputPath();
+  }
+  
+  public static getDataPath(): string {
+    return PathManager.getInstance().getDataPath();
+  }
+  
+  public static getRecyclePath(): string {
+    return PathManager.getInstance().getRecyclePath();
+  }
+
   public getAppConfig(): AppConfig {
     return this.config;
   }
