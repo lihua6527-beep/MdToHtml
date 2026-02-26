@@ -25,8 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CardShape } from '@/lib/shapes';
-// We'll define CardStyle locally to match Card.tsx
-export type CardStyle = 'normal' | 'highlight' | 'quote' | 'code';
+import { CardStyle } from '@/types/chd';
 
 export interface BottomToolbarProps {
     // Current State

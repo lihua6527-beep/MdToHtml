@@ -32,6 +32,8 @@ interface SectionProps {
   onCardMove?: (cardIndex: number, direction: 'left' | 'right' | 'up' | 'down') => void;
   onCardDelete?: (cardIndex: number) => void;
   onCardAdd?: (sectionBlockIndex: number) => void;
+  globalTitleSpacing?: string;
+  globalShowDivider?: boolean;
 }
 
 // --- Component: Section ---
@@ -55,7 +57,9 @@ export const Section: React.FC<SectionProps> = ({
   onTitleUpdate,
   onCardMove,
   onCardDelete,
-  onCardAdd
+  onCardAdd,
+  globalTitleSpacing,
+  globalShowDivider
 }) => {
   // [Strategy Pattern Implementation]
   // Determine layout strategy based on 'layout' prop
@@ -167,8 +171,12 @@ export const Section: React.FC<SectionProps> = ({
   };
 
   const sectionColor = layoutProps['section-color'];
-  const titleSpacing = layoutProps['title-spacing'] || '2';
-  const showDivider = layoutProps['show-divider'] === true || layoutProps['show-divider'] === 'true'; // Handle boolean or string
+  // Priority: Global > Local > Default
+  const titleSpacing = globalTitleSpacing || layoutProps['title-spacing'] || '2';
+  const titleAlign = layoutProps['title-align'] || 'left';
+  const showDivider = globalShowDivider !== undefined 
+      ? globalShowDivider 
+      : (layoutProps['show-divider'] === true || layoutProps['show-divider'] === 'true');
 
   const spacingMap: Record<string, string> = {
       '0': 'mb-0',
@@ -178,6 +186,12 @@ export const Section: React.FC<SectionProps> = ({
       '8': 'mb-32'
   };
   const sectionMbClass = spacingMap[titleSpacing] || 'mb-16';
+
+  const alignClass = {
+      'left': 'justify-start',
+      'center': 'justify-center',
+      'right': 'justify-end'
+  }[titleAlign as string] || 'justify-start';
 
   const handleUnifyWidth = (span: number) => {
     if (!onBatchCardUpdate) return;
@@ -195,11 +209,11 @@ export const Section: React.FC<SectionProps> = ({
 
   // Determine selection state
   // Section is selected if:
-  // 1. No specific card is selected (selectedBlockIndex === null)
-  // 2. This section is the active one (blockIndex === activeSectionBlockIndex)
-  // OR fallback to activeLine exact match if blockIndex not available
+  // 1. Explicitly selected via block index (New Architecture)
+  // 2. Legacy/Implicit selection (activeLine based or old null-logic)
   const isSelected = editMode && (
-      (activeSectionBlockIndex !== undefined && blockIndex !== undefined && activeSectionBlockIndex === blockIndex && selectedBlockIndex === null) ||
+      (selectedBlockIndex !== undefined && blockIndex !== undefined && selectedBlockIndex === blockIndex) ||
+      (selectedBlockIndex === null && activeSectionBlockIndex !== undefined && activeSectionBlockIndex === blockIndex) ||
       (activeLine !== undefined && startLine !== undefined && activeLine === startLine)
   );
 
@@ -249,7 +263,7 @@ export const Section: React.FC<SectionProps> = ({
             Actually, let's keep it simple. The section onClick handles everything. 
             We just need to make sure this div doesn't block clicks. It bubbles.
         */}
-        <div className="flex items-center gap-4 relative z-20 pointer-events-none">
+        <div className={clsx("flex items-center gap-4 relative z-20 pointer-events-none", alignClass)}>
             <h2 
             className={clsx(
                 "text-2xl font-bold tracking-tight transition-colors duration-300",
@@ -257,12 +271,9 @@ export const Section: React.FC<SectionProps> = ({
             )}
             style={sectionColor ? { color: `hsl(var(--${sectionColor}))` } : undefined}
             >
-            {title.replace('## ', '')}
+            {title.replace('## ', '').replace(/\{.*?\}/g, '').trim()}
             </h2>
         </div>
-        {showDivider && (
-            <div className="h-px w-full bg-border-soft" />
-        )}
       </div>
 
       {/* Divider between sections */}
@@ -295,7 +306,10 @@ export const Section: React.FC<SectionProps> = ({
       })}
       </div>
 
-      <hr className="mt-4 mb-4 border-t border-border-soft" style={{ display: showDivider ? 'block' : 'none' }} />
+      {/* Render Divider if enabled */}
+      {showDivider && (
+          <div className="relative z-10 w-full h-px bg-slate-200 mt-8" />
+      )}
     </section>
   );
 };

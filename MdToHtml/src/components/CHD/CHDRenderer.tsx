@@ -359,26 +359,29 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
       )}
 
       {/* Sections */}
-      <div className="px-8 space-y-12 max-w-[1600px] mx-auto">
+      <div className="px-8 max-w-[1600px] mx-auto flex flex-col">
         {sections.map((section, index) => (
-          <Section 
-            key={index} 
-            {...section} 
-            activeLine={activeLine}
-            onCardClick={onCardClick}
-            editMode={editMode}
-            selectedBlockIndex={selectedBlockIndex}
-            activeSectionBlockIndex={activeSectionBlockIndex}
-            onSelectBlock={onSelectBlock}
-            onSelectSection={onSelectSection}
-            onCardUpdate={onCardUpdate}
-            onBatchCardUpdate={onBatchCardUpdate}
-            onContentUpdate={onContentUpdate}
-            onTitleUpdate={onTitleUpdate}
-            onCardMove={onCardMove}
-            onCardDelete={onCardDelete}
-            onCardAdd={onCardAdd}
-          />
+          <React.Fragment key={index}>
+            <Section 
+              {...section} 
+              globalTitleSpacing={String(frontmatter['title-spacing'] || '2')}
+              globalShowDivider={frontmatter['show-divider'] === true || frontmatter['show-divider'] === 'true'}
+              activeLine={activeLine}
+              onCardClick={onCardClick}
+              editMode={editMode}
+              selectedBlockIndex={selectedBlockIndex}
+              activeSectionBlockIndex={activeSectionBlockIndex}
+              onSelectBlock={onSelectBlock}
+              onSelectSection={onSelectSection}
+              onCardUpdate={onCardUpdate}
+              onBatchCardUpdate={onBatchCardUpdate}
+              onContentUpdate={onContentUpdate}
+              onTitleUpdate={onTitleUpdate}
+              onCardMove={onCardMove}
+              onCardDelete={onCardDelete}
+              onCardAdd={onCardAdd}
+            />
+          </React.Fragment>
         ))}
       </div>
     </div>

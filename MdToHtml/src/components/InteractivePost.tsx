@@ -7,18 +7,21 @@ import { ChevronLeft, Edit, Save, Eye, Layout, ArrowLeft, CheckCircle, AlertTria
 import { CHDRenderer } from '@/components/CHD/CHDRenderer';
 import { useMarkdownInteraction } from '@/hooks/useMarkdownInteraction';
 import { useHistory } from '@/hooks/useHistory';
+import { useScoring } from '@/hooks/useScoring';
+import { useVisitHistory } from '@/hooks/useVisitHistory';
 import { Button } from '@/components/ui/button';
 import { FloatingUndoRedo } from '@/components/FloatingUndoRedo';
 import { parseCHDBlocks } from '@/lib/chdParser';
-import { RuleBasedScorer } from '@/lib/scorer';
-import { ScoreResponse } from '@/types/model-interface';
 import { clsx } from 'clsx';
 import { HtmlBundler } from '@/lib/export/HtmlBundler';
 import { useTheme } from '@/components/ThemeProvider';
-import { BottomToolbar, CardStyle } from '@/components/CHD/BottomToolbar';
+import { BottomToolbar } from '@/components/CHD/BottomToolbar';
+import { CardStyle } from '@/types/chd';
 import { AVAILABLE_THEMES } from '@/lib/themes';
 import { parseAttributes } from '@/lib/attributeParser';
 import { CardShape } from '@/lib/shapes';
+import { useCHDSelection } from '@/hooks/useCHDSelection';
+import matter from 'gray-matter';
 
 interface InteractivePostProps {
   initialContent: string;
@@ -56,140 +59,28 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
   // Note: We use useHistory's undo/redo, so we ignore the ones from useMarkdownInteraction
   const { updateAttribute, updateContent, updateTitle, updateFrontmatter, moveCard, deleteCard, addCard, operationLog, batchUpdateAttributes } = useMarkdownInteraction(content, handleContentUpdate);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   
   // Record Visit History
-  useEffect(() => {
-    try {
-        const visitedStr = localStorage.getItem('visited_docs');
-        const visitedMap = visitedStr ? JSON.parse(visitedStr) : {};
-        
-        visitedMap[decodedSlug] = Date.now();
-        localStorage.setItem('visited_docs', JSON.stringify(visitedMap));
-    } catch (e) {
-        console.error('Failed to update visit history', e);
-    }
-  }, [decodedSlug]);
+  useVisitHistory(decodedSlug);
 
   // Real-time Scoring
-  const [scoreResult, setScoreResult] = useState<ScoreResponse | null>(null);
-  const [showScoreDetails, setShowScoreDetails] = useState(false);
+  const { scoreResult, showScoreDetails, setShowScoreDetails } = useScoring(content);
 
-  // Evaluate on initial load and content change
-  useEffect(() => {
-    // Only evaluate if content is present
-    if (content) {
-       const result = RuleBasedScorer.evaluate(content);
-       setScoreResult(result);
-       
-       // Auto-show score details if critical errors found or score is very low
-       if (result.totalScore === 0 || result.issues.some(i => i.severity === 'error')) {
-           setShowScoreDetails(true);
-       }
-    } else {
-        // Handle empty content specifically
-        const result = RuleBasedScorer.evaluate('');
-        setScoreResult(result);
-        setShowScoreDetails(true);
+  // Toolbar State - Replaced with useCHDSelection hook
+  const { activeSectionProps, activeCardProps, selectedSectionTitle } = useCHDSelection(content, selectedBlockIndex);
+
+  // Parse Frontmatter for Global Settings
+  const frontmatter = useMemo(() => {
+    try {
+        const { data } = matter(content);
+        return data || {};
+    } catch (e) {
+        console.warn('Frontmatter parsing failed', e);
+        return {};
     }
   }, [content]);
-
-  // Toolbar State
-  const [activeSectionProps, setActiveSectionProps] = useState<{
-      layout: string;
-      color: string;
-      columns: number;
-      titleSpacing: string;
-      showDivider: boolean;
-      blockIndex: number;
-  }>({ layout: 'grid', color: 'default', columns: 2, titleSpacing: '2', showDivider: false, blockIndex: -1 });
-
-  const [activeCardProps, setActiveCardProps] = useState<{
-      shape: CardShape;
-      style: CardStyle;
-      badge: string;
-      blockIndex: number;
-  }>({ shape: 'rect', style: 'normal', badge: '', blockIndex: -1 });
-  
-  const [selectedSectionTitle, setSelectedSectionTitle] = useState('');
-
-  // Sync Toolbar State with Selection
-  useEffect(() => {
-    if (!content || selectedBlockIndex === null) {
-        setActiveSectionProps(prev => ({ ...prev, blockIndex: -1 }));
-        setActiveCardProps(prev => ({ ...prev, blockIndex: -1 }));
-        setSelectedSectionTitle('');
-        return;
-    }
-
-    const blocks = parseCHDBlocks(content);
-    const currentBlock = blocks[selectedBlockIndex];
-    
-    if (!currentBlock) return;
-
-    if (currentBlock.type === 'section') {
-        // Section Selected
-        // Regex to extract props from title line
-        const lines = content.split('\n');
-        const titleLine = lines[currentBlock.startLine];
-        const { props, cleanText } = parseAttributes(titleLine.replace(/^#+\s+/, ''));
-        
-        setActiveSectionProps({
-            layout: props.layout || 'grid',
-            color: props['section-color'] || 'default',
-            columns: parseInt(props.columns || '2'),
-            titleSpacing: props['title-spacing'] || '2',
-            showDivider: props['show-divider'] === 'true',
-            blockIndex: selectedBlockIndex
-        });
-        setSelectedSectionTitle(cleanText || '无标题分区');
-        setActiveCardProps(prev => ({ ...prev, blockIndex: -1 }));
-    } else if (currentBlock.type === 'card' || currentBlock.type === 'code') {
-        // Card Selected
-        const lines = content.split('\n');
-        const titleLine = lines[currentBlock.startLine];
-        const { props } = parseAttributes(titleLine.replace(/^#+\s+/, ''));
-        
-        setActiveCardProps({
-            shape: (props.shape as CardShape) || 'rect',
-            style: (props['card-style'] as CardStyle) || 'normal',
-            badge: props.badge || '',
-            blockIndex: selectedBlockIndex
-        });
-
-        // Find Parent Section
-        let parentSectionIndex = -1;
-        for (let i = selectedBlockIndex - 1; i >= 0; i--) {
-            if (blocks[i].type === 'section') {
-                parentSectionIndex = i;
-                break;
-            }
-        }
-
-        if (parentSectionIndex !== -1) {
-            const parentBlock = blocks[parentSectionIndex];
-            const pTitleLine = lines[parentBlock.startLine];
-            const { props: sectionProps, cleanText } = parseAttributes(pTitleLine.replace(/^#+\s+/, ''));
-            
-            setActiveSectionProps({
-                layout: sectionProps.layout || 'grid',
-                color: sectionProps['section-color'] || 'default',
-                columns: parseInt(sectionProps.columns || '2'),
-                titleSpacing: sectionProps['title-spacing'] || '2',
-                showDivider: sectionProps['show-divider'] === 'true',
-                blockIndex: parentSectionIndex
-            });
-            setSelectedSectionTitle(cleanText || '无标题分区');
-        } else {
-             setActiveSectionProps(prev => ({ ...prev, blockIndex: -1 }));
-             setSelectedSectionTitle('');
-        }
-    } else {
-        setActiveSectionProps(prev => ({ ...prev, blockIndex: -1 }));
-        setActiveCardProps(prev => ({ ...prev, blockIndex: -1 }));
-        setSelectedSectionTitle('');
-    }
-  }, [content, selectedBlockIndex]);
 
   // Extract Sections for BottomToolbar
   const sections = useMemo(() => {
@@ -280,6 +171,8 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                 body: JSON.stringify({ slug, content: contentToSave })
             });
             console.log('Save successful');
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 2000);
             router.refresh();
         } else {
             console.error('Save session failed');
@@ -359,10 +252,13 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
   const saveFile = async (silent = false, contentOverride?: string) => {
      // Legacy direct save, kept for manual save button if needed
      const contentToSave = contentOverride || contentRef.current;
-     debouncedSave(decodedSlug, contentToSave, initialContent, operationLog, router);
+     await debouncedSave(decodedSlug, contentToSave, initialContent, operationLog, router);
   };
 
-  const handleSave = () => saveFile(false);
+  const handleSave = async () => {
+      await saveFile(false);
+      setIsEditing(false); // Exit edit mode after save
+  };
 
   // Auto-save
   useEffect(() => {
@@ -573,10 +469,11 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                         onClick={handleSave} 
                         variant="default" 
                         size="sm"
-                        className="gap-2"
+                        className={clsx("gap-2 transition-all", saveSuccess && "bg-green-600 hover:bg-green-700")}
                         disabled={isSaving}
                     >
-                        <Save size={14} /> {isSaving ? '保存中...' : '保存修改'}
+                        {saveSuccess ? <CheckCircle size={14} /> : <Save size={14} />} 
+                        {isSaving ? '保存中...' : (saveSuccess ? '已保存' : '保存修改')}
                     </Button>
                 </>
             ) : (
@@ -641,56 +538,65 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                         updateAttribute(activeSectionProps.blockIndex, 'layout', layout);
                     }
                 }}
-                sectionColor={activeSectionProps.color}
+                sectionColor={activeSectionProps.color || 'default'}
                 onSectionColorChange={(color) => {
                     if (activeSectionProps.blockIndex !== -1) {
                         updateAttribute(activeSectionProps.blockIndex, 'section-color', color);
                     }
                 }}
-                sectionColumns={activeSectionProps.columns}
+                sectionColumns={parseInt(String(activeSectionProps.columns || '2'), 10)}
                 onSectionColumnsChange={(cols) => {
                     if (activeSectionProps.blockIndex !== -1) {
-                        updateAttribute(activeSectionProps.blockIndex, 'columns', cols.toString());
+                        // Batch update for all cards in the section to maintain grid consistency
+                        const blocks = parseCHDBlocks(content);
+                        const updates: Array<{blockIndex: number, key: string, value: any}> = [];
+                        
+                        // 1. Update Section columns
+                        updates.push({
+                            blockIndex: activeSectionProps.blockIndex,
+                            key: 'columns',
+                            value: String(cols)
+                        });
+
+                        // 2. Update Section layout (if switching from non-grid)
+                        if (activeSectionProps.layout === 'list' || activeSectionProps.layout === 'stack' || activeSectionProps.layout === 'single') {
+                            updates.push({
+                                blockIndex: activeSectionProps.blockIndex,
+                                key: 'layout',
+                                value: ''
+                            });
+                        }
+
+                        // 3. Update ALL child cards to match new column count
+                        const newSpan = Math.floor(12 / cols);
+                        
+                        // Find cards belonging to this section
+                        // They start after the section block and end before the next section
+                        for (let i = activeSectionProps.blockIndex + 1; i < blocks.length; i++) {
+                            const block = blocks[i];
+                            if (block.type === 'section') break; // Next section found
+                            
+                            if (block.type === 'card' || block.type === 'code') {
+                                updates.push({
+                                    blockIndex: i,
+                                    key: 'col-span',
+                                    value: String(newSpan)
+                                });
+                            }
+                        }
+
+                        batchUpdateAttributes(updates);
                     }
                 }}
-                sectionTitleSpacing={activeSectionProps.titleSpacing}
+                sectionTitleSpacing={String(frontmatter['title-spacing'] || '2')}
                 onSectionTitleSpacingChange={(spacing) => {
-                    console.log('[Global Spacing] Updating to:', spacing);
-                    // [Global Update] Update all sections with the new spacing
-                    const blocks = parseCHDBlocks(content);
-                    const updates = blocks
-                        .filter(b => b.type === 'section')
-                        .map(b => ({
-                            blockIndex: blocks.indexOf(b),
-                            key: 'title-spacing',
-                            value: spacing
-                        }));
-                    
-                    if (updates.length > 0) {
-                        batchUpdateAttributes(updates);
-                        // Optimistically update local state to reflect change immediately
-                        setActiveSectionProps(prev => ({ ...prev, titleSpacing: spacing }));
-                    }
+                    updateFrontmatter('title-spacing', spacing);
                 }}
-                sectionShowDivider={activeSectionProps.showDivider}
+                sectionShowDivider={frontmatter['show-divider'] === true || frontmatter['show-divider'] === 'true'}
                 onSectionShowDividerChange={(show) => {
-                    console.log('[Global Divider] Updating to:', show);
-                    // [Global Update] Update all sections with the new divider setting
-                    const blocks = parseCHDBlocks(content);
-                    const updates = blocks
-                        .filter(b => b.type === 'section')
-                        .map(b => ({
-                            blockIndex: blocks.indexOf(b),
-                            key: 'show-divider',
-                            value: String(show) // Convert boolean to string for markdown attribute
-                        }));
-                    
-                    if (updates.length > 0) {
-                        batchUpdateAttributes(updates);
-                        // Optimistically update local state
-                        setActiveSectionProps(prev => ({ ...prev, showDivider: show }));
-                    }
+                    updateFrontmatter('show-divider', String(show));
                 }}
+
                 selectedSectionTitle={selectedSectionTitle}
                 onCardAdd={() => {
                     if (activeSectionProps.blockIndex !== -1) {

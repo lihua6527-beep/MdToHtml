@@ -7,8 +7,9 @@ import { GlobalErrorBoundary } from '@/components/GlobalErrorBoundary';
 import { loadFromStorage } from '@/hooks/useAutoSave';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Button } from '@/components/ui/button';
-import { FileCode, Save, Download, Bold, Italic, List, Link as LinkIcon, Heading1, Heading2, Heading3, Code as CodeIcon, Upload, Home, ExternalLink } from 'lucide-react';
+import { FileCode, Save, Download, Bold, Italic, List, Link as LinkIcon, Heading1, Heading2, Heading3, Code as CodeIcon, Upload, Home, ExternalLink, Check } from 'lucide-react';
 import Link from 'next/link';
+import { clsx } from 'clsx';
 import { parseCHDBlocks } from '@/lib/chdParser';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher';
 import { useTheme } from '@/components/ThemeProvider';
@@ -16,10 +17,12 @@ import { CHDRenderer } from '@/components/CHD/CHDRenderer';
 import { ThemeScope } from '@/components/ThemeScope';
 import { useMarkdownInteraction } from '@/hooks/useMarkdownInteraction';
 import { HtmlBundler } from '@/lib/export/HtmlBundler';
-import { BottomToolbar, CardStyle } from '@/components/CHD/BottomToolbar';
+import { BottomToolbar } from '@/components/CHD/BottomToolbar';
 import { AVAILABLE_THEMES } from '@/lib/themes';
 import { parseAttributes } from '@/lib/attributeParser';
 import { CardShape } from '@/lib/shapes';
+import { useCHDSelection } from '@/hooks/useCHDSelection';
+import { CardStyle } from '@/types/chd';
 
 export default function EditorPage() {
   const { theme, setTheme } = useTheme();
@@ -29,26 +32,20 @@ export default function EditorPage() {
   const [currentFilename, setCurrentFilename] = useState<string>('示例1.md');
   const [isMounted, setIsMounted] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [activeLine, setActiveLine] = useState<number>(0);
   // Track last saved content for diff logging
   const [lastSavedContent, setLastSavedContent] = useState<string>('');
   
   // Selection State for BottomToolbar
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
-  const [selectedSectionTitle, setSelectedSectionTitle] = useState<string | null>(null);
-  const [activeSectionProps, setActiveSectionProps] = useState<{
-      layout: string;
-      color: string;
-      columns: number;
-      titleSpacing: string;
-      blockIndex: number;
-  }>({ layout: 'grid', color: 'default', columns: 2, titleSpacing: '2', blockIndex: -1 });
+  
+  // Use useCHDSelection hook for derived state
+  const { activeSectionProps, activeCardProps, selectedSectionTitle } = useCHDSelection(content, selectedBlockIndex);
 
-  const [activeCardProps, setActiveCardProps] = useState<{
-      shape: CardShape;
-      style: CardStyle;
-      badge: string;
-  }>({ shape: 'rect', style: 'normal', badge: '' });
+  const [activeCardProps_Legacy, setActiveCardProps_Legacy] = useState<any>(null); // Placeholder to avoid breaking other code if any
+  
+  const [activeSectionProps_Legacy, setActiveSectionProps_Legacy] = useState<any>(null); // Placeholder
 
   // Interaction Hook
   const { updateAttribute, updateContent, updateTitle, moveCard, batchUpdateAttributes, addCard, deleteCard } = useMarkdownInteraction(content, setContent);
@@ -84,59 +81,28 @@ export default function EditorPage() {
                  const idx = blocks.indexOf(currentBlock);
                  if (idx !== selectedBlockIndex) {
                     console.log('[Selection Update] Switching to Card:', idx);
-                    // ... (update logic)
                     setSelectedBlockIndex(idx);
-                    // Extract Card Props...
-                    const lines = content.split('\n');
-                    const titleLine = lines[currentBlock.startLine];
-                    const { props } = parseAttributes(titleLine.replace(/^(#+)\s+/, ''));
-                    setActiveCardProps({
-                        shape: (props.shape as CardShape) || 'rect',
-                        style: (props['card-style'] as CardStyle) || 'normal',
-                        badge: props.badge || ''
-                    });
-                    // Find parent section...
-                    let sectionBlock = null;
-                    let sectionIdx = -1;
-                    for (let i = idx - 1; i >= 0; i--) {
-                        if (blocks[i].type === 'section') {
-                            sectionBlock = blocks[i];
-                            sectionIdx = i;
-                            break;
-                        }
-                    }
-                    if (sectionBlock) {
-                        const { cleanText, props: sProps } = parseAttributes(sectionBlock.title);
-                        setSelectedSectionTitle(cleanText);
-                        setActiveSectionProps({
-                            layout: sProps.layout || 'grid',
-                            color: sProps['section-color'] || 'default',
-                            columns: parseInt(sProps.columns || sProps.cols || '2'),
-                            titleSpacing: sProps['title-spacing'] || '2',
-                            blockIndex: sectionIdx
-                        });
-                    } else {
-                         setSelectedSectionTitle('Overview');
-                         setActiveSectionProps({ layout: 'grid', color: 'default', columns: 2, titleSpacing: '2', blockIndex: -1 });
-                    }
                  }
              } else if (currentBlock.type === 'section') {
                  // Switch to Section Selection
                  const idx = blocks.indexOf(currentBlock);
+                 // Note: activeSectionProps comes from hook now. 
+                 // We need to check if the section block index matches.
                  if (idx !== activeSectionProps.blockIndex || selectedBlockIndex !== null) {
                     console.log('[Selection Update] Switching to Section:', idx);
-                    setSelectedBlockIndex(null); // No card selected
-                    const { cleanText, props: sProps } = parseAttributes(currentBlock.title);
-                              const titleToSet = cleanText || currentBlock.title.replace(/\{.*?\}/g, '').trim() || '未命名分区';
-                              setSelectedSectionTitle(titleToSet);
-                    setActiveSectionProps({
-                        layout: sProps.layout || 'grid',
-                        color: sProps['section-color'] || 'default',
-                        columns: parseInt(sProps.columns || sProps.cols || '2'),
-                        titleSpacing: sProps['title-spacing'] || '2',
-                        blockIndex: idx
-                    });
-                    setActiveCardProps({ shape: 'rect', style: 'normal', badge: '' });
+                    setSelectedBlockIndex(null); // No card selected, but we need to signal section selection?
+                    // Wait, if selectedBlockIndex is null, useCHDSelection resets?
+                    // No, useCHDSelection takes selectedBlockIndex.
+                    // If selectedBlockIndex is null, it resets.
+                    // BUT EditorPage logic was: if section selected, selectedBlockIndex is NULL, but activeSectionProps has blockIndex.
+                    
+                    // My hook implementation relies on selectedBlockIndex pointing to the selected block.
+                    // If I select a section, selectedBlockIndex should be the SECTION's index.
+                    // But EditorPage previously set selectedBlockIndex = null when section is selected.
+                    
+                    // I need to change this behavior. 
+                    // Let's set selectedBlockIndex to the section index.
+                    setSelectedBlockIndex(idx);
                  }
              }
         } else {
@@ -152,21 +118,8 @@ export default function EditorPage() {
    }, [activeLine, content, selectedBlockIndex, activeSectionProps.blockIndex]);
   
   // Ensure state consistency when blockIndex changes
-  useEffect(() => {
-      // If we have a valid section selection, ensure selectedSectionTitle is synced
-      if (activeSectionProps.blockIndex !== -1 && selectedBlockIndex === null) {
-           const blocks = parseCHDBlocks(content);
-           const sectionBlock = blocks[activeSectionProps.blockIndex];
-           if (sectionBlock && sectionBlock.type === 'section') {
-               const { cleanText } = parseAttributes(sectionBlock.title);
-               const titleToSet = cleanText || sectionBlock.title.replace(/\{.*?\}/g, '').trim() || '未命名分区';
-               if (selectedSectionTitle !== titleToSet) {
-                   console.log('[Sync] Updating Section Title:', titleToSet);
-                   setSelectedSectionTitle(titleToSet);
-               }
-           }
-      }
-  }, [activeSectionProps.blockIndex, selectedBlockIndex, content]);
+  // This effect is no longer needed as useCHDSelection handles it
+
   const [isDragging, setIsDragging] = useState(false);
   // Export State
   const [isExporting, setIsExporting] = useState(false);
@@ -234,21 +187,8 @@ export default function EditorPage() {
           const blocks = parseCHDBlocks(content);
           const sectionBlock = blocks[blockIndex];
           if (sectionBlock && sectionBlock.type === 'section') {
-              const { cleanText, props: sProps } = parseAttributes(sectionBlock.title);
-              
-              console.log('[EditorPage] Toolbar Selection:', cleanText);
-              
-              setSelectedSectionTitle(cleanText || '未命名分区');
-              setActiveSectionProps({
-                  layout: sProps.layout || 'grid',
-                  color: sProps['section-color'] || 'default',
-                  columns: parseInt(sProps.columns || sProps.cols || '2'),
-                  titleSpacing: sProps['title-spacing'] || '2',
-                  blockIndex: blockIndex
-              });
-              
-              setSelectedBlockIndex(null);
-              setActiveCardProps({ shape: 'rect', style: 'normal', badge: '' });
+              console.log('[EditorPage] Toolbar Selection:', sectionBlock.title);
+              setSelectedBlockIndex(blockIndex);
               
               // Sync cursor
               setActiveLine(sectionBlock.startLine);
@@ -336,11 +276,25 @@ export default function EditorPage() {
   };
 
   // Save to Workspace
-  const handleSaveToWorkspace = async () => {
-    const slug = prompt('请输入文件名 (不含 .md):', currentFilename.replace(/\.md$/i, '') || 'my-document');
-    if (!slug) return;
+  const handleSaveToWorkspace = async (forcePrompt: boolean | React.MouseEvent = true) => {
+    let slug = currentFilename.replace(/\.md$/i, '') || 'my-document';
+    
+    // Determine if we need to prompt
+    // Always prompt if:
+    // 1. Explicitly requested (forcePrompt === true)
+    // 2. File is the default template ('示例1')
+    // 3. File is 'my-document' (default fallback)
+    const isDefault = slug === '示例1' || slug === 'my-document';
+    const shouldPrompt = (forcePrompt === true) || isDefault;
+
+    if (shouldPrompt) {
+        const input = prompt('请输入文件名 (不含 .md):', slug);
+        if (!input) return;
+        slug = input;
+    }
 
     setIsSaving(true);
+    setSaveSuccess(false);
     try {
       const res = await fetch('/api/save', {
         method: 'POST',
@@ -368,7 +322,14 @@ export default function EditorPage() {
             console.error('Failed to log training data', err);
         }
 
-        alert('保存成功！数据已自动录入训练集。');
+        if (shouldPrompt) {
+            alert('保存成功！数据已自动录入训练集。');
+        } else {
+            setSaveSuccess(true);
+            setTimeout(() => setSaveSuccess(false), 2000);
+            console.log('Saved successfully');
+        }
+        
         setCurrentFilename(slug.endsWith('.md') ? slug : `${slug}.md`);
       } else {
         alert('保存失败');
@@ -379,6 +340,19 @@ export default function EditorPage() {
       setIsSaving(false);
     }
   };
+
+  // Keyboard Shortcuts (Ctrl+S)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            // Silent save unless it's a new file
+            handleSaveToWorkspace(false);
+        }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentFilename, content, lastSavedContent]);
 
   if (!isMounted) return null;
 
@@ -465,12 +439,12 @@ export default function EditorPage() {
              <Button 
                 variant="default" 
                 size="sm" 
-                className="gap-2 h-7 text-xs"
+                className={clsx("gap-2 h-7 text-xs transition-all", saveSuccess && "bg-green-600 hover:bg-green-700")}
                 onClick={handleSaveToWorkspace} 
                 disabled={isSaving}
              >
-                <Save className="w-3 h-3" />
-                {isSaving ? '保存中...' : '保存'}
+                {saveSuccess ? <Check className="w-3 h-3" /> : <Save className="w-3 h-3" />}
+                {isSaving ? '保存中...' : (saveSuccess ? '已保存' : '保存')}
              </Button>
           </div>
        </div>
@@ -508,7 +482,11 @@ export default function EditorPage() {
           >
              {/* Editor Toolbar */}
              <div className="h-10 bg-bg-page border-b border-border-soft flex items-center px-2 gap-1 shrink-0 transition-colors duration-300">
-                <div className="flex items-center gap-2 mr-4 pl-2 border-r border-border-soft pr-4">
+                <div 
+                    className="flex items-center gap-2 mr-4 pl-2 border-r border-border-soft pr-4 cursor-pointer hover:bg-slate-100 rounded px-1 transition-colors"
+                    onClick={() => handleSaveToWorkspace(true)}
+                    title="点击重命名"
+                >
                     <FileCode className="w-4 h-4 text-text-secondary" />
                     <span className="text-xs font-medium text-text-primary truncate max-w-[150px]">{currentFilename}</span>
                 </div>
@@ -572,55 +550,8 @@ export default function EditorPage() {
                         console.log('[EditorPage] Direct Selection - Found block:', currentBlock?.type, currentBlock?.id);
 
                         if (currentBlock) {
-                            if (currentBlock.type === 'section') {
-                                setSelectedBlockIndex(null); // Deselect any card
-                                const { cleanText, props: sProps } = parseAttributes(currentBlock.title);
-                                console.log('[EditorPage] Selecting Section Title:', cleanText);
-                                setSelectedSectionTitle(cleanText);
-                                setActiveSectionProps({
-                                    layout: sProps.layout || 'grid',
-                                    color: sProps['section-color'] || 'default',
-                                    columns: parseInt(sProps.columns || sProps.cols || '2'),
-                                    titleSpacing: sProps['title-spacing'] || '2',
-                                    blockIndex: blocks.indexOf(currentBlock)
-                                });
-                                // Reset card props
-                                setActiveCardProps({ shape: 'rect', style: 'normal', badge: '' });
-                            } else if (currentBlock.type === 'card' || currentBlock.type === 'code') {
-                                // Find index
-                                const idx = blocks.indexOf(currentBlock);
-                                setSelectedBlockIndex(idx);
-                                // Parse props
-                                const lines = content.split('\n');
-                                const titleLine = lines[currentBlock.startLine];
-                                const { props } = parseAttributes(titleLine.replace(/^(#+)\s+/, ''));
-                                setActiveCardProps({
-                                    shape: (props.shape as CardShape) || 'rect',
-                                    style: (props['card-style'] as CardStyle) || 'normal',
-                                    badge: props.badge || ''
-                                });
-                                // Find parent section for context
-                                let sectionBlock = null;
-                                let sectionIdx = -1;
-                                for (let i = idx - 1; i >= 0; i--) {
-                                    if (blocks[i].type === 'section') {
-                                        sectionBlock = blocks[i];
-                                        sectionIdx = i;
-                                        break;
-                                    }
-                                }
-                                if (sectionBlock) {
-                                    const { cleanText, props: sProps } = parseAttributes(sectionBlock.title);
-                                    setSelectedSectionTitle(cleanText);
-                                    setActiveSectionProps({
-                                        layout: sProps.layout || 'grid',
-                                        color: sProps['section-color'] || 'default',
-                                        columns: parseInt(sProps.columns || sProps.cols || '2'),
-                                        titleSpacing: sProps['title-spacing'] || '2',
-                                        blockIndex: sectionIdx
-                                    });
-                                }
-                            }
+                            const idx = blocks.indexOf(currentBlock);
+                            setSelectedBlockIndex(idx);
                         }
                     } catch (e) {
                         console.error('[EditorPage] Direct Selection Failed', e);
@@ -642,21 +573,9 @@ export default function EditorPage() {
                   onSelectSection={(blockIndex, title, layoutProps) => {
                       console.log('[EditorPage] Explicit Section Selection:', { blockIndex, title });
                       
-                      // 1. Set Title Directly (Robust against parsing failures)
-                      setSelectedSectionTitle(title || '未命名分区');
-                      
-                      // 2. Set Props Directly (Robust against stale closures)
-                      setActiveSectionProps({
-                          layout: layoutProps.layout || 'grid',
-                          color: layoutProps['section-color'] || 'default',
-                          columns: parseInt(layoutProps.columns || layoutProps.cols || '2'),
-                          titleSpacing: layoutProps['title-spacing'] || '2',
-                          blockIndex: blockIndex
-                      });
-
-                      // 3. Clear Card Selection
-                      setSelectedBlockIndex(null); 
-                      setActiveCardProps({ shape: 'rect', style: 'normal', badge: '' });
+                      // Just update the selected block index.
+                      // useCHDSelection will handle parsing the props from content.
+                      setSelectedBlockIndex(blockIndex);
 
                       // 4. Sync Editor Cursor (Optional, for context)
                       try {
@@ -740,11 +659,14 @@ export default function EditorPage() {
                      console.log('[Global Spacing Update] Applying to', updates.length, 'sections');
                      batchUpdateAttributes(updates);
                  }
-                 
-                 // Update local state immediately for feedback
-                 setActiveSectionProps(prev => ({ ...prev, titleSpacing: spacing }));
              } catch (e) {
                  console.error('Failed to update global spacing', e);
+             }
+         }}
+         sectionShowDivider={activeSectionProps.showDivider}
+         onSectionShowDividerChange={(show) => {
+             if (activeSectionProps.blockIndex !== -1) {
+                 updateAttribute(activeSectionProps.blockIndex, 'show-divider', String(show));
              }
          }}
          
