@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { INITIAL_CONTENT } from '@/components/Editor/MarkdownEditor';
+import { INITIAL_CONTENT } from '@/data/editor-defaults';
 import { CodeMirrorEditor, CodeMirrorEditorHandle } from '@/components/Editor/CodeMirrorEditor';
 import { GlobalErrorBoundary } from '@/components/GlobalErrorBoundary';
 import { loadFromStorage } from '@/hooks/useAutoSave';
