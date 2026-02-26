@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     // Use CacheManager for updates to ensure consistency
     // CacheManager only cares about content
-    const cacheManager = MetadataCacheManager.getInstance();
+    const cacheManager = MetadataCacheManager;
     cacheManager.update(safeSlug, content);
 
     return NextResponse.json({ success: true, slug: safeSlug });

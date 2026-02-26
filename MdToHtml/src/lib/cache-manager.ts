@@ -2,10 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
 import PathManager from './path-manager';
+import TrashManager from './trash-manager';
 
 const CACHE_FILE_NAME = '.metadata_cache.json';
-const TRASH_DIR_NAME = '.trash';
-const DEFAULT_CAPACITY = 500;
+const DEFAULT_CAPACITY = 100; // Updated to 100 as per plan
 const CACHE_VERSION = '2.0';
 
 export interface CacheEntry {
@@ -30,20 +30,21 @@ export class MetadataCacheManager {
   private static instance: MetadataCacheManager;
   private baseDir: string;
   private cachePath: string;
-  private trashDir: string;
   private cache: MetadataCache;
   private entryMap: Map<string, CacheEntry>;
 
   private constructor() {
     this.baseDir = PathManager.getInputPath();
     this.cachePath = path.join(this.baseDir, CACHE_FILE_NAME);
-    this.trashDir = PathManager.getRecyclePath();
     
     // Initialize cache structure
+    const config = PathManager.getAppConfig();
+    const limit = config.capacityLimit || DEFAULT_CAPACITY;
+
     this.cache = {
       version: CACHE_VERSION,
       lastUpdated: Date.now(),
-      capacity_limit: DEFAULT_CAPACITY,
+      capacity_limit: limit,
       entries: []
     };
     this.entryMap = new Map();
@@ -163,16 +164,24 @@ export class MetadataCacheManager {
       }
 
       // 4. Sort and Capacity Check
+      // Get current limit from config (reload if needed)
+      const config = PathManager.getAppConfig();
+      const currentLimit = config.capacityLimit || DEFAULT_CAPACITY;
+      this.cache.capacity_limit = currentLimit; // Update cache internal state
+
       const sortedEntries = Array.from(this.entryMap.values())
         .sort((a, b) => b.mtime - a.mtime);
       
-      if (sortedEntries.length > this.cache.capacity_limit) {
+      if (sortedEntries.length > currentLimit) {
         // Identify overflow files
-        const overflow = sortedEntries.slice(this.cache.capacity_limit);
-        const keep = sortedEntries.slice(0, this.cache.capacity_limit);
+        const overflow = sortedEntries.slice(currentLimit);
+        const keep = sortedEntries.slice(0, currentLimit);
         
-        // Move overflow to trash
-        this.moveToTrash(overflow.map(e => e.path));
+        console.log(`[CacheManager] Capacity exceeded (${sortedEntries.length} > ${currentLimit}). Moving ${overflow.length} files to trash.`);
+        
+        // Move overflow to trash via TrashManager
+        const overflowPaths = overflow.map(e => e.path); // Relative paths
+        TrashManager.moveToTrash(overflowPaths);
         
         // Update map to only keep valid entries
         this.entryMap.clear();
@@ -189,46 +198,20 @@ export class MetadataCacheManager {
   }
 
   /**
-   * Move files to trash directory
-   */
-  private moveToTrash(files: string[]) {
-    if (files.length === 0) return;
-
-    if (!fs.existsSync(this.trashDir)) {
-      fs.mkdirSync(this.trashDir, { recursive: true });
-    }
-
-    for (const file of files) {
-      const src = path.join(this.baseDir, file);
-      const dest = path.join(this.trashDir, file);
-      try {
-        if (fs.existsSync(src)) {
-          // If dest exists, rename it (e.g. append timestamp) to avoid overwrite conflict?
-          // For now, simple overwrite or rename if exists
-          if (fs.existsSync(dest)) {
-             const timestamp = Date.now();
-             const ext = path.extname(file);
-             const name = path.basename(file, ext);
-             const newDest = path.join(this.trashDir, `${name}_${timestamp}${ext}`);
-             fs.renameSync(src, newDest);
-          } else {
-             fs.renameSync(src, dest);
-          }
-          console.log(`[CacheManager] Moved ${file} to trash.`);
-        }
-      } catch (e) {
-        console.error(`[CacheManager] Failed to move ${file} to trash:`, e);
-      }
-    }
-  }
-
-  /**
    * Public API: Get all cached posts
    * Returns O(1) memory reference (sorted)
    */
   public getAll(): CacheEntry[] {
     // Return sorted list
     return Array.from(this.entryMap.values()).sort((a, b) => b.mtime - a.mtime);
+  }
+  
+  /**
+   * Public API: Get capacity limit
+   */
+  public getCapacityLimit(): number {
+      const config = PathManager.getAppConfig();
+      return config.capacityLimit || DEFAULT_CAPACITY;
   }
 
   /**
@@ -276,10 +259,11 @@ export class MetadataCacheManager {
     const { data, excerpt } = matter(content, { excerpt: true });
     
     const entry: CacheEntry = {
-      path: filename,
-      mtime: stats.mtimeMs,
-      status: data.status,
-      title: data.title || safeSlug.replace(/\.md$/i, ''),
+              path: filename,
+              mtime: stats.mtimeMs,
+              birthtime: stats.birthtimeMs,
+              status: data.status,
+              title: data.title || safeSlug.replace(/\.md$/i, ''),
       tags: data.tags,
       excerpt: excerpt || undefined
     };
@@ -288,7 +272,8 @@ export class MetadataCacheManager {
     
     // Check capacity (optional here, or wait for next scan? Better to check now to keep cache clean)
     // But sorting every time might be heavy? 500 items is fine.
-    this.saveCache(); 
+    // Let's trigger scanAndSync to handle capacity properly
+    this.scanAndSync(); 
   }
 
   /**
@@ -300,11 +285,8 @@ export class MetadataCacheManager {
      const fullPath = path.join(this.baseDir, filename);
      
      if (fs.existsSync(fullPath)) {
-        // Move to trash instead of permanent delete?
-        // User Input says "moveToTrash" for capacity cleanup.
-        // For explicit delete, maybe also move to trash?
-        // Let's implement move to trash for safety.
-        this.moveToTrash([filename]);
+        // Move to trash using TrashManager
+        TrashManager.moveToTrash([filename]);
      }
      
      this.entryMap.delete(filename);
@@ -312,4 +294,4 @@ export class MetadataCacheManager {
   }
 }
 
-export default MetadataCacheManager;
+export default MetadataCacheManager.getInstance();

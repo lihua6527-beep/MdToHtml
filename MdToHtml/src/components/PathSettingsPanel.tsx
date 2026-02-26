@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { X, Folder, Settings, RefreshCw, FileText } from 'lucide-react';
+import { X, Folder, Settings, RefreshCw, FileText, Database, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { clsx } from 'clsx';
 
@@ -21,6 +21,7 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
   const [info, setInfo] = useState<PathInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [trashStats, setTrashStats] = useState<{ count: number; size: number } | null>(null);
 
   const fetchInfo = async () => {
     setLoading(true);
@@ -37,9 +38,53 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
     }
   };
 
+  const fetchTrashStats = async () => {
+    try {
+      const res = await fetch('/api/trash/stats');
+      if (res.ok) {
+        setTrashStats(await res.json());
+      }
+    } catch (e) {
+      console.error('Failed to fetch trash stats', e);
+    }
+  };
+
+  const handleEmptyTrash = async () => {
+    if (!confirm('确定清空回收站吗？此操作不可撤销。')) return;
+    try {
+      const res = await fetch('/api/trash/empty', { method: 'POST' });
+      if (res.ok) {
+        fetchTrashStats();
+        alert('回收站已清空');
+      } else {
+        alert('清空失败');
+      }
+    } catch (e) {
+      alert('清空出错');
+    }
+  };
+
+  const handleUpdateCapacity = async (limit: number) => {
+    try {
+      const res = await fetch('/api/config/capacity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit })
+      });
+      if (res.ok) {
+        fetchInfo(); // Refresh config display
+      } else {
+        alert('设置失败');
+      }
+    } catch (e) {
+      alert('设置出错');
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       fetchInfo();
+      fetchTrashStats();
     }
   }, [isOpen]);
 
@@ -159,6 +204,79 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
                         <p className="text-[10px] text-text-muted mt-1">
                             删除的 Markdown 文件将移动到此文件夹。
                         </p>
+                    </div>
+                </div>
+              </div>
+
+              {/* Storage Settings */}
+              <div className="space-y-4 pt-4 border-t border-border-soft">
+                <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider flex items-center gap-2">
+                    <Database className="w-4 h-4" /> 存储与容量
+                </h3>
+                
+                <div className="bg-bg-page rounded-lg p-4 border border-border-soft space-y-4">
+                    {/* Capacity Limit */}
+                    <div>
+                        <label className="text-xs font-semibold text-text-secondary block mb-2">
+                            最大文档容量 (超过此数量将自动清理旧文档)
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                            {[
+                                { value: 20, label: '20 (极简)' },
+                                { value: 50, label: '50 (轻量)' },
+                                { value: 100, label: '100 (标准)' },
+                                { value: 200, label: '200 (专业)' },
+                                { value: 300, label: '300 (扩容)' },
+                                { value: 500, label: '500 (极限)' }
+                            ].map(option => (
+                                <button
+                                    key={option.value}
+                                    onClick={() => handleUpdateCapacity(option.value)}
+                                    className={clsx(
+                                        "px-3 py-1.5 text-xs rounded-md border transition-colors",
+                                        (info.config.capacityLimit || 100) === option.value 
+                                            ? "bg-primary text-white border-primary" 
+                                            : "bg-bg-card border-border-soft hover:border-primary text-text-primary"
+                                    )}
+                                >
+                                    {option.label}
+                                </button>
+                            ))}
+                        </div>
+                        <p className="text-[10px] text-text-muted mt-2 flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" />
+                            当前设置: {info.config.capacityLimit || 100} 个文档。修改后立即生效。
+                        </p>
+                    </div>
+
+                    {/* Trash Management */}
+                    <div className="pt-4 border-t border-border-soft">
+                         <label className="text-xs font-semibold text-text-secondary block mb-2">
+                            回收站管理
+                        </label>
+                        <div className="flex items-center justify-between bg-bg-card p-3 rounded border border-border-soft">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-red-50 text-red-500 rounded-full">
+                                    <Trash2 className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-medium text-text-primary">
+                                        {trashStats ? `${trashStats.count} 个文件` : '加载中...'}
+                                    </div>
+                                    <div className="text-xs text-text-muted">
+                                        占用空间: {trashStats ? (trashStats.size / 1024 / 1024).toFixed(2) : '0'} MB
+                                    </div>
+                                </div>
+                            </div>
+                            <Button 
+                                variant="destructive" 
+                                size="sm" 
+                                onClick={handleEmptyTrash}
+                                disabled={!trashStats || trashStats.count === 0}
+                            >
+                                清空回收站
+                            </Button>
+                        </div>
                     </div>
                 </div>
               </div>

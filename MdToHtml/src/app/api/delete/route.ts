@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import PathManager from '@/lib/path-manager';
 import MetadataCacheManager from '@/lib/cache-manager';
+import TrashManager from '@/lib/trash-manager';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
     // Normalize to array
     const targets: string[] = slugs || [slug];
 
-    const cache = MetadataCacheManager.getInstance();
+    const cache = MetadataCacheManager;
     const outputDir = PathManager.getOutputPath();
 
     for (const s of targets) {
@@ -44,7 +45,8 @@ export async function POST(request: NextRequest) {
           for (const p of candidates) {
             try {
               if (fs.existsSync(p)) {
-                fs.unlinkSync(p);
+                // fs.unlinkSync(p);
+                TrashManager.moveToTrash([p]);
               }
             } catch (e) {
               console.warn('[Delete] Failed to delete output file:', p, e);

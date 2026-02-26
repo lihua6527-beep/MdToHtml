@@ -6,7 +6,7 @@ import MetadataCacheManager from '@/lib/cache-manager';
 
 // Use absolute path to ensure reliability across environments
 const postsDirectory = PathManager.getInputPath();
-const cacheManager = MetadataCacheManager.getInstance();
+const cacheManager = MetadataCacheManager;
 
 export function getPostSlugs() {
   // Use cache manager to get valid file list

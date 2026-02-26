@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { loadConfig, AppConfig } from './config-loader';
+import { loadConfig, saveConfig, AppConfig } from './config-loader';
 
 class PathManager {
   private static instance: PathManager;
@@ -44,7 +44,7 @@ class PathManager {
     const defaultInput = path.join(this.appRoot, 'input');
     const defaultOutput = path.join(this.appRoot, 'output');
     const defaultData = path.join(this.appRoot, 'data');
-    const defaultRecycle = path.join(this.appRoot, 'recycle');
+    const defaultRecycle = path.join(this.appRoot, '.trash');
     
     let isWritable = false;
     try {
@@ -64,7 +64,7 @@ class PathManager {
         baseInput = path.join(docDir, 'input');
         baseOutput = path.join(docDir, 'output');
         baseData = path.join(docDir, 'data');
-        baseRecycle = path.join(docDir, 'recycle');
+        baseRecycle = path.join(docDir, '.trash');
         console.warn(`App root is not writable. Fallback to Documents: ${docDir}`);
     }
 
@@ -132,6 +132,16 @@ class PathManager {
   
   public getAppRoot(): string {
     return this.appRoot;
+  }
+
+  public updateConfig(newConfig: Partial<AppConfig>): void {
+    this.config = { ...this.config, ...newConfig };
+    saveConfig(this.appRoot, this.config);
+    // Re-resolve paths if necessary (e.g. if paths changed)
+    // For now, mostly used for capacityLimit which doesn't affect paths
+    if (newConfig.inputPath || newConfig.outputPath || newConfig.recyclePath) {
+        this.resolvePaths();
+    }
   }
 }
 

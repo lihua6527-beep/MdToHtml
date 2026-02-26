@@ -2,10 +2,13 @@
 
 import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { FileText, ChevronRight, Layout, PenTool, Clock, AlertCircle, CheckCircle2, Settings, Trash2, CheckSquare, Square, Eye, X, ArrowUpDown, Calendar, Monitor, Maximize2, Minimize2 } from 'lucide-react';
+import { FileText, ChevronRight, Layout, PenTool, Clock, AlertCircle, CheckCircle2, Settings, Trash2, CheckSquare, Square, Eye, X, ArrowUpDown, Calendar, Monitor, Maximize2, Minimize2, Database } from 'lucide-react';
 import { clsx } from 'clsx';
 import { CHDRenderer } from './CHD/CHDRenderer';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { CapacityProgressBar } from './CapacityProgressBar';
+import { RecycleBin } from './RecycleBin';
+import { CapacityWarningDialog } from './CapacityWarningDialog';
 
 interface Post {
   slug: string;
@@ -33,6 +36,20 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
   const [showSortSubmenu, setShowSortSubmenu] = useState(false);
+  const [showCapacitySubmenu, setShowCapacitySubmenu] = useState(false);
+  const [capacityLimit, setCapacityLimit] = useState<number>(100);
+  const [showRecycleBin, setShowRecycleBin] = useState(false);
+  const [warningDialog, setWarningDialog] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    isLoading?: boolean;
+    cleanupLabel?: string;
+  }>({ isOpen: false, message: '', onConfirm: () => {}, isLoading: false, cleanupLabel: '' });
+
+  useEffect(() => {
+    setPosts(initialPosts);
+  }, [initialPosts]);
 
   useEffect(() => {
     // Client-side sorting
@@ -66,8 +83,35 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
   useEffect(() => {
     if (!showSettingsMenu) {
         setShowSortSubmenu(false);
+        setShowCapacitySubmenu(false);
+    } else {
+        // Fetch capacity when menu opens
+        fetch('/api/config/capacity')
+            .then(res => res.json())
+            .then(data => {
+                if (data.limit) setCapacityLimit(data.limit);
+            })
+            .catch(console.error);
     }
   }, [showSettingsMenu]);
+
+  const updateCapacity = async (limit: number) => {
+    try {
+        const res = await fetch('/api/config/capacity', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ limit })
+        });
+        if (res.ok) {
+            setCapacityLimit(limit);
+            setShowSettingsMenu(false);
+            // Optionally refresh stats or trigger a re-fetch if needed
+        }
+    } catch (e) {
+        console.error('Failed to update capacity', e);
+        alert('设置容量失败');
+    }
+  };
 
   useEffect(() => {
     const handleGlobalClick = () => {
@@ -90,9 +134,11 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
     setContextMenu({ visible: true, x: e.clientX, y: e.clientY, slug });
   }, [isSelectionMode]);
 
-  const performDelete = useCallback(async (slug: string, deleteOutput: boolean) => {
-    const confirmText = deleteOutput ? `确认删除“${slug}”的 Markdown 与输出HTML？此操作不可撤销。` : `确认删除“${slug}”的 Markdown 源文件？此操作不可撤销。`;
-    if (!confirm(confirmText)) return;
+  const performDelete = useCallback(async (slug: string, deleteOutput: boolean, skipConfirm = false) => {
+    if (!skipConfirm) {
+        const confirmText = deleteOutput ? `确认将“${slug}”的 Markdown 与输出HTML移入回收站？` : `确认将“${slug}”的 Markdown 源文件移入回收站？`;
+        if (!confirm(confirmText)) return;
+    }
     try {
       const res = await fetch('/api/delete', {
         method: 'POST',
@@ -163,8 +209,104 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
     }
   };
 
+  const handleDragStart = (e: React.DragEvent, slug: string) => {
+    e.dataTransfer.setData('application/json', JSON.stringify({ type: 'document', slug }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDropToTrash = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const data = e.dataTransfer.getData('application/json');
+    if (!data) return;
+
+    try {
+        const { type, slug } = JSON.parse(data);
+        if (type !== 'document' || !slug) return;
+
+        // Check trash capacity
+        const res = await fetch('/api/trash/stats');
+        const stats = await res.json();
+        
+        if (stats.count >= 500) {
+            setWarningDialog({
+                isOpen: true,
+                message: `回收站已满（${stats.count}/500）。无法继续删除。建议先清理回收站中最早的文件。`,
+                cleanupLabel: '删除回收站最早文件',
+                onConfirm: async () => {
+                    setWarningDialog(prev => ({ ...prev, isLoading: true }));
+                    try {
+                        // Find oldest file in trash
+                        const filesRes = await fetch('/api/trash/files');
+                        const { files } = await filesRes.json();
+                        if (files && files.length > 0) {
+                            // Sort by deletedAt ascending (oldest first)
+                            files.sort((a: any, b: any) => a.deletedAt - b.deletedAt);
+                            const oldest = files[0];
+                            
+                            // Delete oldest
+                            await fetch('/api/trash/delete', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ files: [oldest.name] })
+                            });
+
+                            // Proceed with original delete
+                            await performDelete(slug, false); 
+                            setWarningDialog(prev => ({ ...prev, isOpen: false, isLoading: false }));
+                        }
+                    } catch (err) {
+                        console.error('Cleanup failed', err);
+                        alert('清理失败');
+                        setWarningDialog(prev => ({ ...prev, isLoading: false }));
+                    }
+                }
+            });
+            return;
+        }
+
+        // Normal delete
+              performDelete(slug, false, true);
+          } catch (e) {
+        console.error('Drag drop failed', e);
+    }
+  };
+
+  if (showRecycleBin) {
+    return (
+        <RecycleBin 
+            onClose={() => setShowRecycleBin(false)} 
+            className={clsx(isExpanded ? "w-[50vw]" : "w-64", className)}
+            documentCount={posts.length}
+            capacityLimit={capacityLimit}
+            onDeleteOldestDocuments={async (count: number) => {
+                if (count <= 0) return;
+                // Find oldest documents
+                const sorted = [...posts].sort((a, b) => {
+                     const timeA = a.birthtime || a.mtime;
+                     const timeB = b.birthtime || b.mtime;
+                     return timeA - timeB; // Ascending: oldest first
+                });
+                
+                const toDelete = sorted.slice(0, count);
+                if (toDelete.length > 0) {
+                    await Promise.all(toDelete.map(p => performDelete(p.slug, false, true)));
+                }
+            }}
+        />
+    );
+  }
+
   return (
     <div className={clsx("flex flex-col h-full bg-bg-card transition-all duration-300 border-r border-border-soft", isExpanded ? "w-[50vw]" : "w-64", className)}>
+        <CapacityWarningDialog 
+            isOpen={warningDialog.isOpen}
+            onClose={() => setWarningDialog(prev => ({ ...prev, isOpen: false }))}
+            message={warningDialog.message}
+            onConfirmCleanup={warningDialog.onConfirm}
+            cleanupLabel={warningDialog.cleanupLabel}
+            isLoading={warningDialog.isLoading}
+        />
         {/* Header */}
         <div className="h-14 flex items-center justify-between px-4 border-b border-border-soft shrink-0 bg-bg-card z-10">
            {isSelectionMode ? (
@@ -208,6 +350,15 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
                      {isExpanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
                    </button>
                    <button 
+                     onClick={() => setShowRecycleBin(true)}
+                     className="text-text-secondary hover:text-primary transition-colors p-1 rounded-md hover:bg-bg-page"
+                     title="回收站 (拖拽文档至此删除)"
+                     onDrop={handleDropToTrash}
+                     onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+                   >
+                     <Trash2 size={18} />
+                   </button>
+                   <button 
                      onClick={toggleSelectionMode}
                      className="text-text-secondary hover:text-primary transition-colors p-1 rounded-md hover:bg-bg-page"
                      title="批量管理"
@@ -219,6 +370,8 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
            )}
         </div>
         
+        <CapacityProgressBar />
+
         {/* List */}
         <div className={clsx("flex-1 overflow-y-auto p-2", isExpanded ? "grid grid-cols-2 gap-2 content-start" : "space-y-1")}>
            {posts.map((post) => {
@@ -263,6 +416,8 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
              return (
                 <div 
                    key={post.slug} 
+                   draggable={true}
+                   onDragStart={(e) => handleDragStart(e, post.slug)}
                    onContextMenu={(e) => handleContextMenu(e, post.slug)}
                    className="px-3 py-2 rounded-md hover:bg-bg-page transition-colors flex items-center gap-2 group relative"
                  >
@@ -352,12 +507,63 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
                        <span>文件路径</span>
                    </button>
 
+                   {/* Capacity Settings (With Submenu) */}
+                   <div className="relative mb-1">
+                       <button 
+                           onClick={(e) => {
+                               e.stopPropagation();
+                               setShowCapacitySubmenu(!showCapacitySubmenu);
+                               setShowSortSubmenu(false); // Close other submenu
+                           }}
+                           className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between", showCapacitySubmenu ? "bg-bg-page text-primary" : "hover:bg-bg-page text-text-primary")}
+                       >
+                           <div className="flex items-center gap-2">
+                               <Database className="w-4 h-4 text-text-secondary" />
+                               <span>存储容量</span>
+                           </div>
+                           <div className="flex items-center gap-1">
+                               <span className="text-xs text-text-muted">{capacityLimit}</span>
+                               <ChevronRight className={clsx("w-3 h-3 text-text-muted transition-transform", showCapacitySubmenu && "rotate-90")} />
+                           </div>
+                       </button>
+
+                       {/* Capacity Submenu */}
+                       {showCapacitySubmenu && (
+                           <div 
+                               className="absolute left-full bottom-0 ml-2 w-40 bg-bg-card border border-border-soft rounded-lg shadow-xl p-2 animate-in fade-in slide-in-from-left-2 z-50 max-h-60 overflow-y-auto"
+                               onClick={(e) => e.stopPropagation()}
+                           >
+                               {[
+                                   { value: 20, label: '20 (极简)' },
+                                   { value: 50, label: '50 (轻量)' },
+                                   { value: 100, label: '100 (标准)' },
+                                   { value: 200, label: '200 (专业)' },
+                                   { value: 300, label: '300 (扩容)' },
+                                   { value: 500, label: '500 (极限)' }
+                               ].map(option => (
+                                   <button 
+                                       key={option.value}
+                                       onClick={() => updateCapacity(option.value)}
+                                       className={clsx(
+                                           "w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between",
+                                           capacityLimit === option.value ? "bg-primary/10 text-primary" : "hover:bg-bg-page text-text-primary"
+                                       )}
+                                   >
+                                       <span>{option.label}</span>
+                                       {capacityLimit === option.value && <CheckCircle2 className="w-3 h-3" />}
+                                   </button>
+                               ))}
+                           </div>
+                       )}
+                   </div>
+
                    {/* Sort Method (With Submenu) */}
                    <div className="relative">
                        <button 
                            onClick={(e) => {
                                e.stopPropagation();
                                setShowSortSubmenu(!showSortSubmenu);
+                               setShowCapacitySubmenu(false); // Close other submenu
                            }}
                            className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between", showSortSubmenu ? "bg-bg-page text-primary" : "hover:bg-bg-page text-text-primary")}
                        >

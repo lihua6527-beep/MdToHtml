@@ -10,7 +10,7 @@ import 'katex/dist/katex.min.css';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Maximize2, Palette, MoreHorizontal, LayoutGrid, Type, ArrowLeft, ArrowRight, ArrowUp, ArrowDown, Edit, Check, Trash2, Minus, Plus, AlignLeft, AlignCenter, AlignRight, Cpu, Zap, TrendingUp, Tag, Award, Layers, Box, Globe } from 'lucide-react';
-import { getShapeStyle, CardShape } from '../../lib/shapes';
+import { getShapeClass, CardShape } from '../../lib/shapes';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 
@@ -284,7 +284,7 @@ export const Card: React.FC<CardProps> = ({
   // --- Composition Pattern Logic ---
   const shape = (attributes.shape as CardShape) || 'rect';
   const isCustomShape = shape && shape !== 'rect';
-  const shapeStyle = getShapeStyle(shape);
+  const shapeClass = getShapeClass(shape);
 
   return (
     <>
@@ -346,9 +346,9 @@ export const Card: React.FC<CardProps> = ({
                 "absolute inset-0 z-0",
                 shapeVariants[style as CardStyle] || shapeVariants.normal,
                 colorVariants[forcedCardColor],
-                "shadow-none border-none" // Remove box-shadow/border from shape layer as it might be clipped weirdly or we rely on drop-shadow
+                "shadow-none border-none", // Remove box-shadow/border from shape layer as it might be clipped weirdly or we rely on drop-shadow
+                shapeClass
             )}
-            style={shapeStyle}
           />
       )}
 

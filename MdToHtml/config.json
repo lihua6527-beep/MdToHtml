@@ -2,5 +2,6 @@
   "inputPath": "../input",
   "outputPath": "../output",
   "autoSave": true,
-  "theme": "light"
+  "theme": "light",
+  "capacityLimit": 50
 }

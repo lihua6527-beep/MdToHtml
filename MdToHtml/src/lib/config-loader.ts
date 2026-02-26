@@ -7,6 +7,7 @@ export interface AppConfig {
   recyclePath?: string;
   autoSave?: boolean;
   theme?: string;
+  capacityLimit?: number;
 }
 
 export function loadConfig(appRoot: string): AppConfig {
@@ -20,4 +21,15 @@ export function loadConfig(appRoot: string): AppConfig {
     console.warn('Failed to load config.json:', error);
   }
   return {};
+}
+
+export function saveConfig(appRoot: string, config: AppConfig): boolean {
+  const configPath = path.join(appRoot, 'config.json');
+  try {
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), 'utf-8');
+    return true;
+  } catch (error) {
+    console.error('Failed to save config.json:', error);
+    return false;
+  }
 }
