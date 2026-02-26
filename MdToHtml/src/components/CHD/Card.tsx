@@ -488,7 +488,7 @@ export const Card: React.FC<CardProps> = ({
                       
                       // 1. Block Code (always allowed)
                       if (!inline || match) {
-                        return <code className={clsx("bg-bg-page px-1.5 py-0.5 rounded text-sm font-mono text-text-secondary", className)} {...props}>{children}</code>;
+                        return <code className={clsx("bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-sm font-mono text-text-secondary", className)} {...props}>{children}</code>;
                       }
 
                       // 2. Allow List Logic for Inline Code
@@ -504,7 +504,7 @@ export const Card: React.FC<CardProps> = ({
                       const hasChinese = /[\u4e00-\u9fa5]/.test(text);
 
                       if (isArrow || isReference || (isCodeLike && !hasChinese && !isSentence)) {
-                         return <code className="bg-bg-page px-1.5 py-0.5 rounded text-sm font-mono text-text-secondary" {...props}>{children}</code>;
+                         return <code className="bg-black/5 dark:bg-white/10 px-1.5 py-0.5 rounded text-sm font-mono text-text-secondary" {...props}>{children}</code>;
                       }
 
                       // Fallback: Render as Bold Text (Correction)

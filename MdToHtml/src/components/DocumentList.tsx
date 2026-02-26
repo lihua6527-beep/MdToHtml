@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { FileText, ChevronRight, Layout, PenTool, Clock, AlertCircle, CheckCircle2, Settings, Trash2, CheckSquare, Square, Eye, X, ArrowUpDown, Calendar, Monitor, Maximize2, Minimize2 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { CHDRenderer } from './CHD/CHDRenderer';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 interface Post {
   slug: string;
@@ -23,14 +24,15 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
   const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number; slug: string | null }>({ visible: false, x: 0, y: 0, slug: null });
-  const [sortMethod, setSortMethod] = useState<'import' | 'visited' | 'modified'>('import');
+  const [sortMethod, setSortMethod] = useLocalStorage<'import' | 'visited' | 'modified'>('chd_sort_method', 'import');
   
-  // Layout State
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Layout State (Default: true for Wide Mode)
+  const [isExpanded, setIsExpanded] = useLocalStorage<boolean>('chd_sidebar_expanded', true);
   
   // Batch selection state
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
+  const [showSortSubmenu, setShowSortSubmenu] = useState(false);
 
   useEffect(() => {
     // Client-side sorting
@@ -62,9 +64,16 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
   }, [initialPosts, sortMethod]);
 
   useEffect(() => {
+    if (!showSettingsMenu) {
+        setShowSortSubmenu(false);
+    }
+  }, [showSettingsMenu]);
+
+  useEffect(() => {
     const handleGlobalClick = () => {
         setContextMenu(prev => ({ ...prev, visible: false }));
         setShowSettingsMenu(false);
+        // showSortSubmenu will be handled by the effect above
     };
     window.addEventListener('click', handleGlobalClick);
     window.addEventListener('contextmenu', handleGlobalClick); // Close on right click elsewhere
@@ -331,44 +340,67 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
                 className="absolute bottom-16 left-4 w-56 bg-bg-card border border-border-soft rounded-lg shadow-xl p-2 z-50 animate-in slide-in-from-bottom-2 fade-in duration-200"
                 onClick={(e) => e.stopPropagation()}
                >
-                   <div className="text-xs font-semibold text-text-muted mb-2 px-2 uppercase tracking-wider">排序方式</div>
-                   <button 
-                       onClick={() => setSortMethod('import')}
-                       className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2", sortMethod === 'import' ? "bg-primary/10 text-primary" : "hover:bg-bg-page text-text-primary")}
-                   >
-                       <Calendar className="w-4 h-4" />
-                       <span>导入时间</span>
-                       {sortMethod === 'import' && <CheckCircle2 className="w-3 h-3 ml-auto" />}
-                   </button>
-                   <button 
-                       onClick={() => setSortMethod('modified')}
-                       className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2", sortMethod === 'modified' ? "bg-primary/10 text-primary" : "hover:bg-bg-page text-text-primary")}
-                   >
-                       <Clock className="w-4 h-4" />
-                       <span>修改时间</span>
-                       {sortMethod === 'modified' && <CheckCircle2 className="w-3 h-3 ml-auto" />}
-                   </button>
-                   <button 
-                       onClick={() => setSortMethod('visited')}
-                       className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2", sortMethod === 'visited' ? "bg-primary/10 text-primary" : "hover:bg-bg-page text-text-primary")}
-                   >
-                       <ArrowUpDown className="w-4 h-4" />
-                       <span>最近访问</span>
-                       {sortMethod === 'visited' && <CheckCircle2 className="w-3 h-3 ml-auto" />}
-                   </button>
-
-                   <div className="h-px bg-border-soft my-2" />
-
+                   {/* File Path Button */}
                    <button 
                        onClick={() => {
                            setShowSettingsMenu(false);
                            onOpenSettings?.();
                        }}
-                       className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-bg-page transition-colors flex items-center gap-2 text-text-primary"
+                       className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-bg-page transition-colors flex items-center gap-2 text-text-primary mb-1"
                    >
                        <Settings className="w-4 h-4 text-text-secondary" />
                        <span>文件路径</span>
                    </button>
+
+                   {/* Sort Method (With Submenu) */}
+                   <div className="relative">
+                       <button 
+                           onClick={(e) => {
+                               e.stopPropagation();
+                               setShowSortSubmenu(!showSortSubmenu);
+                           }}
+                           className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between", showSortSubmenu ? "bg-bg-page text-primary" : "hover:bg-bg-page text-text-primary")}
+                       >
+                           <div className="flex items-center gap-2">
+                               <ArrowUpDown className="w-4 h-4 text-text-secondary" />
+                               <span>排序方式</span>
+                           </div>
+                           <ChevronRight className={clsx("w-3 h-3 text-text-muted transition-transform", showSortSubmenu && "rotate-90")} />
+                       </button>
+
+                       {/* Submenu */}
+                       {showSortSubmenu && (
+                           <div 
+                               className="absolute left-full bottom-0 ml-2 w-48 bg-bg-card border border-border-soft rounded-lg shadow-xl p-2 animate-in fade-in slide-in-from-left-2 z-50"
+                               onClick={(e) => e.stopPropagation()}
+                           >
+                               <button 
+                                   onClick={() => { setSortMethod('import'); setShowSettingsMenu(false); }}
+                                   className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2", sortMethod === 'import' ? "bg-primary/10 text-primary" : "hover:bg-bg-page text-text-primary")}
+                               >
+                                   <Calendar className="w-4 h-4" />
+                                   <span>导入时间</span>
+                                   {sortMethod === 'import' && <CheckCircle2 className="w-3 h-3 ml-auto" />}
+                               </button>
+                               <button 
+                                   onClick={() => { setSortMethod('modified'); setShowSettingsMenu(false); }}
+                                   className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2", sortMethod === 'modified' ? "bg-primary/10 text-primary" : "hover:bg-bg-page text-text-primary")}
+                               >
+                                   <Clock className="w-4 h-4" />
+                                   <span>修改时间</span>
+                                   {sortMethod === 'modified' && <CheckCircle2 className="w-3 h-3 ml-auto" />}
+                               </button>
+                               <button 
+                                   onClick={() => { setSortMethod('visited'); setShowSettingsMenu(false); }}
+                                   className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2", sortMethod === 'visited' ? "bg-primary/10 text-primary" : "hover:bg-bg-page text-text-primary")}
+                               >
+                                   <Eye className="w-4 h-4" />
+                                   <span>最近访问</span>
+                                   {sortMethod === 'visited' && <CheckCircle2 className="w-3 h-3 ml-auto" />}
+                               </button>
+                           </div>
+                       )}
+                   </div>
                </div>
            )}
 
