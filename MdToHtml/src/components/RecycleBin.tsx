@@ -23,7 +23,7 @@ interface RecycleBinProps {
   onRestore?: () => void;
 }
 
-export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, documentCount = 0, capacityLimit = 100, onDeleteOldestDocuments }) => {
+export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, documentCount = 0, capacityLimit = 100, onDeleteOldestDocuments, onRestore }) => {
   const [files, setFiles] = useState<TrashFile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
@@ -132,6 +132,9 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
         body: JSON.stringify({ files: fileNames })
       });
       if (res.ok) {
+        // Add 500ms delay to ensure FS stability and provide visual feedback
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         setFiles(prev => prev.filter(f => !fileNames.includes(f.name)));
         setSelectedFiles(prev => {
           const newSet = new Set(prev);

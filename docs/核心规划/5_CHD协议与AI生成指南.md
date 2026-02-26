@@ -74,16 +74,18 @@ AI 必须为每个 Section 指定布局属性。
     *   `"normal"`: 标准卡片（默认）。适合一般性描述。
     *   `"highlight"`: 高亮卡片。适合核心观点、重要结论。
     *   `"quote"`: 引用卡片。适合名言、用户评价、设计理念。
-    *   `"code"`: 代码卡片。**严格限制**！仅限于展示代码块、伪代码、流程箭头图或配置文件。
-        *   **禁止滥用**: 严禁将普通文本内容设置为 `code` 样式以试图获得特殊高亮（请使用 `highlight` 或 `quote`）。非必要不使用！
-    *   **注**: `stat`, `warning`, `summary` 等样式在 v2.0 中已**精简**，请勿使用。所有内容请归类为上述 4 种样式。
+    *   `"code"`: **[用户专用]** 代码卡片。
+        *   **AI 禁止生成**: AI **严禁**直接生成此样式。
+        *   **原因**: 该样式具有特殊的视觉效果，仅由用户在后期编辑时根据审美偏好手动开启。
+        *   **AI 策略**: 对于代码块、配置文件或伪代码，AI 应始终将其放在 `normal` 或 `highlight` 卡片中。
+    *   **注**: `stat`, `warning`, `summary` 等样式在 v2.0 中已**精简**，请勿使用。所有内容请归类为上述 3 种允许的样式。
 
 ### L2.1: 富文本支持 (Rich Text Support)
 CHD 协议全面支持以下富文本格式。
 **核心原则**: 为了保证内容的可编辑性与语义化，**必须优先使用标准文本格式normal**，严禁使用图片或硬编码 HTML。
 
 *   **数学公式 (Math/LaTeX)**:
-    *   **规范**: 必须使用 LaTeX 语法。**禁止使用公式截图**。
+    *   **规范**: 必须使用 LaTeX 语法（`$` 或 `$$`）。**严禁使用行内代码（反引号）包裹公式**。**禁止使用公式截图**。
     *   **行内公式**: 使用 `$ E = mc^2 $`。
     *   **块级公式**: 使用 `$$` 包裹。
     *   **适用场景**: 算法推导、物理公式、统计模型。
@@ -130,7 +132,7 @@ You are an expert Information Architect and UI Designer. Your task is to restruc
     - **L2**: Use `### Card Title {attributes}` for content blocks.
     - **NO Orphan Text**: NEVER write text directly under `## Section`. All text MUST be inside `### Card`.
     - **No H4+**: Do not use `####` or deeper headings.
-    - **Math/Tables**: MUST use LaTeX (`$`/`$$`) for formulas and GFM for tables. Do NOT use images.
+    - **Math/Tables**: MUST use LaTeX (`$`/`$$`) for formulas. **NEVER use code blocks (backticks) for math**. Do NOT use images.
 
 2.  **Layout Strategy (L1 Attributes)**:
     - **FORCE GRID**: Always use `{layout="grid"}`. Other layouts (`single`, `gallery`) are DISABLED.
@@ -140,12 +142,12 @@ You are an expert Information Architect and UI Designer. Your task is to restruc
     - **Color**: Use `section-color="chart-N"` for visual distinction.
 
 3.  **Card Styling (L2 Attributes)**:
-    - **Allowed Styles Only**: `normal`, `highlight`, `quote`, `code`.
-    - **Core Concepts/Stats**: Use `{card-style="highlight"}` (Stats style is deprecated).
+    - **Allowed Styles Only**: `normal`, `highlight`, `quote`. (**'code' style is BANNED for AI**)
+    - **Core Concepts/Stats/Math**: Use `{card-style="highlight"}`. **Math MUST use LaTeX**.
     - **Quotes/Feedback**: Use `{card-style="quote"}`.
-    - **Code/Algorithms**: Use `{card-style="code"}`.
+    - **Code/Config**: Use `{card-style="normal"}` (or `highlight`). **NEVER generate `{card-style="code"}`**. This style is reserved for manual user application.
     - **General Text**: Use `{card-style="normal"}`.
-    - **Consistency**: Maintain style consistency within a section (e.g., all `normal` or all `code`). Exception: Footer sections (Summary/References) can vary.
+    - **Consistency**: Maintain style consistency within a section.
     - **No Col-Span**: Do NOT use `col-span`. All cards must be equal width.
 
 4.  **Content Refinement**:
@@ -174,12 +176,15 @@ Fully automated setup with smart defaults. No manual tuning required.
 ### 99.9% Uptime {card-style="highlight"}
 Enterprise-grade reliability.
 
+### Math Ready {card-style="highlight"}
+Supports LaTeX: $ E = mc^2 $.
+
 ## Architecture {layout="grid" columns=3}
 
 ### Frontend Layer {card-style="normal"}
 Built with React and Tailwind for maximum flexibility.
 
-### AI Core {card-style="code"}
+### AI Core {card-style="normal"}
 Powered by a custom transformer model optimized for structural understanding.
 
 ## User Feedback {layout="grid" columns=2}
@@ -209,14 +214,18 @@ I can't imagine working without it anymore.
 
 ### 4.3 如何处理技术架构 (Architecture)
 *   **不要**：用纯文本描述流程。
-*   **要**：使用 `code` 样式卡片展示模块名称或伪代码。
+*   **要**：使用 `normal` 样式卡片展示模块名称或伪代码（**勿用 `code` 样式**）。
 *   **要**：使用 `columns=3` 的网格布局，按逻辑顺序排列。
 
 ### 4.4 视觉一致性 (Visual Consistency)
 *   **强制网格**: 严格遵守 `1-4 张 = N 列`，`5+ 张 = 3 列` 的规则。
 *   **避免孤儿**: 确保每行卡片数量平衡。例如 5 张卡片会排成 `3 + 2`，这是允许的。
 *   **不要**: 尝试使用 `col-span` 或 `row-span` 来创造“艺术感”。在 v2.0 中，整齐划一是最高优先级。
-*   **Section 内部一致性**: 同一个 Section 下的 Card 样式应尽可能保持统一。例如，如果 Section 是关于“核心概念”的，建议全部使用 `normal` 或 `highlight`；如果是“代码实现”，则全部使用 `code`。避免在一个逻辑段落内无意义地混用多种样式。
+*   **AI 智能列数**:
+    *   **1-4 张卡片**: 列数 = 卡片数 (如 3张 -> `columns=3`)。
+    *   **5+ 张卡片**: **强制** `columns=3`。这能保证最佳的阅读体验（如 5张排成 3+2，6张排成 3+3）。
+    *   **避免拥挤**: 尽量不要使用 `columns=4`，除非卡片内容极短。绝大多数情况下，`columns=3` 是最佳选择。
+*   **Section 内部一致性**: 同一个 Section 下的 Card 样式应尽可能保持统一。
 *   **特殊区域例外 (Footer Exceptions)**: 对于文档的结尾部分（如“引言”、“总结”、“参考文献”），允许其样式与正文部分不同。例如，可以使用 `card-style="quote"` 来突出总结性陈述。
 
 ### 4.5 内容原子化 (Content Atomicity)
@@ -236,3 +245,5 @@ I can't imagine working without it anymore.
     *   **修正**: v2.0 已移除 `stat` 样式。请使用 `card-style="highlight"`，并直接在内容中加粗数字，如 `**95%** Accuracy`。
 *   **错误 3**: 整个文档只用了一种 `card-style="normal"`。
     *   **修正**: 根据语义，至少应用 3 种允许的样式（`normal`, `highlight`, `quote`）。
+*   **错误 4**: 公式使用了代码块包裹，如 `` `E=mc^2` `` 或使用了 `code` 样式卡片。
+    *   **修正**: 必须使用 LaTeX 语法 `$ E=mc^2 $`，并使用 `highlight` 或 `normal` 样式。

@@ -274,12 +274,31 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
     }
   };
 
+  const refreshList = async () => {
+      // 1. Trigger server refresh
+      router.refresh();
+      
+      // 2. Fetch latest list manually to update UI immediately
+      try {
+          const res = await fetch('/api/files');
+          const data = await res.json();
+          if (data.files && Array.isArray(data.files)) {
+              setPosts(data.files);
+          }
+      } catch (e) {
+          console.error('Failed to refresh list manually', e);
+      }
+  };
+
   if (showRecycleBin) {
     return (
         <RecycleBin 
-            onClose={() => setShowRecycleBin(false)} 
+            onClose={() => {
+                setShowRecycleBin(false);
+                refreshList();
+            }} 
             onRestore={() => {
-                router.refresh();
+                refreshList();
             }}
             className={clsx(isExpanded ? "w-[50vw]" : "w-64", className)}
             documentCount={posts.length}

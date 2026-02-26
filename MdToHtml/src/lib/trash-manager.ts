@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 import PathManager from './path-manager';
 
 export interface TrashStats {
@@ -240,7 +241,27 @@ class TrashManager {
                     targetPath = path.join(inputDir, `${name}_restored_${Date.now()}${ext}`);
                 }
 
-                fs.renameSync(trashPath, targetPath);
+                // Use copy + unlink instead of rename to ensure new birthtime (creation time)
+                // This ensures the restored file appears at the top when sorted by "Import Time"
+                fs.copyFileSync(trashPath, targetPath);
+                fs.unlinkSync(trashPath);
+                
+                // Explicitly update mtime/atime to now to ensure it appears at top when sorted by "Modified Time"
+                const now = new Date();
+                fs.utimesSync(targetPath, now, now);
+
+                // Windows Tunneling Fix: Force update CreationTime (birthtime) via PowerShell
+                // This ensures it appears at top when sorted by "Import Time" (default)
+                if (process.platform === 'win32') {
+                    try {
+                        // Use powershell to update CreationTime
+                        const cmd = `powershell -Command "(Get-Item '${targetPath}').CreationTime = Get-Date"`;
+                        execSync(cmd, { stdio: 'ignore' });
+                    } catch (e) {
+                        console.error('[TrashManager] Failed to update creation time on Windows', e);
+                    }
+                }
+                
                 success++;
             } catch (error: any) {
                 failed++;
