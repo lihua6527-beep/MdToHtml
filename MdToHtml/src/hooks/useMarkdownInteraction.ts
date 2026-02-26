@@ -14,7 +14,7 @@ export interface MarkdownUpdater {
   updateContent: (blockIndex: number, newContent: string) => void;
   updateTitle: (blockIndex: number, newTitle: string) => void;
   batchUpdateAttributes: (updates: Array<{blockIndex: number, key: string, value: any}>) => void;
-  updateFrontmatter: (key: string, value: any) => void; // New
+  updateFrontmatter: (updates: Record<string, any> | string, value?: any) => void; // Robust & Batch
   moveCard: (blockIndex: number, direction: 'left' | 'right' | 'up' | 'down') => void;
   deleteCard: (blockIndex: number) => void;
   addCard: (sectionBlockIndex: number) => void;
@@ -125,36 +125,61 @@ export function useMarkdownInteraction(
       handleUpdate(lines.join('\n'));
   }, [markdown, handleUpdate, logOperation]);
 
-  // New: Update Frontmatter
-  const updateFrontmatter = useCallback((key: string, value: any) => {
-    logOperation('updateFrontmatter', key, value);
-    const lines = markdown.split('\n');
-    if (lines[0] !== '---') return; // No frontmatter
+  // New: Update Frontmatter (Robust & Batch)
+  const updateFrontmatter = useCallback((updates: Record<string, any> | string, value?: any) => {
+    // Normalize input: updates can be Key(string)+Value(any) OR Map(object)
+    const updatesMap: Record<string, any> = typeof updates === 'string' 
+        ? { [updates]: value } 
+        : updates;
 
+    logOperation('updateFrontmatter', updatesMap);
+    
+    let lines = markdown.split('\n');
+    let hasFrontmatter = lines[0]?.trim() === '---';
     let fmEnd = -1;
-    for (let i = 1; i < lines.length; i++) {
-        if (lines[i].trim() === '---') {
-            fmEnd = i;
-            break;
+
+    if (hasFrontmatter) {
+        for (let i = 1; i < lines.length; i++) {
+            if (lines[i].trim() === '---') {
+                fmEnd = i;
+                break;
+            }
         }
+        // If no end found, treat as no frontmatter (broken)
+        if (fmEnd === -1) hasFrontmatter = false;
     }
 
-    if (fmEnd === -1) return;
-
-    // Simple YAML update (regex based)
-    let found = false;
-    for (let i = 1; i < fmEnd; i++) {
-        const line = lines[i];
-        const match = line.match(/^([a-zA-Z0-9_-]+):\s*(.*)$/);
-        if (match && match[1] === key) {
-            lines[i] = `${key}: ${value}`;
-            found = true;
-            break;
-        }
-    }
-
-    if (!found) {
-        lines.splice(fmEnd, 0, `${key}: ${value}`);
+    if (!hasFrontmatter) {
+        // Create Frontmatter
+        const newFm = ['---'];
+        Object.entries(updatesMap).forEach(([k, v]) => {
+            newFm.push(`${k}: ${v}`);
+        });
+        newFm.push('---');
+        newFm.push(''); // Empty line after
+        
+        lines = [...newFm, ...lines];
+    } else {
+        // Update existing
+        const fmLines = lines.slice(1, fmEnd);
+        
+        Object.entries(updatesMap).forEach(([key, val]) => {
+            let found = false;
+            for (let i = 0; i < fmLines.length; i++) {
+                const match = fmLines[i].match(/^([a-zA-Z0-9_-]+):\s*(.*)$/);
+                if (match && match[1] === key) {
+                    fmLines[i] = `${key}: ${val}`;
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                fmLines.push(`${key}: ${val}`);
+            }
+        });
+        
+        // Reassemble
+        lines = [lines[0], ...fmLines, ...lines.slice(fmEnd)];
     }
 
     handleUpdate(lines.join('\n'));

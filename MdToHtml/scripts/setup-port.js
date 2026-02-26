@@ -59,9 +59,33 @@ function startNextServer(port) {
     // Open browser after a short delay
     setTimeout(() => {
         const url = `http://localhost:${port}`;
+        console.log(`[Smart Port] Server is ready at: ${url}`);
         console.log(`[Smart Port] Opening ${url} in default browser...`);
-        const startCommand = process.platform === 'win32' ? 'start' : (process.platform === 'darwin' ? 'open' : 'xdg-open');
-        require('child_process').exec(`${startCommand} ${url}`);
+        
+        const { exec } = require('child_process');
+        let command;
+        
+        switch (process.platform) {
+            case 'win32':
+                command = `start "" "${url}"`;
+                break;
+            case 'darwin':
+                command = `open "${url}"`;
+                break;
+            case 'linux':
+                command = `xdg-open "${url}"`;
+                break;
+            default:
+                command = `start "${url}"`;
+        }
+
+        if (command) {
+            exec(command, (error) => {
+                if (error) {
+                    console.error('[Smart Port] Failed to open browser:', error);
+                }
+            });
+        }
     }, 3000);
 
     server.on('error', (err) => {

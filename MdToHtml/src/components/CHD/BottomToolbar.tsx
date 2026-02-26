@@ -210,7 +210,7 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({
                             </div>
                         </div>
 
-                        <div className="flex-none flex flex-col gap-3 min-w-[140px] pl-6 border-l border-slate-200">
+                        <div className="flex-none flex flex-col gap-3 min-w-[140px] pl-6">
                              <div className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">全局微调</div>
                              <div className="space-y-3">
                                 <div className="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100">

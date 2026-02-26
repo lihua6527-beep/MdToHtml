@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Edit, Save, Eye, Layout, ArrowLeft, CheckCircle, AlertTriangle, X, Download } from 'lucide-react';
+import { ChevronLeft, Edit, Save, Eye, Layout, ArrowLeft, CheckCircle, AlertTriangle, X, Download, Loader2 } from 'lucide-react';
 import { CHDRenderer } from '@/components/CHD/CHDRenderer';
 import { useMarkdownInteraction } from '@/hooks/useMarkdownInteraction';
 import { useHistory } from '@/hooks/useHistory';
@@ -24,9 +24,10 @@ interface InteractivePostProps {
   initialContent: string;
   slug: string;
   decodedSlug: string;
+  initialStatus?: string | null;
 }
 
-const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug, decodedSlug }) => {
+const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug, decodedSlug, initialStatus }) => {
   const { theme, setTheme } = useTheme();
   // Use useHistory for state management instead of simple useState
   const { 
@@ -41,8 +42,19 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
   const [isEditing, setIsEditing] = useState(false);
   const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
   
+  const triggerSaveRef = useRef<((content: string) => void) | null>(null);
+
+  // Wrapper for content updates to ensure auto-save works even in View Mode
+  const handleContentUpdate = useCallback((newContent: string) => {
+    setContent(newContent);
+    // If not in edit mode (e.g. status toggle, drag & drop), trigger save immediately
+    if (!isEditing) {
+        triggerSaveRef.current?.(newContent);
+    }
+  }, [setContent, isEditing]);
+
   // Note: We use useHistory's undo/redo, so we ignore the ones from useMarkdownInteraction
-  const { updateAttribute, updateContent, updateTitle, updateFrontmatter, moveCard, deleteCard, addCard, operationLog, batchUpdateAttributes } = useMarkdownInteraction(content, setContent);
+  const { updateAttribute, updateContent, updateTitle, updateFrontmatter, moveCard, deleteCard, addCard, operationLog, batchUpdateAttributes } = useMarkdownInteraction(content, handleContentUpdate);
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   
@@ -198,36 +210,14 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
   }, [content]);
 
   // Parse Document Status from Frontmatter
-  const [docStatus, setDocStatus] = useState('');
-  useEffect(() => {
-    const match = content.match(/^---\n([\s\S]*?)\n---/);
-    if (match) {
-        const fm = match[1];
-        const statusMatch = fm.match(/status:\s*(.*)/);
-        if (statusMatch) {
-            setDocStatus(statusMatch[1].trim());
-        } else {
-            setDocStatus('');
-        }
-    }
-  }, [content]);
+  const [docStatus, setDocStatus] = useState<string | null>(initialStatus || null);
+  
+  // Use a ref to track if content has been modified by user
+  const isContentModified = useRef(false);
 
-  // Auto-transition Logic
-  const isFirstLoad = useRef(true);
-  useEffect(() => {
-    if (isFirstLoad.current) {
-        isFirstLoad.current = false;
-        return;
-    }
-
-    // Simplified Status Logic:
-    // If status is empty, set to 'incomplete'
-    // If status is 'completed', do NOT auto-switch back to 'incomplete' on edit (User request)
-    // Only manual toggle changes status between 'incomplete' and 'completed'
-    if (!docStatus) {
-        updateFrontmatter('status', 'incomplete');
-    }
-  }, [content, docStatus, updateFrontmatter]);
+  // Auto-transition Logic Removed
+  // We trust the user to set the status manually. No auto-reset to 'incomplete'.
+  // This prevents the "flash and revert" bug where existing status is overwritten.
 
   // Clear selection when exiting edit mode
   React.useEffect(() => {
@@ -317,54 +307,39 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
     }, 500);
   };
 
-  const handleStatusChange = (newStatus: string) => {
-      // 1. Immediately update UI state
-      setDocStatus(newStatus);
+  // Keep triggerSaveRef up to date
+  useEffect(() => {
+    triggerSaveRef.current = triggerDebouncedSave;
+  });
 
-      // 2. Calculate new content based on REF to avoid closure staleness
-      let newContent = contentRef.current;
-      const lines = newContent.split('\n');
+  // Status Update Loading State
+  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
+
+  const handleStatusChange = (newStatus: string) => {
+      // Prevent rapid clicks
+      if (isStatusUpdating) return;
       
-      if (lines[0].trim() === '---') {
-          let fmEnd = -1;
-          for (let i = 1; i < lines.length; i++) {
-              if (lines[i].trim() === '---') {
-                  fmEnd = i;
-                  break;
-              }
-          }
+      // 1. Immediately update UI state (Optimistic)
+      setDocStatus(newStatus);
+      setIsStatusUpdating(true);
+
+      // 2. Update via robust updateFrontmatter (batch update)
+      // Use setTimeout to allow UI to render the loading state first
+      setTimeout(() => {
+          const isDone = ['done', 'completed'].includes(newStatus);
           
-          if (fmEnd > 0) {
-              const fmLines = lines.slice(1, fmEnd);
-              
-              // Update status
-              const statusIndex = fmLines.findIndex(l => l.trim().startsWith('status:'));
-              if (statusIndex >= 0) {
-                  fmLines[statusIndex] = `status: ${newStatus}`;
-              } else {
-                  fmLines.push(`status: ${newStatus}`);
-              }
-              
-              // Update training_sample
-              const isDone = ['done', 'completed'].includes(newStatus);
-              const trainIndex = fmLines.findIndex(l => l.trim().startsWith('training_sample:'));
-              if (trainIndex >= 0) {
-                  fmLines[trainIndex] = `training_sample: ${isDone}`;
-              } else {
-                  fmLines.push(`training_sample: ${isDone}`);
-              }
-              
-              lines.splice(1, fmEnd - 1, ...fmLines);
-              newContent = lines.join('\n');
-          }
-      }
+          updateFrontmatter({
+              status: newStatus,
+              training_sample: isDone
+          });
+          
+          // Keep loading state for a moment to provide visual feedback
+          setTimeout(() => {
+              setIsStatusUpdating(false);
+          }, 800);
+      }, 50);
       
-      // 3. Update content state and ref
-      setContent(newContent);
-      contentRef.current = newContent;
-      
-      // 4. Trigger Debounced Save
-      triggerDebouncedSave(newContent);
+      // Note: triggerDebouncedSave is handled by handleContentUpdate wrapper passed to useMarkdownInteraction
   };
 
   const handleBack = async () => {
@@ -489,26 +464,36 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
               <div className="flex items-center gap-1 mx-4 bg-secondary/10 p-1 rounded-lg border border-border-soft">
                   <button
                       onClick={() => handleStatusChange('incomplete')}
+                      disabled={isStatusUpdating}
                       className={clsx(
-                          "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                          "flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md transition-all",
                           ['pending', 'modified', 'incomplete', ''].includes(docStatus || '')
                             ? "bg-amber-100 text-amber-700 shadow-sm" 
-                            : "text-text-secondary hover:bg-secondary/20"
+                            : "text-text-secondary hover:bg-secondary/20",
+                          isStatusUpdating && "opacity-70 cursor-wait"
                       )}
                       title="文档需要修改"
                   >
+                      {isStatusUpdating && ['pending', 'modified', 'incomplete', ''].includes(docStatus || '') && (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                      )}
                       未完成
                   </button>
                   <button
                       onClick={() => handleStatusChange('completed')}
+                      disabled={isStatusUpdating}
                       className={clsx(
-                          "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                          "flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md transition-all",
                           ['done', 'completed'].includes(docStatus || '')
                             ? "bg-green-100 text-green-700 shadow-sm" 
-                            : "text-text-secondary hover:bg-secondary/20"
+                            : "text-text-secondary hover:bg-secondary/20",
+                          isStatusUpdating && "opacity-70 cursor-wait"
                       )}
                       title="文档已完成并锁定"
                   >
+                      {isStatusUpdating && ['done', 'completed'].includes(docStatus || '') && (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                      )}
                       已完成
                   </button>
               </div>
