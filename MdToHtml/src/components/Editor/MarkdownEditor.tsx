@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useState, useRef, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useRef, useMemo, forwardRef } from 'react';
 import { validateContent, ValidationResult } from '@/lib/validator';
 import { useAutoSave, loadFromStorage } from '@/hooks/useAutoSave';
+import { useEditorDragDrop } from '@/hooks/editor/useEditorDragDrop';
+import { useEditorIO } from '@/hooks/editor/useEditorIO';
+import { useEditorScroll, MarkdownEditorHandle } from '@/hooks/editor/useEditorScroll';
 import { 
   FileText,
   AlertCircle,
@@ -23,9 +26,7 @@ interface MarkdownEditorProps {
   className?: string;
 }
 
-export interface MarkdownEditorHandle {
-  scrollToLine: (line: number) => void;
-}
+export type { MarkdownEditorHandle };
 
 export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({
   value,
@@ -40,51 +41,6 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
   // Use controlled value if provided, else internal
   const content = value !== undefined ? value : internalContent;
   
-  const [filePath, setFilePath] = useState('output/my-document.md');
-  const [status, setStatus] = useState<string>('');
-  
-  // Auto-save
-  const { lastSaved, isSaving } = useAutoSave('chd_md_content', content);
-
-  const [isDragging, setIsDragging] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<ValidationResult[]>([]);
-
-  // Real-time Validation
-  useEffect(() => {
-    const errors = validateContent(content);
-    setValidationErrors(errors);
-  }, [content]);
-
-  // Interaction Enhancements State
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useImperativeHandle(ref, () => ({
-    scrollToLine: (line: number) => {
-      if (textareaRef.current) {
-        const lineHeight = 24; // Approximation for text-sm leading-relaxed
-        const targetScroll = (line - 1) * lineHeight;
-        
-        textareaRef.current.scrollTo({
-          top: targetScroll,
-          behavior: 'smooth'
-        });
-      }
-    }
-  }));
-
-  const [showMenu, setShowMenu] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
-  const [menuFilter, setMenuFilter] = useState('');
-  const [activeMenuIndex, setActiveMenuIndex] = useState(0);
-
-  // Components Definition
-  const components = EDITOR_MENU_ITEMS;
-
-  const filteredComponents = components.filter(c => 
-    c.label.toLowerCase().includes(menuFilter.toLowerCase()) || 
-    c.id.includes(menuFilter.toLowerCase())
-  );
-
   const setContent = (newVal: string | ((prev: string) => string)) => {
     let nextContent: string;
     if (typeof newVal === 'function') {
@@ -98,6 +54,57 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     } else {
       setInternalContent(nextContent);
     }
+  };
+
+  // 1. Hooks Integration
+  const { filePath, setFilePath, status, setStatus, handleSave, handleLoad } = useEditorIO({
+    content,
+    setContent,
+  });
+
+  const { isDragging, handleDragOver, handleDragLeave, handleDrop } = useEditorDragDrop({
+    setContent,
+    setFilePath,
+    setStatus,
+  });
+
+  const { textareaRef, handleScroll } = useEditorScroll({
+    ref,
+    onScroll
+  });
+
+  const { lastSaved, isSaving } = useAutoSave('chd_md_content', content, 3000);
+
+  // 2. Local State for UI
+  const [showMenu, setShowMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const [menuFilter, setMenuFilter] = useState('');
+  const [activeMenuIndex, setActiveMenuIndex] = useState(0);
+  const [validationErrors, setValidationErrors] = useState<ValidationResult[]>([]);
+
+  const components = EDITOR_MENU_ITEMS;
+
+  const filteredComponents = useMemo(() => {
+    if (!menuFilter) return components;
+    return components.filter(c => 
+      c.label.toLowerCase().includes(menuFilter.toLowerCase()) || 
+      c.id.toLowerCase().includes(menuFilter.toLowerCase())
+    );
+  }, [components, menuFilter]);
+
+  // 3. Effects
+  useEffect(() => {
+    const errors = validateContent(content);
+    setValidationErrors(errors);
+  }, [content]);
+
+  // 4. Handlers
+  const updateActiveLine = () => {
+    if (!textareaRef.current || !onCursorChange) return;
+    const cursor = textareaRef.current.selectionStart;
+    const textBefore = textareaRef.current.value.slice(0, cursor);
+    const line = textBefore.split('\n').length;
+    onCursorChange(line);
   };
 
   // Smart Insert: Inserts at cursor position
@@ -135,28 +142,10 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
     setTimeout(() => {
       textarea.focus();
       textarea.setSelectionRange(newCursorPos, newCursorPos);
-      // Trigger scroll or update
       updateActiveLine();
     }, 0);
     
     setShowMenu(false);
-  };
-
-  // Sync Scroll: Editor -> Preview (Propagated up)
-  const handleScroll = () => {
-    if (!textareaRef.current) return;
-    const { scrollTop, scrollHeight, clientHeight } = textareaRef.current;
-    if (onScroll) {
-      onScroll(scrollTop, scrollHeight, clientHeight);
-    }
-  };
-
-  const updateActiveLine = () => {
-    if (!textareaRef.current || !onCursorChange) return;
-    const cursor = textareaRef.current.selectionStart;
-    const textBefore = textareaRef.current.value.slice(0, cursor);
-    const line = textBefore.split('\n').length;
-    onCursorChange(line);
   };
 
   // Input Handler: Detect Slash
@@ -224,92 +213,6 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
   // Click handler to update cursor
   const handleClick = () => {
     updateActiveLine();
-  };
-
-  // Drag & Drop Handlers
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = async (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    const files = Array.from(e.dataTransfer.files);
-    if (files.length === 0) return;
-
-    const file = files[0];
-    
-    const validExtensions = ['.md', '.txt', '.markdown'];
-    const isMarkdown = validExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
-    
-    if (!isMarkdown && file.type !== 'text/plain' && file.type !== 'text/markdown') {
-      setStatus('Error: Only Markdown/Text files allowed');
-      setTimeout(() => setStatus(''), 3000);
-      return;
-    }
-
-    try {
-      const text = await file.text();
-      if (text.includes('\0')) {
-        throw new Error("Binary file detected");
-      }
-      
-      setContent(text);
-      setFilePath(prev => {
-         const dir = prev.includes('/') ? prev.substring(0, prev.lastIndexOf('/') + 1) : '';
-         return dir + file.name;
-      });
-      setStatus(`Loaded: ${file.name}`);
-      setTimeout(() => setStatus(''), 2000);
-    } catch (err) {
-      console.error(err);
-      setStatus('Error reading file');
-    }
-  };
-
-  const handleSave = async () => {
-    setStatus('Saving...');
-    try {
-      const res = await fetch('/api/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: filePath, content })
-      });
-      if (res.ok) {
-        setStatus('Saved!');
-        setTimeout(() => setStatus(''), 2000);
-      } else {
-        setStatus('Error saving');
-      }
-    } catch (e) {
-      console.error(e);
-      setStatus('Error');
-    }
-  };
-
-  const handleLoad = async () => {
-    setStatus('Loading...');
-    try {
-      const res = await fetch(`/api/read?path=${encodeURIComponent(filePath)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setContent(data.content);
-        setStatus('Loaded');
-        setTimeout(() => setStatus(''), 2000);
-      } else {
-        setStatus('File not found');
-      }
-    } catch (e) {
-      console.error(e);
-      setStatus('Error');
-    }
   };
 
   const handleFix = (fix: NonNullable<ValidationResult['fix']>, lineNum: number) => {
