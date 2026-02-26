@@ -7,6 +7,7 @@ interface PathInfo {
   inputPath: string;
   outputPath: string;
   dataPath: string;
+  recyclePath: string;
   appRoot: string;
   config: any;
 }
@@ -143,6 +144,21 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
                         <div className="font-mono text-sm bg-bg-page p-3 rounded border border-border-soft break-all select-all">
                             {info.dataPath}
                         </div>
+                    </div>
+                </div>
+
+                <div className="group relative">
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500 rounded-l-lg"></div>
+                    <div className="pl-4 py-2">
+                        <label className="text-xs font-semibold text-text-secondary block mb-1">
+                            回收站路径 (Recycle Path)
+                        </label>
+                        <div className="font-mono text-sm bg-bg-page p-3 rounded border border-border-soft break-all select-all">
+                            {info.recyclePath}
+                        </div>
+                        <p className="text-[10px] text-text-muted mt-1">
+                            删除的 Markdown 文件将移动到此文件夹。
+                        </p>
                     </div>
                 </div>
               </div>

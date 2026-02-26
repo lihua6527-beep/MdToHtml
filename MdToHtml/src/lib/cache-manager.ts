@@ -36,7 +36,7 @@ export class MetadataCacheManager {
   private constructor() {
     this.baseDir = PathManager.getInputPath();
     this.cachePath = path.join(this.baseDir, CACHE_FILE_NAME);
-    this.trashDir = path.join(this.baseDir, TRASH_DIR_NAME);
+    this.trashDir = PathManager.getRecyclePath();
     
     // Initialize cache structure
     this.cache = {

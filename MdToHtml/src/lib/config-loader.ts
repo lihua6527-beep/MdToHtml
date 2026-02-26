@@ -4,6 +4,7 @@ import path from 'path';
 export interface AppConfig {
   inputPath?: string;
   outputPath?: string;
+  recyclePath?: string;
   autoSave?: boolean;
   theme?: string;
 }

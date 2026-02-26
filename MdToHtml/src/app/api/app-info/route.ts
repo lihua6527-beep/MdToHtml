@@ -6,6 +6,7 @@ export async function GET() {
     const inputPath = PathManager.getInputPath();
     const outputPath = PathManager.getOutputPath();
     const dataPath = PathManager.getDataPath();
+    const recyclePath = PathManager.getRecyclePath();
     const appRoot = PathManager.getAppRoot();
     const config = PathManager.getAppConfig();
 
@@ -13,6 +14,7 @@ export async function GET() {
       inputPath,
       outputPath,
       dataPath,
+      recyclePath,
       appRoot,
       config
     });

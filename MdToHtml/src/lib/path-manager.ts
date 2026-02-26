@@ -10,6 +10,7 @@ class PathManager {
   private inputDir: string = '';
   private outputDir: string = '';
   private dataDir: string = '';
+  private recycleDir: string = '';
 
   private constructor() {
     this.appRoot = this.detectAppRoot();
@@ -43,6 +44,7 @@ class PathManager {
     const defaultInput = path.join(this.appRoot, 'input');
     const defaultOutput = path.join(this.appRoot, 'output');
     const defaultData = path.join(this.appRoot, 'data');
+    const defaultRecycle = path.join(this.appRoot, 'recycle');
     
     let isWritable = false;
     try {
@@ -55,12 +57,14 @@ class PathManager {
     let baseInput = defaultInput;
     let baseOutput = defaultOutput;
     let baseData = defaultData;
+    let baseRecycle = defaultRecycle;
 
     if (!isWritable) {
         const docDir = path.join(os.homedir(), 'Documents', 'MdToHtml');
         baseInput = path.join(docDir, 'input');
         baseOutput = path.join(docDir, 'output');
         baseData = path.join(docDir, 'data');
+        baseRecycle = path.join(docDir, 'recycle');
         console.warn(`App root is not writable. Fallback to Documents: ${docDir}`);
     }
 
@@ -76,16 +80,22 @@ class PathManager {
     // Data dir is always baseData unless we add config support later
     this.dataDir = baseData;
 
+    this.recycleDir = this.config.recyclePath
+        ? (path.isAbsolute(this.config.recyclePath) ? this.config.recyclePath : path.join(this.appRoot, this.config.recyclePath))
+        : baseRecycle;
+
     // Ensure directories exist
     this.ensureDirectory(this.inputDir);
     this.ensureDirectory(this.outputDir);
     this.ensureDirectory(this.dataDir);
+    this.ensureDirectory(this.recycleDir);
 
     console.log('[PathManager] Initialized paths:', {
         appRoot: this.appRoot,
         input: this.inputDir,
         output: this.outputDir,
         data: this.dataDir,
+        recycle: this.recycleDir,
         isWritable
     });
   }
@@ -112,6 +122,10 @@ class PathManager {
     return this.dataDir;
   }
   
+  public getRecyclePath(): string {
+    return this.recycleDir;
+  }
+
   public getAppConfig(): AppConfig {
     return this.config;
   }
