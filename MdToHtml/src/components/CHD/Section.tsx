@@ -268,7 +268,7 @@ export const Section: React.FC<SectionProps> = ({
       {/* Divider between sections */}
       {isFallback && editMode && (
          <div className="mb-4 p-3 bg-yellow-50 text-yellow-700 text-sm rounded-lg border border-yellow-200 flex items-center gap-2">
-             <span>⚠️ 布局 '{layoutProps.layout}' 暂不支持，已自动回退到并列布局。</span>
+             <span>⚠️ 布局 &apos;{layoutProps.layout}&apos; 暂不支持，已自动回退到并列布局。</span>
              <button 
                 onClick={() => onCardUpdate?.(blockIndex!, { ...layoutProps, layout: '' })}
                 className="underline hover:text-yellow-900"

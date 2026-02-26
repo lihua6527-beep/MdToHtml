@@ -41,8 +41,22 @@
     "asar": false,
     "win": {
       "target": [
-        "dir"
-      ]
+        "nsis",
+        "portable"
+      ],
+      "artifactName": "${productName}-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MdToHtml Pro",
+      "deleteAppDataOnUninstall": true
+    },
+    "portable": {
+      "artifactName": "${productName}-Portable-${version}.${ext}"
     }
   },
   "dependencies": {
