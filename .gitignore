@@ -79,3 +79,9 @@ MdToHtml/dist_build/
 MdToHtml/dist_build_v2/
 MdToHtml/release/
 MdToHtml/release_v2/
+
+# Local metadata caches
+**/.metadata_cache.json
+
+# Kept local-only (duplicate / temp)
+docs/归档/系统配置与路径管理方案.md
