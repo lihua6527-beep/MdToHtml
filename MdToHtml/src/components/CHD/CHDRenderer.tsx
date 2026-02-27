@@ -163,11 +163,9 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
                     blockIndex: index // Store the index in the blocks array
                 };
                 
-                // Only add card if it has content or is a code block
-                // This prevents empty headings (like '### ' without text) from rendering as empty cards
-                if (cleanContent.length > 0 || block.type === 'code') {
-                    currentSection.cards.push(card);
-                }
+                // Always add card regardless of content length
+                // This ensures all cards are rendered
+                currentSection.cards.push(card);
             }
         });
 
@@ -222,55 +220,9 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
             });
         });
 
-        // [Smart Sizing Logic] - DISABLED
-        // This legacy logic assumes a 2/4 column grid and conflicts with the new 12-column system.
-        // It prevents the Section component from applying correct default widths.
-        /*
-        result.forEach(section => {
-            const relationship = section.layoutProps['relation'] || 'parallel';
-            
-            section.cards.forEach((card: any, index: number) => {
-                if (!card.props['col-span']) {
-                    // [Fix] Summary cards should default to full width (own line)
-                    if (card.props['card-style'] === 'summary') {
-                        card.props['col-span'] = '4';
-                        return;
-                    }
-
-                    const textLen = card.content.length;
-                    
-                    if (relationship === 'parallel') {
-                        if (textLen > 800) {
-                            card.props['col-span'] = '2';
-                        } else {
-                            card.props['col-span'] = '1';
-                        }
-                    } else if (relationship === 'total-part') {
-                        if (index === 0) {
-                            card.props['col-span'] = '2';
-                            card.props['row-span'] = '2';
-                        } else {
-                            card.props['col-span'] = '1';
-                        }
-                    } else {
-                        // Mosaic
-                        if (textLen > 600) {
-                            card.props['col-span'] = '2';
-                        } else {
-                            if (index % 3 === 2) {
-                                card.props['col-span'] = '2';
-                            } else {
-                                card.props['col-span'] = '1';
-                            }
-                        }
-                    }
-                }
-            });
-        });
-        */
-
         return { sections: result, frontmatter: fm, error: null, blockMap: blockIndices };
     } catch (e: any) {
+        console.error('Error parsing markdown:', e);
         return { sections: [], frontmatter: {}, error: e.message || 'Unknown rendering error', blockMap: {} };
     }
   }, [markdown]);

@@ -282,12 +282,12 @@ export class RuleBasedScorer {
       const { data } = matter(content);
       
       if (!data.title) {
-        score -= 20;
+        score -= 10;
         issues.push({
           line: 1,
           type: 'metadata_missing_title',
           message: 'Frontmatter 缺失 title 字段。',
-          severity: 'error'
+          severity: 'warning'
         });
       }
       
@@ -297,12 +297,12 @@ export class RuleBasedScorer {
     } catch (e) {
       // Robust Fallback: Even if frontmatter fails, return a partial score
       // but mark it as a severe issue.
-      score = 0;
+      score = 50;
       issues.push({
         line: 1,
         type: 'metadata_invalid_yaml',
-        message: 'Frontmatter 解析失败，请检查 YAML 语法。这将导致元数据评分为 0。',
-        severity: 'error'
+        message: 'Frontmatter 解析失败，请检查 YAML 语法。',
+        severity: 'warning'
       });
     }
 

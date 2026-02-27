@@ -127,6 +127,9 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
     other: 'bg-gray-100 text-gray-700'
   };
 
+  // Type selection state
+  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+
 
 
   // Extract Sections for BottomToolbar
@@ -182,6 +185,18 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isEditing, undo, redo]);
+
+  // Click outside to close type dropdown
+  useEffect(() => {
+    const handleClickOutside = () => {
+      setShowTypeDropdown(false);
+    };
+
+    if (showTypeDropdown) {
+      window.addEventListener('click', handleClickOutside);
+      return () => window.removeEventListener('click', handleClickOutside);
+    }
+  }, [showTypeDropdown]);
 
   const router = useRouter();
 
@@ -269,6 +284,15 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
       // Note: triggerDebouncedSave is handled by handleContentUpdate wrapper passed to useMarkdownInteraction
   };
 
+  const handleTypeChange = (newType: string) => {
+      // Update frontmatter with new type
+      updateFrontmatter({
+          type: newType
+      });
+      // Close dropdown
+      setShowTypeDropdown(false);
+  };
+
   const handleBack = async () => {
     if (isSavingRef.current) {
         // Wait for save to complete
@@ -321,9 +345,33 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                   <ArrowLeft size={20} />
               </Button>
 
-              {/* Document Type Label */}
-              <div className={`px-3 py-1 rounded-full text-xs font-medium ${typeColors[documentType] || typeColors.project}`}>
-                {typeLabels[documentType] || typeLabels.project}
+              {/* Document Type Label with Dropdown */}
+              <div className="relative">
+                  <button 
+                      onClick={() => setShowTypeDropdown(!showTypeDropdown)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${typeColors[documentType] || typeColors.project} transition-all hover:shadow-md`}
+                      title="点击修改文档类型"
+                  >
+                      {typeLabels[documentType] || typeLabels.project}
+                  </button>
+                  {showTypeDropdown && (
+                      <div className="absolute top-full left-0 mt-2 w-32 bg-bg-card border border-border-soft rounded-lg shadow-xl p-1 z-50 animate-in fade-in slide-in-from-top-2">
+                          {Object.entries(typeLabels).map(([type, label]) => (
+                              <button
+                                  key={type}
+                                  onClick={() => handleTypeChange(type)}
+                                  className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2 ${
+                                      documentType === type 
+                                          ? `bg-primary/10 text-primary ${typeColors[type] || typeColors.project}` 
+                                          : 'hover:bg-bg-page text-text-primary'
+                                  }`}
+                              >
+                                  <div className={`w-2 h-2 rounded-full ${typeColors[type] || typeColors.project}`} />
+                                  {label}
+                              </button>
+                          ))}
+                      </div>
+                  )}
               </div>
 
               {/* Score Indicator */}
