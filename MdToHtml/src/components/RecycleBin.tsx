@@ -86,6 +86,16 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
     fetchFiles();
   }, [fetchFiles]);
 
+  useEffect(() => {
+    const handlePathsUpdated = () => {
+      fetchFiles();
+    };
+    window.addEventListener('app-paths-updated', handlePathsUpdated);
+    return () => {
+      window.removeEventListener('app-paths-updated', handlePathsUpdated);
+    };
+  }, [fetchFiles]);
+
   const toggleSelection = (fileName: string) => {
     const newSet = new Set(selectedFiles);
     if (newSet.has(fileName)) {

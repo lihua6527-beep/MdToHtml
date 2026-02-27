@@ -5,8 +5,9 @@ import PathManager from '@/lib/path-manager';
 import MetadataCacheManager from '@/lib/cache-manager';
 
 // Use absolute path to ensure reliability across environments
-const postsDirectory = PathManager.getInputPath();
+// Removed static initialization to support dynamic path changes
 const cacheManager = MetadataCacheManager;
+const MARKDOWN_EXT_RE = /\.(md|markdown)$/i;
 
 export function getPostSlugs() {
   // Use cache manager to get valid file list
@@ -15,22 +16,35 @@ export function getPostSlugs() {
 }
 
 export function getPostBySlug(slug: string) {
-  const realSlug = slug.replace(/\.md$/i, '');
-  const fullPath = path.join(postsDirectory, `${realSlug}.md`);
+  const postsDirectory = PathManager.getInputPath();
+  const realSlug = slug.replace(MARKDOWN_EXT_RE, '');
+  const mdCandidate = `${realSlug}.md`;
+  const markdownCandidate = `${realSlug}.markdown`;
+  let matchedFilename: string | null = null;
+  
+  if (fs.existsSync(path.join(postsDirectory, mdCandidate))) {
+    matchedFilename = mdCandidate;
+  } else if (fs.existsSync(path.join(postsDirectory, markdownCandidate))) {
+    matchedFilename = markdownCandidate;
+  }
   
   // Try to get status from cache first
-  const cacheEntry = cacheManager.getAll().find(e => e.path.replace(/\.md$/i, '') === realSlug);
+  const cacheEntry = cacheManager.getAll().find(e => e.path.replace(MARKDOWN_EXT_RE, '') === realSlug);
   const status = cacheEntry?.status || null;
 
   let historyCount = 0;
   
-  if (!fs.existsSync(fullPath)) {
+  if (!matchedFilename) {
      // Case-insensitive fallback
      const dir = fs.readdirSync(postsDirectory);
-     const match = dir.find(f => f.toLowerCase() === `${realSlug.toLowerCase()}.md`);
+     const realSlugLower = realSlug.toLowerCase();
+     const match = dir.find(f => {
+        const lower = f.toLowerCase();
+        return lower === `${realSlugLower}.md` || lower === `${realSlugLower}.markdown`;
+     });
      if (match) {
          // Use the actual filename for data lookup too
-         const actualName = match.replace(/\.md$/i, '');
+         const actualName = match.replace(MARKDOWN_EXT_RE, '');
          try {
              const historyPath = path.join(PathManager.getDataPath(), actualName, 'history.jsonl');
              if (fs.existsSync(historyPath)) {
@@ -42,10 +56,10 @@ export function getPostBySlug(slug: string) {
          return { slug: realSlug, content: fs.readFileSync(path.join(postsDirectory, match), 'utf8'), status, historyCount };
      }
 
-     throw new Error(`File not found: ${fullPath}`);
+     throw new Error(`File not found: ${realSlug}`);
   }
 
-  const fileContents = fs.readFileSync(fullPath, 'utf8');
+  const fileContents = fs.readFileSync(path.join(postsDirectory, matchedFilename), 'utf8');
 
   // Read History Count for Scoring
   try {
@@ -66,7 +80,7 @@ export function getAllPosts() {
   const entries = cacheManager.getAll();
   
   return entries.map((entry) => ({
-    slug: entry.path.replace(/\.md$/i, ''),
+    slug: entry.path.replace(MARKDOWN_EXT_RE, ''),
     mtime: entry.mtime,
     birthtime: entry.birthtime || entry.mtime, // Fallback to mtime if birthtime is missing
     status: entry.status,

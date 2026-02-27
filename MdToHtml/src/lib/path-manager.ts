@@ -1,12 +1,11 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { loadConfig, saveConfig, AppConfig } from './config-loader';
+import ConfigManager from './config-manager';
 
 class PathManager {
   private static instance: PathManager;
   private appRoot: string;
-  private config: AppConfig;
   private inputDir: string = '';
   private outputDir: string = '';
   private dataDir: string = '';
@@ -14,7 +13,6 @@ class PathManager {
 
   private constructor() {
     this.appRoot = this.detectAppRoot();
-    this.config = loadConfig(this.appRoot);
     this.resolvePaths();
   }
 
@@ -40,6 +38,9 @@ class PathManager {
   }
 
   private resolvePaths() {
+    const config = ConfigManager.getInstance().getConfig();
+    const paths = config.paths || {};
+
     // Determine defaults first (Portable vs Fallback)
     const defaultInput = path.join(this.appRoot, 'input');
     const defaultOutput = path.join(this.appRoot, 'output');
@@ -69,19 +70,20 @@ class PathManager {
     }
 
     // Level 1: Config overrides
-    this.inputDir = this.config.inputPath 
-        ? (path.isAbsolute(this.config.inputPath) ? this.config.inputPath : path.join(this.appRoot, this.config.inputPath))
+    this.inputDir = paths.input 
+        ? (path.isAbsolute(paths.input) ? paths.input : path.join(this.appRoot, paths.input))
         : baseInput;
         
-    this.outputDir = this.config.outputPath
-        ? (path.isAbsolute(this.config.outputPath) ? this.config.outputPath : path.join(this.appRoot, this.config.outputPath))
+    this.outputDir = paths.output
+        ? (path.isAbsolute(paths.output) ? paths.output : path.join(this.appRoot, paths.output))
         : baseOutput;
         
-    // Data dir is always baseData unless we add config support later
-    this.dataDir = baseData;
+    this.dataDir = paths.data
+        ? (path.isAbsolute(paths.data) ? paths.data : path.join(this.appRoot, paths.data))
+        : baseData;
 
-    this.recycleDir = this.config.recyclePath
-        ? (path.isAbsolute(this.config.recyclePath) ? this.config.recyclePath : path.join(this.appRoot, this.config.recyclePath))
+    this.recycleDir = paths.trash
+        ? (path.isAbsolute(paths.trash) ? paths.trash : path.join(this.appRoot, paths.trash))
         : baseRecycle;
 
     // Ensure directories exist
@@ -142,23 +144,18 @@ class PathManager {
   public static getRecyclePath(): string {
     return PathManager.getInstance().getRecyclePath();
   }
-
-  public getAppConfig(): AppConfig {
-    return this.config;
-  }
   
   public getAppRoot(): string {
     return this.appRoot;
   }
 
-  public updateConfig(newConfig: Partial<AppConfig>): void {
-    this.config = { ...this.config, ...newConfig };
-    saveConfig(this.appRoot, this.config);
-    // Re-resolve paths if necessary (e.g. if paths changed)
-    // For now, mostly used for capacityLimit which doesn't affect paths
-    if (newConfig.inputPath || newConfig.outputPath || newConfig.recyclePath) {
-        this.resolvePaths();
-    }
+  public getAppConfig() {
+    return ConfigManager.getInstance().getConfig();
+  }
+
+  public updateConfig(newConfig: any): void {
+    ConfigManager.getInstance().updateConfig(newConfig);
+    this.resolvePaths();
   }
 }
 

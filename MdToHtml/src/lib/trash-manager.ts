@@ -10,10 +10,8 @@ export interface TrashStats {
 
 class TrashManager {
     private static instance: TrashManager;
-    private trashDir: string;
 
     private constructor() {
-        this.trashDir = PathManager.getRecyclePath();
         this.ensureTrashDir();
     }
 
@@ -22,6 +20,14 @@ class TrashManager {
             TrashManager.instance = new TrashManager();
         }
         return TrashManager.instance;
+    }
+
+    public reload() {
+        this.ensureTrashDir();
+    }
+
+    private get trashDir(): string {
+        return PathManager.getRecyclePath();
     }
 
     private ensureTrashDir() {

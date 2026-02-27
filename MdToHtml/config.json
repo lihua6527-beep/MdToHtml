@@ -1,7 +1,10 @@
 {
-  "inputPath": "../input",
-  "outputPath": "../output",
   "autoSave": true,
   "theme": "light",
-  "capacityLimit": 50
+  "capacityLimit": 50,
+  "paths": {
+    "input": "",
+    "output": ""
+  },
+  "system": {}
 }

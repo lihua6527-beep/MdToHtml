@@ -54,6 +54,16 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
   }, [initialPosts]);
 
   useEffect(() => {
+    const handlePathsUpdated = () => {
+      router.refresh();
+    };
+    window.addEventListener('app-paths-updated', handlePathsUpdated);
+    return () => {
+      window.removeEventListener('app-paths-updated', handlePathsUpdated);
+    };
+  }, [router]);
+
+  useEffect(() => {
     // Client-side sorting
     try {
         const visitedStr = localStorage.getItem('visited_docs');

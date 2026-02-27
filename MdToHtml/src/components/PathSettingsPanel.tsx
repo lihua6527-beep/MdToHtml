@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { X, Folder, Settings, RefreshCw, FileText, Database, Trash2, AlertTriangle } from 'lucide-react';
+import { X, Folder, Settings, RefreshCw, FileText, Database, Trash2, AlertTriangle, Edit2, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { PathSelector } from '@/components/settings/PathSelector';
 import { clsx } from 'clsx';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 interface PathInfo {
   inputPath: string;
@@ -17,11 +19,21 @@ interface PathSettingsPanelProps {
   onClose: () => void;
 }
 
+type PathKey = 'input' | 'output' | 'data' | 'trash';
+
 export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, onClose }) => {
   const [info, setInfo] = useState<PathInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trashStats, setTrashStats] = useState<{ count: number; size: number } | null>(null);
+  
+  // Path Editing State
+  const [editingKey, setEditingKey] = useState<PathKey | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const notifyPathsUpdated = () => {
+    window.dispatchEvent(new Event('app-paths-updated'));
+  };
 
   const fetchInfo = async () => {
     setLoading(true);
@@ -66,10 +78,10 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
 
   const handleUpdateCapacity = async (limit: number) => {
     try {
-      const res = await fetch('/api/config/capacity', {
+      const res = await fetch('/api/config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ limit })
+        body: JSON.stringify({ capacityLimit: limit })
       });
       if (res.ok) {
         fetchInfo(); // Refresh config display
@@ -81,6 +93,74 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
     }
   };
 
+  const handleSavePath = async (path: string) => {
+    if (!editingKey) return;
+    
+    setSaving(true);
+    try {
+      const res = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          paths: {
+            [editingKey]: path
+          }
+        })
+      });
+
+      if (!res.ok) throw new Error('保存配置失败');
+
+      await fetchInfo(); // Refresh to see new resolved paths
+      await fetchTrashStats();
+      notifyPathsUpdated();
+      setEditingKey(null);
+    } catch (err: any) {
+      alert(`保存失败: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleResetPath = async (key: PathKey) => {
+    if (!confirm('确定要重置为默认路径吗？')) return;
+    
+    setSaving(true);
+    try {
+        // Sending null/undefined for a key usually merges, but here we might need a way to unset.
+        // ConfigManager uses partial merge. 
+        // We might need to send a specific value or handle unset in API.
+        // For now, let's try sending empty string or implement a reset endpoint if needed.
+        // Assuming empty string means "use default" in our logic or we explicitly handle it.
+        // Actually ConfigManager implementation:
+        // paths: { ...this.config.paths, ...newConfig.paths }
+        // So sending undefined won't delete it.
+        
+        // Let's modify API or just set it to empty string and have PathManager handle empty string as default?
+        // PathManager: paths.input ? ... : baseInput. 
+        // If paths.input is "", it's falsy, so it uses baseInput.
+        
+        const res = await fetch('/api/config', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              paths: {
+                [key]: "" 
+              }
+            })
+          });
+    
+          if (!res.ok) throw new Error('重置配置失败');
+    
+          await fetchInfo();
+          await fetchTrashStats();
+          notifyPathsUpdated();
+    } catch (err: any) {
+        alert(`重置失败: ${err.message}`);
+    } finally {
+        setSaving(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       fetchInfo();
@@ -89,6 +169,62 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
   }, [isOpen]);
 
   if (!isOpen) return null;
+
+  const renderPathSection = (
+    label: string, 
+    pathValue: string, 
+    pathKey: PathKey, 
+    iconColorClass: string,
+    description?: string
+  ) => {
+    const isConfigured = info?.config?.paths?.[pathKey];
+    
+    return (
+        <div className="group relative">
+            <div className={clsx("absolute left-0 top-0 bottom-0 w-1 rounded-l-lg", iconColorClass)}></div>
+            <div className="pl-4 py-2">
+                <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-semibold text-text-secondary flex items-center gap-2">
+                        {label}
+                        {isConfigured && <span className="text-[10px] bg-primary/10 text-primary px-1 rounded">自定义</span>}
+                    </label>
+                    <div className="flex gap-2">
+                         {isConfigured && (
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="h-7 px-2 text-xs gap-1" 
+                                title="重置为默认"
+                                onClick={() => handleResetPath(pathKey)}
+                            >
+                                <RotateCcw className="w-3 h-3" />
+                                重置
+                            </Button>
+                         )}
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 px-2 text-xs gap-1" 
+                            title="修改路径"
+                            onClick={() => setEditingKey(pathKey)}
+                        >
+                            <Edit2 className="w-3 h-3" />
+                            修改
+                        </Button>
+                    </div>
+                </div>
+                <div className="font-mono text-sm bg-bg-page p-3 rounded border border-border-soft break-all select-all flex items-center justify-between">
+                    <span>{pathValue}</span>
+                </div>
+                {description && (
+                    <p className="text-[10px] text-text-muted mt-1">
+                        {description}
+                    </p>
+                )}
+            </div>
+        </div>
+    );
+  };
 
   return (
     <>
@@ -150,62 +286,37 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
                     <Folder className="w-4 h-4" /> 路径配置
                 </h3>
                 
-                <div className="group relative">
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-blue-500 rounded-l-lg"></div>
-                    <div className="pl-4 py-2">
-                        <label className="text-xs font-semibold text-text-secondary block mb-1">
-                            输入路径 (Input Path)
-                        </label>
-                        <div className="font-mono text-sm bg-bg-page p-3 rounded border border-border-soft break-all select-all">
-                            {info.inputPath}
-                        </div>
-                        <p className="text-[10px] text-text-muted mt-1">
-                            在此文件夹放入 .md 文件，刷新页面即可在列表中看到。
-                        </p>
-                    </div>
-                </div>
+                {renderPathSection(
+                    "输入路径 (Input Path)", 
+                    info.inputPath, 
+                    "input", 
+                    "bg-blue-500",
+                    "在此文件夹放入 .md 文件，刷新页面即可在列表中看到。"
+                )}
 
-                <div className="group relative">
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-green-500 rounded-l-lg"></div>
-                    <div className="pl-4 py-2">
-                        <label className="text-xs font-semibold text-text-secondary block mb-1">
-                            输出路径 (Output Path)
-                        </label>
-                        <div className="font-mono text-sm bg-bg-page p-3 rounded border border-border-soft break-all select-all">
-                            {info.outputPath}
-                        </div>
-                        <p className="text-[10px] text-text-muted mt-1">
-                            导出的 HTML 文件将保存到此文件夹。
-                        </p>
-                    </div>
-                </div>
+                {renderPathSection(
+                    "输出路径 (Output Path)", 
+                    info.outputPath, 
+                    "output", 
+                    "bg-green-500",
+                    "导出的 HTML 文件将保存到此文件夹。"
+                )}
 
-                <div className="group relative">
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-purple-500 rounded-l-lg"></div>
-                    <div className="pl-4 py-2">
-                        <label className="text-xs font-semibold text-text-secondary block mb-1">
-                            数据存储路径 (Data Path)
-                        </label>
-                        <div className="font-mono text-sm bg-bg-page p-3 rounded border border-border-soft break-all select-all">
-                            {info.dataPath}
-                        </div>
-                    </div>
-                </div>
+                {renderPathSection(
+                    "数据存储路径 (Data Path)", 
+                    info.dataPath, 
+                    "data", 
+                    "bg-purple-500",
+                    "存储历史记录、缓存等数据。"
+                )}
 
-                <div className="group relative">
-                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500 rounded-l-lg"></div>
-                    <div className="pl-4 py-2">
-                        <label className="text-xs font-semibold text-text-secondary block mb-1">
-                            回收站路径 (Recycle Path)
-                        </label>
-                        <div className="font-mono text-sm bg-bg-page p-3 rounded border border-border-soft break-all select-all">
-                            {info.recyclePath}
-                        </div>
-                        <p className="text-[10px] text-text-muted mt-1">
-                            删除的 Markdown 文件将移动到此文件夹。
-                        </p>
-                    </div>
-                </div>
+                {renderPathSection(
+                    "回收站路径 (Recycle Path)", 
+                    info.recyclePath, 
+                    "trash", 
+                    "bg-red-500",
+                    "被删除的文件将移动到此文件夹。"
+                )}
               </div>
 
               {/* Storage Settings */}
@@ -301,6 +412,28 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
             MD-To-HTML Converter • v1.0.0
         </div>
       </div>
+
+      {/* Path Selector Dialog */}
+      <Dialog open={!!editingKey} onOpenChange={(open) => !open && setEditingKey(null)}>
+        <DialogContent className="sm:max-w-[800px] p-0 overflow-hidden">
+            <DialogHeader className="p-4 border-b">
+                <DialogTitle>选择文件夹</DialogTitle>
+            </DialogHeader>
+            {editingKey && (
+                <PathSelector
+                    initialPath={
+                        editingKey === 'input' ? info?.inputPath :
+                        editingKey === 'output' ? info?.outputPath :
+                        editingKey === 'data' ? info?.dataPath :
+                        editingKey === 'trash' ? info?.recyclePath :
+                        undefined
+                    }
+                    onSelect={handleSavePath}
+                    onCancel={() => setEditingKey(null)}
+                />
+            )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

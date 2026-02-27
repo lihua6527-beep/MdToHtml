@@ -7,6 +7,7 @@ import TrashManager from './trash-manager';
 const CACHE_FILE_NAME = '.metadata_cache.json';
 const DEFAULT_CAPACITY = 500; // Updated to 500 as per plan
 const CACHE_VERSION = '2.0';
+const MARKDOWN_EXT_RE = /\.(md|markdown)$/i;
 
 export interface CacheEntry {
   path: string; // Filename (basename)
@@ -28,14 +29,12 @@ export interface MetadataCache {
 
 export class MetadataCacheManager {
   private static instance: MetadataCacheManager;
-  private baseDir: string;
-  private cachePath: string;
   private cache: MetadataCache;
   private entryMap: Map<string, CacheEntry>;
+  private currentBaseDir: string;
 
   private constructor() {
-    this.baseDir = PathManager.getInputPath();
-    this.cachePath = path.join(this.baseDir, CACHE_FILE_NAME);
+    this.currentBaseDir = PathManager.getInputPath();
     
     // Initialize cache structure
     const config = PathManager.getAppConfig();
@@ -61,6 +60,18 @@ export class MetadataCacheManager {
     return MetadataCacheManager.instance;
   }
 
+  public reload() {
+    this.scanAndSync();
+  }
+
+  private get baseDir(): string {
+      return PathManager.getInputPath();
+  }
+
+  private get cachePath(): string {
+      return path.join(this.baseDir, CACHE_FILE_NAME);
+  }
+
   /**
    * Load cache from disk
    */
@@ -80,9 +91,16 @@ export class MetadataCacheManager {
         } else {
           console.log('[CacheManager] Version mismatch or invalid cache, resetting.');
         }
+      } else {
+          // Reset if no cache file found (e.g. new directory)
+          this.entryMap.clear();
+          this.cache.entries = [];
       }
     } catch (e) {
       console.warn('[CacheManager] Failed to load cache:', e);
+      // Reset on error
+      this.entryMap.clear();
+      this.cache.entries = [];
     }
   }
 
@@ -107,6 +125,14 @@ export class MetadataCacheManager {
    */
   public scanAndSync() {
     try {
+      // Check if path changed
+      const newBaseDir = this.baseDir;
+      if (newBaseDir !== this.currentBaseDir) {
+          console.log(`[CacheManager] Base directory changed from ${this.currentBaseDir} to ${newBaseDir}. Reloading cache.`);
+          this.currentBaseDir = newBaseDir;
+          this.loadCache();
+      }
+
       // Ensure base directory exists
       if (!fs.existsSync(this.baseDir)) {
         fs.mkdirSync(this.baseDir, { recursive: true });
@@ -116,7 +142,7 @@ export class MetadataCacheManager {
       // 1. Scan directory
       const files = fs.readdirSync(this.baseDir);
       const mdFiles = files.filter(f => 
-        f.endsWith('.md') && 
+        MARKDOWN_EXT_RE.test(f) && 
         !f.startsWith('.') && // Ignore hidden files like .metadata_cache.json
         f !== CACHE_FILE_NAME
       );
@@ -141,7 +167,7 @@ export class MetadataCacheManager {
               mtime: stats.mtimeMs,
               birthtime: stats.birthtimeMs,
               status: data.status,
-              title: data.title || file.replace(/\.md$/i, ''),
+              title: data.title || file.replace(MARKDOWN_EXT_RE, ''),
               tags: data.tags,
               excerpt: excerpt || undefined,
             };
@@ -202,6 +228,9 @@ export class MetadataCacheManager {
    * Returns O(1) memory reference (sorted)
    */
   public getAll(): CacheEntry[] {
+    if (this.baseDir !== this.currentBaseDir) {
+        this.scanAndSync();
+    }
     // Return sorted list
     return Array.from(this.entryMap.values()).sort((a, b) => b.mtime - a.mtime);
   }
@@ -219,9 +248,14 @@ export class MetadataCacheManager {
    * This is a helper that uses the cache to locate, but reads content on demand.
    */
   public getPost(slug: string): { slug: string, content: string, metadata?: CacheEntry } | null {
-    // slug might be "foo" or "foo.md"
-    let filename = slug;
-    if (!filename.endsWith('.md')) filename += '.md';
+    if (this.baseDir !== this.currentBaseDir) {
+        this.scanAndSync();
+    }
+    const candidates = MARKDOWN_EXT_RE.test(slug) ? [slug] : [`${slug}.md`, `${slug}.markdown`];
+    const filename =
+      candidates.find(c => this.entryMap.has(c)) ||
+      candidates.find(c => fs.existsSync(path.join(this.baseDir, c))) ||
+      candidates[0];
 
     const entry = this.entryMap.get(filename);
     
@@ -235,7 +269,7 @@ export class MetadataCacheManager {
 
     const content = fs.readFileSync(fullPath, 'utf8');
     return {
-      slug: filename.replace(/\.md$/i, ''),
+      slug: filename.replace(MARKDOWN_EXT_RE, ''),
       content,
       metadata: entry
     };
@@ -246,6 +280,9 @@ export class MetadataCacheManager {
    * Updates cache immediately.
    */
   public update(slug: string, content: string): void {
+    if (this.baseDir !== this.currentBaseDir) {
+        this.scanAndSync();
+    }
     // Clean slug
     const safeSlug = slug.replace(/[^a-zA-Z0-9\-\u4e00-\u9fa5\s_.\(\)]/g, '');
     const filename = safeSlug.endsWith('.md') ? safeSlug : `${safeSlug}.md`;
@@ -280,8 +317,14 @@ export class MetadataCacheManager {
    * Public API: Delete a post
    */
   public delete(slug: string): void {
-     let filename = slug;
-     if (!filename.endsWith('.md')) filename += '.md';
+     if (this.baseDir !== this.currentBaseDir) {
+         this.scanAndSync();
+     }
+     const candidates = MARKDOWN_EXT_RE.test(slug) ? [slug] : [`${slug}.md`, `${slug}.markdown`];
+     const filename =
+        candidates.find(c => this.entryMap.has(c)) ||
+        candidates.find(c => fs.existsSync(path.join(this.baseDir, c))) ||
+        candidates[0];
      const fullPath = path.join(this.baseDir, filename);
      
      if (fs.existsSync(fullPath)) {
