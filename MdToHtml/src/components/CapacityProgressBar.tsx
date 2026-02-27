@@ -4,12 +4,7 @@ import React from 'react';
 import { Database, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useCapacity } from '../hooks/useFileSystem';
-
-interface CapacityStats {
-  limit: number;
-  count: number;
-  usage: number; // Percentage
-}
+import { CapacityStats } from '@/types/file-system';
 
 interface CapacityProgressBarProps {
   current?: number;

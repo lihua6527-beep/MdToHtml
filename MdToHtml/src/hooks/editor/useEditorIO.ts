@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { FileService } from '@/services/FileService';
 
 interface UseEditorIOProps {
   content: string;
@@ -13,12 +14,12 @@ export const useEditorIO = ({ content, setContent, initialFilePath = 'output/my-
   const handleSave = useCallback(async () => {
     setStatus('Saving...');
     try {
-      const res = await fetch('/api/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ path: filePath, content })
-      });
-      if (res.ok) {
+      // Extract filename from path if needed, but API expects slug
+      // If filePath is a full path, we might need to adjust logic.
+      // Assuming filePath is just the filename/slug for now based on usage context
+      const success = await FileService.saveFile(filePath, content);
+      
+      if (success) {
         setStatus('Saved!');
         setTimeout(() => setStatus(''), 2000);
       } else {
@@ -33,10 +34,9 @@ export const useEditorIO = ({ content, setContent, initialFilePath = 'output/my-
   const handleLoad = useCallback(async () => {
     setStatus('Loading...');
     try {
-      const res = await fetch(`/api/read?path=${encodeURIComponent(filePath)}`);
-      if (res.ok) {
-        const data = await res.json();
-        setContent(data.content);
+      const loadedContent = await FileService.loadFile(filePath);
+      if (loadedContent !== null) {
+        setContent(loadedContent);
         setStatus('Loaded');
         setTimeout(() => setStatus(''), 2000);
       } else {

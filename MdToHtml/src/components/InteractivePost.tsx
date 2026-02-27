@@ -25,6 +25,8 @@ import { useCHDSelection } from '@/hooks/useCHDSelection';
 import matter from 'gray-matter';
 import { TagStyleType } from '@/components/CHD/TagRenderer';
 
+import { FileService } from '@/services/FileService';
+
 interface InteractivePostProps {
   initialContent: string;
   slug: string;
@@ -158,19 +160,10 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
       setIsSaving(true);
       try {
         console.log('Executing save for:', slug);
-        // Unified Save Logic: Call /api/save with content AND operations
-        // This replaces the old /api/save-session + /api/save dual call
-        const res = await fetch('/api/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                slug, 
-                content: contentToSave,
-                operations: operationLog
-            })
-        });
+        // Unified Save Logic using FileService
+        const success = await FileService.saveFile(slug, contentToSave, operationLog);
 
-        if (res.ok) {
+        if (success) {
             console.log('Save successful');
             setSaveSuccess(true);
             setTimeout(() => setSaveSuccess(false), 2000);
@@ -250,11 +243,11 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
     }
   };
 
-  const saveFile = async (silent = false, contentOverride?: string) => {
+  const saveFile = useCallback(async (silent = false, contentOverride?: string) => {
      // Legacy direct save, kept for manual save button if needed
      const contentToSave = contentOverride || contentRef.current;
      await debouncedSave(decodedSlug, contentToSave, initialContent, operationLog, router);
-  };
+  }, [decodedSlug, initialContent, operationLog, router, debouncedSave]);
 
   const handleSave = async () => {
       await saveFile(false);
@@ -270,7 +263,7 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
     }, 5000); // 5 seconds debounce
 
     return () => clearTimeout(timer);
-  }, [content, isEditing]);
+  }, [content, isEditing, saveFile]);
 
   return (
     <div className="flex flex-col min-h-screen">

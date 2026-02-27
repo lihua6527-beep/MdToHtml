@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { PathSelector } from '@/components/settings/PathSelector';
 import { clsx } from 'clsx';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ConfigService } from '@/services/ConfigService';
+import { TrashService } from '@/services/TrashService';
 
 interface PathInfo {
   inputPath: string;
@@ -39,9 +41,8 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/app-info');
-      if (!res.ok) throw new Error('Failed to fetch app info');
-      const data = await res.json();
+      const data = await ConfigService.getAppInfo();
+      if (!data) throw new Error('Failed to fetch app info');
       setInfo(data);
     } catch (err: any) {
       setError(err.message);
@@ -51,45 +52,27 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
   };
 
   const fetchTrashStats = async () => {
-    try {
-      const res = await fetch('/api/trash/stats');
-      if (res.ok) {
-        setTrashStats(await res.json());
-      }
-    } catch (e) {
-      console.error('Failed to fetch trash stats', e);
-    }
+    const stats = await TrashService.getTrashStats();
+    setTrashStats(stats);
   };
 
   const handleEmptyTrash = async () => {
     if (!confirm('确定清空回收站吗？此操作不可撤销。')) return;
-    try {
-      const res = await fetch('/api/trash/empty', { method: 'POST' });
-      if (res.ok) {
-        fetchTrashStats();
-        alert('回收站已清空');
-      } else {
-        alert('清空失败');
-      }
-    } catch (e) {
-      alert('清空出错');
+    const success = await TrashService.emptyTrash();
+    if (success) {
+      fetchTrashStats();
+      alert('回收站已清空');
+    } else {
+      alert('清空失败');
     }
   };
 
   const handleUpdateCapacity = async (limit: number) => {
-    try {
-      const res = await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ capacityLimit: limit })
-      });
-      if (res.ok) {
-        fetchInfo(); // Refresh config display
-      } else {
-        alert('设置失败');
-      }
-    } catch (e) {
-      alert('设置出错');
+    const success = await ConfigService.updateConfig({ capacityLimit: limit });
+    if (success) {
+      fetchInfo(); // Refresh config display
+    } else {
+      alert('设置失败');
     }
   };
 
@@ -162,21 +145,14 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
   };
 
   const handleToggleEmitJson = async (value: boolean) => {
-    try {
-      const res = await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          exportOptions: { emitJson: value }
-        })
-      });
-      if (res.ok) {
-        fetchInfo();
-      } else {
-        alert('保存输出配置失败');
-      }
-    } catch (e) {
-      alert('保存输出配置出错');
+    const success = await ConfigService.updateConfig({
+      exportOptions: { emitJson: value }
+    });
+    
+    if (success) {
+      fetchInfo();
+    } else {
+      alert('保存输出配置失败');
     }
   };
 

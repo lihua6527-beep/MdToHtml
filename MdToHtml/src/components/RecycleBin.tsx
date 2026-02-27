@@ -7,6 +7,7 @@ import { mutate } from 'swr';
 import { CapacityProgressBar } from './CapacityProgressBar';
 import { Button } from './ui/button';
 import { CapacityWarningDialog } from './CapacityWarningDialog';
+import { TrashService } from '../services/TrashService';
 import { TrashItem } from '../types/file-system';
 import { useTrash } from '../hooks/useFileSystem';
 
@@ -113,12 +114,9 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
 
   const performRestore = async (fileNames: string[]) => {
     try {
-      const res = await fetch('/api/trash/restore', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files: fileNames })
-      });
-      if (res.ok) {
+      const result = await TrashService.restoreFiles(fileNames);
+      
+      if (result.success > 0 || result.failed === 0) {
         // Add 500ms delay to ensure FS stability and provide visual feedback
         await new Promise(resolve => setTimeout(resolve, 500));
         
@@ -132,8 +130,12 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
           return newSet;
         });
         if (onRestore) onRestore();
+        
+        if (result.failed > 0) {
+           alert(`部分恢复失败: ${result.errors.join(', ')}`);
+        }
       } else {
-        alert('恢复失败');
+        alert(`恢复失败: ${result.errors.join(', ')}`);
       }
     } catch (e) {
       console.error('Restore failed', e);
@@ -183,12 +185,9 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
     if (!confirm(`确定要永久删除这 ${fileNames.length} 个文件吗？此操作无法撤销。`)) return;
 
     try {
-      const res = await fetch('/api/trash/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ files: fileNames })
-      });
-      if (res.ok) {
+      const result = await TrashService.deleteFiles(fileNames);
+      
+      if (result.success > 0 || result.failed === 0) {
         refresh();
         mutate('/api/config/capacity'); // Refresh capacity stats
         setSelectedFiles(prev => {
@@ -196,8 +195,12 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
           fileNames.forEach(n => newSet.delete(n));
           return newSet;
         });
+        
+        if (result.failed > 0) {
+           alert(`部分删除失败: ${result.errors.join(', ')}`);
+        }
       } else {
-        alert('删除失败');
+        alert(`删除失败: ${result.errors.join(', ')}`);
       }
     } catch (e) {
       console.error('Delete failed', e);

@@ -49,6 +49,12 @@ export interface TrashStats {
   size: number; // in bytes
 }
 
+export interface CapacityStats {
+  limit: number;
+  count: number;
+  usage: number;
+}
+
 export type SortMethod = 'import' | 'visited' | 'modified';
 
 export interface FileOperationResult {

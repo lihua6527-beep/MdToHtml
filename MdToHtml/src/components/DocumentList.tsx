@@ -13,6 +13,8 @@ import { RecycleBin } from './RecycleBin';
 import { CapacityWarningDialog } from './CapacityWarningDialog';
 import { FileItem, SortMethod } from '../types/file-system';
 import { DEFAULT_CAPACITY } from '../lib/constants';
+import { ConfigService } from '@/services/ConfigService';
+import { TrashService } from '@/services/TrashService';
 
 interface DocumentListProps {
   initialPosts: FileItem[];
@@ -96,18 +98,16 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
 
   const updateCapacity = async (limit: number) => {
     try {
-        const res = await fetch('/api/config/capacity', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ limit })
-        });
-        if (res.ok) {
-            refreshCapacity(); // Refresh stats immediately
+        const success = await ConfigService.updateCapacityLimit(limit);
+        
+        if (success) {
+            refreshCapacity();
             setShowSettingsMenu(false);
+        } else {
+            console.error('Failed to update capacity');
         }
     } catch (e) {
-        console.error('Failed to update capacity', e);
-        alert('设置容量失败');
+        console.error('Error updating capacity:', e);
     }
   };
 

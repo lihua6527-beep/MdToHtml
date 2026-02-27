@@ -25,6 +25,7 @@ import { useCHDSelection } from '@/hooks/useCHDSelection';
 import { CardStyle } from '@/types/chd';
 import { TagStyleType } from '@/components/CHD/TagRenderer';
 import matter from 'gray-matter';
+import { FileService } from '@/services/FileService';
 
 export default function EditorPage() {
   const { theme, setTheme } = useTheme();
@@ -288,7 +289,7 @@ export default function EditorPage() {
   };
 
   // Save to Workspace
-  const handleSaveToWorkspace = async (forcePrompt: boolean | React.MouseEvent = true) => {
+  const handleSaveToWorkspace = React.useCallback(async (forcePrompt: boolean | React.MouseEvent = true) => {
     let slug = currentFilename.replace(/\.md$/i, '') || 'my-document';
     
     // Determine if we need to prompt
@@ -308,26 +309,18 @@ export default function EditorPage() {
     setIsSaving(true);
     setSaveSuccess(false);
     try {
-      const res = await fetch('/api/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, content })
-      });
+      const success = await FileService.saveFile(slug, content);
       
-      if (res.ok) {
+      if (success) {
         // Log Training Data
         try {
             const blocks = parseCHDBlocks(content);
-            await fetch('/api/dataset', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    input: content, 
-                    output: blocks,
-                    previous_content: lastSavedContent,
-                    current_content: content,
-                    metadata: { slug }
-                })
+            await FileService.logTrainingData({ 
+                input: content, 
+                output: blocks,
+                previous_content: lastSavedContent,
+                current_content: content,
+                metadata: { slug }
             });
             setLastSavedContent(content);
         } catch (err) {
@@ -351,7 +344,7 @@ export default function EditorPage() {
     } finally {
       setIsSaving(false);
     }
-  };
+  }, [currentFilename, content, lastSavedContent]);
 
   // Keyboard Shortcuts (Ctrl+S)
   useEffect(() => {
@@ -364,7 +357,7 @@ export default function EditorPage() {
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentFilename, content, lastSavedContent]);
+  }, [handleSaveToWorkspace]);
 
   if (!isMounted) return null;
 
@@ -403,23 +396,19 @@ export default function EditorPage() {
                             // Parse frontmatter
                             const { data: frontmatter } = matter(content);
                             
-                            await fetch('/api/save-export', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                    filename: `${title}.html`,
-                                    content: htmlContent,
-                                    metadata: {
-                                        id: title,
-                                        type: frontmatter.type || 'project',
-                                        title: frontmatter.title || title,
-                                        brief: frontmatter.brief || '',
-                                        date: frontmatter.date ? new Date(frontmatter.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
-                                        tags: frontmatter.tags || [],
-                                        chdVersion: '2.4',
-                                        htmlFile: `${title}.html`
-                                    }
-                                })
+                            await FileService.saveExport({
+                                filename: `${title}.html`,
+                                content: htmlContent,
+                                metadata: {
+                                    id: title,
+                                    type: frontmatter.type || 'project',
+                                    title: frontmatter.title || title,
+                                    brief: frontmatter.brief || '',
+                                    date: frontmatter.date ? new Date(frontmatter.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+                                    tags: frontmatter.tags || [],
+                                    chdVersion: '2.4',
+                                    htmlFile: `${title}.html`
+                                }
                             });
                             console.log('Export synced to output directory');
                         } catch (saveErr) {
