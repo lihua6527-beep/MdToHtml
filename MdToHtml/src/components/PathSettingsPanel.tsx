@@ -12,6 +12,7 @@ interface PathInfo {
   outputPath: string;
   dataPath: string;
   recyclePath: string;
+  chdProtocolPath: string;
   appRoot: string;
   config: any;
 }
@@ -21,13 +22,15 @@ interface PathSettingsPanelProps {
   onClose: () => void;
 }
 
-type PathKey = 'input' | 'output' | 'data' | 'trash';
+type PathKey = 'input' | 'output' | 'data' | 'trash' | 'chdProtocol';
 
 export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, onClose }) => {
   const [info, setInfo] = useState<PathInfo | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trashStats, setTrashStats] = useState<{ count: number; size: number } | null>(null);
+  const [protocolContent, setProtocolContent] = useState<string>('加载中...');
+  const [protocolLoading, setProtocolLoading] = useState(true);
   
   // Path Editing State
   const [editingKey, setEditingKey] = useState<PathKey | null>(null);
@@ -54,6 +57,21 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
   const fetchTrashStats = async () => {
     const stats = await TrashService.getTrashStats();
     setTrashStats(stats);
+  };
+
+  const fetchCHDProtocol = async () => {
+    setProtocolLoading(true);
+    try {
+      const response = await fetch('/api/app-info/chd-protocol');
+      if (!response.ok) throw new Error('Failed to fetch CHD protocol');
+      const content = await response.text();
+      setProtocolContent(content);
+    } catch (err: any) {
+      console.error('Failed to fetch CHD protocol:', err);
+      setProtocolContent(`# CHD协议加载失败\n\n${err.message}`);
+    } finally {
+      setProtocolLoading(false);
+    }
   };
 
   const handleEmptyTrash = async () => {
@@ -156,10 +174,35 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
     }
   };
 
+  const handleToggleShowDivider = async (value: boolean) => {
+    const success = await ConfigService.updateConfig({
+      renderOptions: { ...info?.config?.renderOptions, showDivider: value }
+    });
+    
+    if (success) {
+      fetchInfo();
+    } else {
+      alert('保存渲染配置失败');
+    }
+  };
+
+  const handleUpdateTitleSpacing = async (value: string) => {
+    const success = await ConfigService.updateConfig({
+      renderOptions: { ...info?.config?.renderOptions, titleSpacing: value }
+    });
+    
+    if (success) {
+      fetchInfo();
+    } else {
+      alert('保存渲染配置失败');
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       fetchInfo();
       fetchTrashStats();
+      fetchCHDProtocol();
     }
   }, [isOpen]);
 
@@ -275,86 +318,58 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
                  </div>
               </div>
 
-              {/* Path Details */}
+              {/* 文件管理配置 */}
               <div className="space-y-4">
                 <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider flex items-center gap-2">
-                    <Folder className="w-4 h-4" /> 路径配置
+                    <Folder className="w-4 h-4" /> 文件管理配置
                 </h3>
                 
-                {renderPathSection(
-                    "输入路径 (Input Path)", 
-                    info.inputPath, 
-                    "input", 
-                    "bg-blue-500",
-                    "在此文件夹放入 .md 文件，刷新页面即可在列表中看到。"
-                )}
+                {/* 路径配置 */}
+                <div className="space-y-4 pl-4 border-l border-border-soft">
+                    {renderPathSection(
+                        "输入路径 (Input Path)", 
+                        info.inputPath, 
+                        "input", 
+                        "bg-blue-500",
+                        "在此文件夹放入 .md 文件，刷新页面即可在列表中看到。"
+                    )}
 
-                {renderPathSection(
-                    "输出路径 (Output Path)", 
-                    info.outputPath, 
-                    "output", 
-                    "bg-green-500",
-                    "导出的 HTML 文件将保存到此文件夹。"
-                )}
+                    {renderPathSection(
+                        "输出路径 (Output Path)", 
+                        info.outputPath, 
+                        "output", 
+                        "bg-green-500",
+                        "导出的 HTML 文件将保存到此文件夹。"
+                    )}
 
-                {renderPathSection(
-                    "数据存储路径 (Data Path)", 
-                    info.dataPath, 
-                    "data", 
-                    "bg-purple-500",
-                    "存储历史记录、缓存等数据。"
-                )}
+                    {renderPathSection(
+                        "数据存储路径 (Data Path)", 
+                        info.dataPath, 
+                        "data", 
+                        "bg-purple-500",
+                        "存储历史记录、缓存等数据。"
+                    )}
 
-                {renderPathSection(
-                    "回收站路径 (Recycle Path)", 
-                    info.recyclePath, 
-                    "trash", 
-                    "bg-red-500",
-                    "被删除的文件将移动到此文件夹。"
-                )}
-              </div>
+                    {renderPathSection(
+                        "回收站路径 (Recycle Path)", 
+                        info.recyclePath, 
+                        "trash", 
+                        "bg-red-500",
+                        "被删除的文件将移动到此文件夹。"
+                    )}
 
-              {/* Output Options */}
-              <div className="space-y-2 pt-4 border-t border-border-soft">
-                <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider flex items-center gap-2">
-                  <FileText className="w-4 h-4" /> 输出配置
-                </h3>
-                <div className="bg-bg-page rounded-lg p-4 border border-border-soft">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-medium text-text-primary">同时生成 JSON 元信息文件</div>
-                      <div className="text-xs text-text-muted mt-1">与 HTML 同名的 .json 文件，用于博客索引</div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant={(info.config.exportOptions?.emitJson ? 'outline' : 'default') as any}
-                        size="sm"
-                        onClick={() => handleToggleEmitJson(false)}
-                        className="h-7 px-3 text-xs"
-                      >
-                        否
-                      </Button>
-                      <Button 
-                        variant={(info.config.exportOptions?.emitJson ? 'default' : 'outline') as any}
-                        size="sm"
-                        onClick={() => handleToggleEmitJson(true)}
-                        className="h-7 px-3 text-xs"
-                      >
-                        是
-                      </Button>
-                    </div>
-                  </div>
+                    {renderPathSection(
+                        "CHD协议文档路径", 
+                        info.chdProtocolPath, 
+                        "chdProtocol", 
+                        "bg-purple-500",
+                        "CHD协议文档的存储路径，文件名将固定为CHD协议.md。"
+                    )}
                 </div>
-              </div>
 
-              {/* Storage Settings */}
-              <div className="space-y-4 pt-4 border-t border-border-soft">
-                <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider flex items-center gap-2">
-                    <Database className="w-4 h-4" /> 存储与容量
-                </h3>
-                
-                <div className="bg-bg-page rounded-lg p-4 border border-border-soft space-y-4">
-                    {/* Capacity Limit */}
+                {/* 存储与容量 */}
+                <div className="bg-bg-page rounded-lg p-4 border border-border-soft space-y-4 pl-4 border-l border-border-soft">
+                    {/* 最大文档容量 */}
                     <div>
                         <label className="text-xs font-semibold text-text-secondary block mb-2">
                             最大文档容量 (超过此数量将自动清理旧文档)
@@ -388,7 +403,7 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
                         </p>
                     </div>
 
-                    {/* Trash Management */}
+                    {/* 回收站管理 */}
                     <div className="pt-4 border-t border-border-soft">
                          <label className="text-xs font-semibold text-text-secondary block mb-2">
                             回收站管理
@@ -417,6 +432,98 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
                             </Button>
                         </div>
                     </div>
+
+                    {/* 输出配置 */}
+                    <div className="pt-4 border-t border-border-soft">
+                        <label className="text-xs font-semibold text-text-secondary block mb-2">
+                            输出配置
+                        </label>
+                        <div className="flex items-center justify-between bg-bg-card p-3 rounded border border-border-soft">
+                            <div>
+                                <div className="text-sm font-medium text-text-primary">同时生成 JSON 元信息文件</div>
+                                <div className="text-xs text-text-muted mt-1">与 HTML 同名的 .json 文件，用于博客索引</div>
+                            </div>
+                            <div className="flex gap-2">
+                                <Button 
+                                    variant={(info.config.exportOptions?.emitJson ? 'outline' : 'default') as any}
+                                    size="sm"
+                                    onClick={() => handleToggleEmitJson(false)}
+                                    className="h-7 px-3 text-xs"
+                                >
+                                    否
+                                </Button>
+                                <Button 
+                                    variant={(info.config.exportOptions?.emitJson ? 'default' : 'outline') as any}
+                                    size="sm"
+                                    onClick={() => handleToggleEmitJson(true)}
+                                    className="h-7 px-3 text-xs"
+                                >
+                                    是
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+              </div>
+
+              {/* 网页渲染配置 */}
+              <div className="space-y-4 pt-4 border-t border-border-soft">
+                <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider flex items-center gap-2">
+                  <FileText className="w-4 h-4" /> 网页渲染配置
+                </h3>
+                <div className="bg-bg-page rounded-lg p-4 border border-border-soft space-y-4 pl-4 border-l border-border-soft">
+                  {/* 显示分区间分割线 */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-text-primary">显示分区间分割线</div>
+                      <div className="text-xs text-text-muted mt-1">在文档的各个分区之间显示分割线</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant={(!info.config.renderOptions?.showDivider ? 'default' : 'outline') as any}
+                        size="sm"
+                        onClick={() => handleToggleShowDivider(false)}
+                        className="h-7 px-3 text-xs"
+                      >
+                        否
+                      </Button>
+                      <Button 
+                        variant={(info.config.renderOptions?.showDivider ? 'default' : 'outline') as any}
+                        size="sm"
+                        onClick={() => handleToggleShowDivider(true)}
+                        className="h-7 px-3 text-xs"
+                      >
+                        是
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* 分区间距 */}
+                  <div>
+                    <div className="text-sm font-medium text-text-primary mb-2">分区间距</div>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { value: '0', label: '无间距' },
+                        { value: '2', label: '小间距' },
+                        { value: '4', label: '标准间距' },
+                        { value: '6', label: '大间距' },
+                        { value: '8', label: '超大间距' }
+                      ].map(option => (
+                        <button
+                          key={option.value}
+                          onClick={() => handleUpdateTitleSpacing(option.value)}
+                          className={clsx(
+                            "px-3 py-1.5 text-xs rounded-md border transition-colors",
+                            (info.config.renderOptions?.titleSpacing || '2') === option.value 
+                              ? "bg-primary text-white border-primary" 
+                              : "bg-bg-card border-border-soft hover:border-primary text-text-primary"
+                          )}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -431,6 +538,68 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
                     </pre>
                   </div>
               )}
+
+              {/* CHD Protocol Configuration */}
+              <div className="space-y-4 pt-4 border-t border-border-soft">
+                <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider flex items-center gap-2">
+                    <FileText className="w-4 h-4" /> 协议配置 (CHD Protocol)
+                </h3>
+                <div className="bg-bg-page rounded-lg p-4 border border-border-soft space-y-4">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <div className="text-sm font-medium text-text-primary">CHD协议预览</div>
+                            <div className="text-xs text-text-muted mt-1">查看当前使用的CHD协议规范</div>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={async () => {
+                                    try {
+                                        const response = await fetch('/api/app-info/chd-protocol');
+                                        if (!response.ok) throw new Error('Failed to fetch CHD protocol');
+                                        const protocolContent = await response.text();
+                                        await navigator.clipboard.writeText(protocolContent);
+                                        alert('CHD协议内容已复制到剪贴板');
+                                    } catch (err) {
+                                        console.error('Failed to copy CHD protocol:', err);
+                                        alert('复制失败，请稍后重试');
+                                    }
+                                }}
+                                className="h-7 px-3 text-xs"
+                            >
+                                复制协议内容
+                            </Button>
+                            <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={async () => {
+                                    try {
+                                        await navigator.clipboard.writeText(info.chdProtocolPath);
+                                        alert('CHD协议路径已复制到剪贴板');
+                                    } catch (err) {
+                                        console.error('Failed to copy CHD protocol path:', err);
+                                        alert('复制失败，请稍后重试');
+                                    }
+                                }}
+                                className="h-7 px-3 text-xs"
+                            >
+                                复制协议路径
+                            </Button>
+                        </div>
+                    </div>
+                    <div className="relative">
+                        <div className="absolute top-2 right-2 z-10 bg-bg-card/80 backdrop-blur-sm px-2 py-1 rounded text-[10px] text-text-muted">
+                            CHD协议 v2.0
+                        </div>
+                        <div className="bg-bg-card p-4 rounded border border-border-soft max-h-64 overflow-auto">
+                            <div className="text-xs font-mono whitespace-pre-wrap">
+                                {protocolLoading ? '加载中...' : protocolContent}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+              </div>
             </>
           )}
         </div>
@@ -454,6 +623,7 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
                         editingKey === 'output' ? info?.outputPath :
                         editingKey === 'data' ? info?.dataPath :
                         editingKey === 'trash' ? info?.recyclePath :
+                        editingKey === 'chdProtocol' ? info?.chdProtocolPath :
                         undefined
                     }
                     onSelect={handleSavePath}

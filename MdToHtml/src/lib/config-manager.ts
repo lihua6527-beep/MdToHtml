@@ -6,6 +6,7 @@ export interface PathConfig {
   output: string;
   data: string;
   trash: string;
+  chdProtocol?: string;
 }
 
 export interface SystemConfig {
@@ -19,6 +20,10 @@ export interface AppConfig {
   capacityLimit?: number;
   exportOptions?: {
     emitJson?: boolean;
+  };
+  renderOptions?: {
+    showDivider?: boolean;
+    titleSpacing?: string;
   };
   // Legacy support
   inputPath?: string;
@@ -55,6 +60,13 @@ class ConfigManager {
         if (typeof cfg.exportOptions.emitJson === 'undefined') {
           cfg.exportOptions.emitJson = false;
         }
+        cfg.renderOptions = cfg.renderOptions || {};
+        if (typeof cfg.renderOptions.showDivider === 'undefined') {
+          cfg.renderOptions.showDivider = true;
+        }
+        if (typeof cfg.renderOptions.titleSpacing === 'undefined') {
+          cfg.renderOptions.titleSpacing = '2';
+        }
         return cfg;
       }
     } catch (error) {
@@ -63,6 +75,10 @@ class ConfigManager {
     return {
       exportOptions: {
         emitJson: false
+      },
+      renderOptions: {
+        showDivider: true,
+        titleSpacing: '2'
       }
     };
   }
@@ -114,6 +130,7 @@ class ConfigManager {
       paths: { ...this.config.paths, ...newConfig.paths },
       system: { ...this.config.system, ...newConfig.system },
       exportOptions: { ...this.config.exportOptions, ...newConfig.exportOptions },
+      renderOptions: { ...this.config.renderOptions, ...newConfig.renderOptions },
     };
     this.saveConfig();
   }

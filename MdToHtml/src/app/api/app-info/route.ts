@@ -7,6 +7,7 @@ export async function GET() {
     const outputPath = PathManager.getOutputPath();
     const dataPath = PathManager.getDataPath();
     const recyclePath = PathManager.getRecyclePath();
+    const chdProtocolPath = PathManager.getCHDProtocolPath();
     const appRoot = PathManager.getAppRoot();
     const config = PathManager.getAppConfig();
 
@@ -15,6 +16,7 @@ export async function GET() {
       outputPath,
       dataPath,
       recyclePath,
+      chdProtocolPath,
       appRoot,
       config
     });

@@ -11,6 +11,7 @@ class PathManager {
   private outputDir: string = '';
   private dataDir: string = '';
   private recycleDir: string = '';
+  private chdProtocolPath: string = '';
 
   private constructor() {
     this.appRoot = this.detectAppRoot();
@@ -87,6 +88,11 @@ class PathManager {
         ? (path.isAbsolute(paths.trash) ? paths.trash : path.join(this.appRoot, paths.trash))
         : baseRecycle;
 
+    // CHD Protocol path
+    this.chdProtocolPath = paths.chdProtocol
+        ? (path.isAbsolute(paths.chdProtocol) ? paths.chdProtocol : path.join(this.appRoot, paths.chdProtocol))
+        : path.join(this.appRoot, 'CHD协议.md');
+
     // Ensure directories exist
     this.ensureDirectory(this.inputDir);
     this.ensureDirectory(this.outputDir);
@@ -129,6 +135,10 @@ class PathManager {
     return this.recycleDir;
   }
 
+  public getCHDProtocolPath(): string {
+    return this.chdProtocolPath;
+  }
+
   // Legacy static accessors for compatibility
   public static getInputPath(): string {
     return PathManager.getInstance().getInputPath();
@@ -144,6 +154,10 @@ class PathManager {
   
   public static getRecyclePath(): string {
     return PathManager.getInstance().getRecyclePath();
+  }
+
+  public static getCHDProtocolPath(): string {
+    return PathManager.getInstance().getCHDProtocolPath();
   }
   
   public getAppRoot(): string {

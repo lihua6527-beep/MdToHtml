@@ -30,6 +30,8 @@ export interface CHDRendererProps {
   onCardDelete?: (lineIndex: number) => void;
   onCardAdd?: (sectionBlockIndex: number) => void;
   tagStyle?: TagStyleType;
+  globalTitleSpacing?: string;
+  globalShowDivider?: boolean;
 }
 
 // --- Helper: Parse Attributes {key="val"} ---
@@ -55,7 +57,9 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
   onCardMove,
   onCardDelete,
   onCardAdd,
-  tagStyle = 'glass'
+  tagStyle = 'glass',
+  globalTitleSpacing,
+  globalShowDivider
 }) => {
   const [internalError, setInternalError] = useState<string | null>(null);
 
@@ -383,8 +387,8 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
           <React.Fragment key={index}>
             <Section 
               {...section} 
-              globalTitleSpacing={String(frontmatter['title-spacing'] || '2')}
-              globalShowDivider={frontmatter['show-divider'] === true || frontmatter['show-divider'] === 'true'}
+              globalTitleSpacing={String(frontmatter['title-spacing'] || globalTitleSpacing || '2')}
+              globalShowDivider={(frontmatter['show-divider'] === true || frontmatter['show-divider'] === 'true') || globalShowDivider || true}
               activeLine={activeLine}
               onCardClick={onCardClick}
               editMode={editMode}

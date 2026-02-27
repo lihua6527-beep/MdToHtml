@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Edit, Save, Eye, Layout, ArrowLeft, CheckCircle, AlertTriangle, X, Download, Loader2 } from 'lucide-react';
+import { ChevronLeft, Edit, Save, Eye, Layout, ArrowLeft, CheckCircle, AlertTriangle, X, Download, Loader2, FileText, Database } from 'lucide-react';
 import { CHDRenderer } from '@/components/CHD/CHDRenderer';
 import { useMarkdownInteraction } from '@/hooks/useMarkdownInteraction';
 import { useHistory } from '@/hooks/useHistory';
@@ -27,6 +27,7 @@ import matter from 'gray-matter';
 import { TagStyleType } from '@/components/CHD/TagRenderer';
 
 import { FileService } from '@/services/FileService';
+import { ConfigService } from '@/services/ConfigService';
 
 interface InteractivePostProps {
   initialContent: string;
@@ -68,9 +69,25 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [systemConfig, setSystemConfig] = useState<any>(null);
   
   // Record Visit History
   useVisitHistory(decodedSlug);
+
+  // Fetch system config on load
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const appInfo = await ConfigService.getAppInfo();
+        if (appInfo && appInfo.config) {
+          setSystemConfig(appInfo.config);
+        }
+      } catch (error) {
+        console.error('Failed to fetch system config:', error);
+      }
+    };
+    fetchConfig();
+  }, []);
 
   // Real-time Scoring
   // Combine initial history count with current session operations for immediate feedback
@@ -90,6 +107,27 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
         return {};
     }
   }, [content]);
+
+  // Get document type from frontmatter
+  const documentType = frontmatter.type || 'project';
+
+  // Type to label mapping
+  const typeLabels: Record<string, string> = {
+    project: '项目',
+    paper: '论文',
+    knowledge: '知识分享',
+    other: '其他文档'
+  };
+
+  // Type to color mapping
+  const typeColors: Record<string, string> = {
+    project: 'bg-blue-100 text-blue-700',
+    paper: 'bg-green-100 text-green-700',
+    knowledge: 'bg-purple-100 text-purple-700',
+    other: 'bg-gray-100 text-gray-700'
+  };
+
+
 
   // Extract Sections for BottomToolbar
   const sections = useMemo(() => {
@@ -282,6 +320,11 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
               >
                   <ArrowLeft size={20} />
               </Button>
+
+              {/* Document Type Label */}
+              <div className={`px-3 py-1 rounded-full text-xs font-medium ${typeColors[documentType] || typeColors.project}`}>
+                {typeLabels[documentType] || typeLabels.project}
+              </div>
 
               {/* Score Indicator */}
               {scoreResult && (
@@ -545,7 +588,7 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
        )}
 
        {/* Content */}
-       <div className={clsx("flex-1", isEditing && "pb-[180px]")}>
+       <div className={clsx("flex-1 relative", isEditing && "pb-[180px]")}>
           <CHDRenderer 
             markdown={content}  
             editMode={isEditing}
@@ -563,7 +606,13 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
             onCardDelete={deleteCard}
             onCardAdd={addCard}
             tagStyle={(frontmatter['tag-style'] as TagStyleType) || 'glass'}
+            globalTitleSpacing={String(frontmatter['title-spacing'] || systemConfig?.renderOptions?.titleSpacing || '2')}
+            globalShowDivider={(frontmatter['show-divider'] === true || frontmatter['show-divider'] === 'true') || systemConfig?.renderOptions?.showDivider || true}
           />
+          {/* Document Type Label in Bottom Right */}
+          <div className={`absolute bottom-4 right-4 px-3 py-1 rounded-full text-xs font-medium ${typeColors[documentType] || typeColors.project} shadow-md`}>
+            {typeLabels[documentType] || typeLabels.project}
+          </div>
        </div>
 
        {/* Bottom Toolbar */}

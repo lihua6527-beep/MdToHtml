@@ -451,6 +451,27 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
                         </div>
                         <div className="flex-1 min-w-0">
                            <div className="flex items-center gap-2">
+                               {/* Document Type Label */}
+                               {(() => {
+                                 const type = post.type || 'project';
+                                 const typeLabels: Record<string, string> = {
+                                   project: '项目',
+                                   paper: '论文',
+                                   knowledge: '知识分享',
+                                   other: '其他文档'
+                                 };
+                                 const typeColors: Record<string, string> = {
+                                   project: 'bg-blue-100 text-blue-700',
+                                   paper: 'bg-green-100 text-green-700',
+                                   knowledge: 'bg-purple-100 text-purple-700',
+                                   other: 'bg-gray-100 text-gray-700'
+                                 };
+                                 return (
+                                   <div className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${typeColors[type] || typeColors.project}`}>
+                                     {typeLabels[type] || typeLabels.project}
+                                   </div>
+                                 );
+                               })()}
                                <div className={clsx("truncate font-medium", isSelected ? "text-primary" : "text-text-primary")}>{post.slug}</div>
                                {/* Status Icons */}
                                {(post.status === 'pending' || post.status === 'incomplete') && (
@@ -487,6 +508,27 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
                        <FileText className="w-4 h-4 text-text-secondary group-hover:text-primary transition-colors shrink-0" />
                        <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
+                              {/* Document Type Label */}
+                              {(() => {
+                                const type = post.type || 'project';
+                                const typeLabels: Record<string, string> = {
+                                  project: '项目',
+                                  paper: '论文',
+                                  knowledge: '知识分享',
+                                  other: '其他文档'
+                                };
+                                const typeColors: Record<string, string> = {
+                                  project: 'bg-blue-100 text-blue-700',
+                                  paper: 'bg-green-100 text-green-700',
+                                  knowledge: 'bg-purple-100 text-purple-700',
+                                  other: 'bg-gray-100 text-gray-700'
+                                };
+                                return (
+                                  <div className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${typeColors[type] || typeColors.project}`}>
+                                    {typeLabels[type] || typeLabels.project}
+                                  </div>
+                                );
+                              })()}
                               <div className="truncate font-medium">{post.slug}</div>
                               {(post.status === 'pending' || post.status === 'incomplete') && (
                                 <div title="未完成" className="text-amber-500 shrink-0">

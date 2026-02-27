@@ -5,6 +5,7 @@ export interface FrontmatterData {
   tags?: string[];
   brief?: string;
   type?: 'project' | 'paper';
+  category?: 'project' | 'paper' | 'knowledge' | 'other';
   [key: string]: any;
 }
 
