@@ -15,6 +15,9 @@ import { FileItem, SortMethod } from '../types/file-system';
 import { DEFAULT_CAPACITY } from '../lib/constants';
 import { ConfigService } from '@/services/ConfigService';
 import { TrashService } from '@/services/TrashService';
+import { FileService } from '@/services/FileService';
+import { useToast } from '@/components/ui/use-toast';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface DocumentListProps {
   initialPosts: FileItem[];
@@ -24,6 +27,8 @@ interface DocumentListProps {
 
 export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpenSettings, className }) => {
   const router = useRouter();
+  const { toast } = useToast();
+  const { error, isErrorVisible, handleError, clearError } = useErrorHandler();
   const { files: rawFiles, refresh } = useFiles(initialPosts);
   const { stats: capacityStats, refresh: refreshCapacity } = useCapacity();
   const [posts, setPosts] = useState<FileItem[]>(initialPosts);
@@ -103,11 +108,26 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
         if (success) {
             refreshCapacity();
             setShowSettingsMenu(false);
+            toast({
+                title: "容量已更新",
+                description: `存储容量限制已设置为 ${limit} 个文件`,
+                type: "success"
+            });
         } else {
-            console.error('Failed to update capacity');
+            toast({
+                title: "更新失败",
+                description: "无法更新存储容量限制",
+                type: "error"
+            });
         }
     } catch (e) {
         console.error('Error updating capacity:', e);
+        const appError = handleError(e);
+        toast({
+            title: "更新出错",
+            description: appError.message,
+            type: "error"
+        });
     }
   };
 
@@ -134,27 +154,39 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
 
   const performDelete = useCallback(async (slug: string, deleteOutput: boolean, skipConfirm = false) => {
     if (!skipConfirm) {
-        const confirmText = deleteOutput ? `确认将“${slug}”的 Markdown 与输出HTML移入回收站？` : `确认将“${slug}”的 Markdown 源文件移入回收站？`;
+        const confirmText = deleteOutput ? `确认将"${slug}"的 Markdown 与输出HTML移入回收站？` : `确认将"${slug}"的 Markdown 源文件移入回收站？`;
         if (!confirm(confirmText)) return;
     }
     try {
-      const res = await fetch('/api/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slug, deleteOutput })
-      });
-      if (res.ok) {
-        refresh();
+      const success = await FileService.deleteFile(slug, deleteOutput);
+      
+      if (success) {
+        toast({
+            title: "已移入回收站",
+            description: `文档 "${slug}" 已成功删除`,
+            type: "success"
+        });
+        // SWR auto-updates, but we can also trigger manual refresh if needed
+        // refresh(); 
       } else {
-        alert('删除失败');
+        toast({
+            title: "删除失败",
+            description: "无法删除文档，请重试",
+            type: "error"
+        });
       }
     } catch (err) {
       console.error('Delete failed', err);
-      alert('删除出错');
+      const appError = handleError(err);
+      toast({
+          title: "删除出错",
+          description: appError.message,
+          type: "error"
+      });
     } finally {
       setContextMenu(prev => ({ ...prev, visible: false }));
     }
-  }, [refresh]);
+  }, [toast, handleError]);
 
   const toggleSelectionMode = () => {
     setIsSelectionMode(prev => !prev);
@@ -180,22 +212,32 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
     if (!confirm(confirmText)) return;
 
     try {
-      const res = await fetch('/api/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ slugs: Array.from(selectedSlugs), deleteOutput })
-      });
+      const slugs = Array.from(selectedSlugs);
+      const success = await FileService.deleteMultipleFiles(slugs, deleteOutput);
 
-      if (res.ok) {
-        refresh();
+      if (success) {
+        toast({
+            title: "批量删除成功",
+            description: `已删除 ${slugs.length} 个文档`,
+            type: "success"
+        });
         setSelectedSlugs(new Set());
         setIsSelectionMode(false);
       } else {
-        alert('批量删除失败');
+        toast({
+            title: "批量删除失败",
+            description: "部分文档可能未被删除",
+            type: "error"
+        });
       }
     } catch (err) {
         console.error('Batch delete failed', err);
-        alert('批量删除出错');
+        const appError = handleError(err);
+        toast({
+            title: "批量删除出错",
+            description: appError.message,
+            type: "error"
+        });
     }
   };
 
@@ -223,8 +265,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
         if (type !== 'document' || !slug) return;
 
         // Check trash capacity
-        const res = await fetch('/api/trash/stats');
-        const stats = await res.json();
+        const stats = await TrashService.getTrashStats();
         
         if (stats.count >= 500) {
             setWarningDialog({
@@ -235,27 +276,27 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
                     setWarningDialog(prev => ({ ...prev, isLoading: true }));
                     try {
                         // Find oldest file in trash
-                        const filesRes = await fetch('/api/trash/files');
-                        const { files } = await filesRes.json();
+                        const files = await TrashService.getTrashFiles();
                         if (files && files.length > 0) {
                             // Sort by deletedAt ascending (oldest first)
                             files.sort((a: any, b: any) => a.deletedAt - b.deletedAt);
                             const oldest = files[0];
                             
                             // Delete oldest
-                            await fetch('/api/trash/delete', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ files: [oldest.name] })
-                            });
+                            await TrashService.deleteFiles([oldest.name]);
 
                             // Proceed with original delete
-                            await performDelete(slug, false); 
+                            await performDelete(slug, false, true); 
                             setWarningDialog(prev => ({ ...prev, isOpen: false, isLoading: false }));
                         }
                     } catch (err) {
                         console.error('Cleanup failed', err);
-                        alert('清理失败');
+                        const appError = handleError(err);
+                        toast({
+                            title: "清理失败",
+                            description: appError.message || "无法清理回收站",
+                            type: "error"
+                        });
                         setWarningDialog(prev => ({ ...prev, isLoading: false }));
                     }
                 }
@@ -264,9 +305,15 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
         }
 
         // Normal delete
-              performDelete(slug, false, true);
-          } catch (e) {
+        await performDelete(slug, false, true);
+    } catch (e) {
         console.error('Drag drop failed', e);
+        const appError = handleError(e);
+        toast({
+            title: "操作失败",
+            description: appError.message || "无法移动到回收站",
+            type: "error"
+        });
     }
   };
 
@@ -628,6 +675,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
                  setShowSettingsMenu(!showSettingsMenu);
              }}
              className="flex items-center gap-2 w-full px-4 py-2 text-text-secondary hover:text-text-primary hover:bg-bg-page rounded-md transition-colors text-sm font-medium"
+             title="设置 (S)"
            >
              <Settings className="w-4 h-4" />
              设置

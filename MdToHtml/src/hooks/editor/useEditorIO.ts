@@ -34,7 +34,7 @@ export const useEditorIO = ({ content, setContent, initialFilePath = 'output/my-
   const handleLoad = useCallback(async () => {
     setStatus('Loading...');
     try {
-      const loadedContent = await FileService.loadFile(filePath);
+      const loadedContent = await FileService.getFileBySlug(filePath);
       if (loadedContent !== null) {
         setContent(loadedContent);
         setStatus('Loaded');

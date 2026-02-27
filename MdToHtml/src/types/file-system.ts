@@ -3,6 +3,25 @@
  * Unifies interfaces across cache-manager, trash-manager, and frontend components.
  */
 
+// Error types
+export enum ErrorType {
+  NETWORK = 'NETWORK',
+  API = 'API',
+  VALIDATION = 'VALIDATION',
+  AUTH = 'AUTH',
+  SERVER = 'SERVER',
+  UNKNOWN = 'UNKNOWN'
+}
+
+export interface AppError {
+  type: ErrorType;
+  message: string;
+  originalError?: any;
+  statusCode?: number;
+  details?: any;
+}
+
+// File system types
 export interface FileSystemEntry {
   path: string; // Absolute path or relative path depending on context
   name: string; // Filename with extension
@@ -18,7 +37,7 @@ export interface FileItem {
   slug: string; // Usually the filename or relative path
   mtime: number;
   birthtime?: number;
-  status?: string; // 'active', 'deleted', 'archived'
+  status?: 'active' | 'deleted' | 'archived' | 'pending' | 'incomplete' | 'modified' | 'done' | 'completed';
   title?: string; // Extracted title from content
   tags?: string[];
   excerpt?: string;
@@ -67,6 +86,61 @@ export interface BatchOperationResult {
   success: number;
   failed: number;
   errors: string[];
+}
+
+// Service request/response types
+export interface FileDeleteRequest {
+  slug?: string;
+  slugs?: string[];
+  deleteOutput: boolean;
+}
+
+export interface FileSaveRequest {
+  slug: string;
+  content: string;
+  operations?: any[];
+}
+
+export interface FileSaveResponse {
+  success: boolean;
+  slug: string;
+}
+
+export interface CapacityUpdateRequest {
+  limit: number;
+}
+
+export interface AppInfoResponse {
+  paths: {
+    posts: string;
+    output: string;
+    trash: string;
+  };
+  config: {
+    version: string;
+    capacity_limit: number;
+  };
+}
+
+export interface ConfigUpdateRequest {
+  [key: string]: any;
+}
+
+export interface TrashRestoreRequest {
+  files: string[];
+}
+
+export interface TrashDeleteRequest {
+  files: string[];
+}
+
+// API response types
+export interface FilesResponse {
+  files: FileItem[];
+}
+
+export interface TrashFilesResponse {
+  files: TrashItem[];
 }
 
 /**

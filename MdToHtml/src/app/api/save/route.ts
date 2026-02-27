@@ -4,6 +4,7 @@ import path from 'path';
 import PathManager from '@/lib/path-manager';
 import MetadataCacheManager from '@/lib/cache-manager';
 import { collectData } from '@/lib/data-collector';
+import { ApiResponse } from '@/types/file-system';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,10 +13,11 @@ export async function POST(request: NextRequest) {
     const { slug, content, operations } = body;
 
     if (!slug || !content) {
-      return NextResponse.json(
-        { error: 'Slug and content are required' },
-        { status: 400 }
-      );
+      const response: ApiResponse = {
+        success: false,
+        error: 'Slug and content are required'
+      };
+      return NextResponse.json(response, { status: 400 });
     }
 
     // Ensure slug is safe but preserve spaces/underscores for matching existing files
@@ -31,12 +33,18 @@ export async function POST(request: NextRequest) {
     const cacheManager = MetadataCacheManager;
     cacheManager.update(safeSlug, content);
 
-    return NextResponse.json({ success: true, slug: safeSlug });
-  } catch (error) {
+    const response: ApiResponse = {
+      success: true,
+      data: { slug: safeSlug }
+    };
+    return NextResponse.json(response);
+  } catch (error: any) {
     console.error('Error saving file:', error);
-    return NextResponse.json(
-      { error: 'Failed to save file' },
-      { status: 500 }
-    );
+    const response: ApiResponse = {
+      success: false,
+      error: 'Failed to save file',
+      message: error.message
+    };
+    return NextResponse.json(response, { status: 500 });
   }
 }

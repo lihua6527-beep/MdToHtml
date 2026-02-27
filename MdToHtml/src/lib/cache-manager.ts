@@ -308,15 +308,21 @@ export class MetadataCacheManager {
      }
      console.log(`[CacheManager] Deleting slug: ${slug}`);
      const candidates = MARKDOWN_EXT_RE.test(slug) ? [slug] : [`${slug}.md`, `${slug}.markdown`];
-     const filename =
-        candidates.find(c => this.entryMap.has(c)) ||
+     const filename = candidates.find(c => this.entryMap.has(c)) ||
         candidates.find(c => fs.existsSync(path.join(this.baseDir, c))) ||
         candidates[0];
      const fullPath = path.join(this.baseDir, filename);
      
      if (fs.existsSync(fullPath)) {
-        // Move to trash using TrashManager
-        TrashManager.moveToTrash([filename]);
+        // Move to trash using TrashManager with absolute path
+        console.log(`[CacheManager] Moving file to trash: ${fullPath}`);
+        const result = TrashManager.moveToTrash([fullPath]);
+        console.log(`[CacheManager] Trash move result:`, result);
+        
+        if (result.failed > 0) {
+            console.error(`[CacheManager] Failed to move file to trash:`, result.errors);
+            throw new Error(`Failed to move file to trash: ${result.errors.join(', ')}`);
+        }
      }
      
      this.entryMap.delete(filename);

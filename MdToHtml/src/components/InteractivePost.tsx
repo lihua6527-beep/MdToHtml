@@ -10,6 +10,7 @@ import { useHistory } from '@/hooks/useHistory';
 import { useScoring } from '@/hooks/useScoring';
 import { useVisitHistory } from '@/hooks/useVisitHistory';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
 import { FloatingUndoRedo } from '@/components/FloatingUndoRedo';
 import { parseCHDBlocks } from '@/lib/chdParser';
 import { clsx } from 'clsx';
@@ -37,6 +38,7 @@ interface InteractivePostProps {
 
 const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug, decodedSlug, initialStatus, historyCount = 0 }) => {
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
   // Use useHistory for state management instead of simple useState
   const { 
     state: content, 
@@ -437,27 +439,38 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                     // Sync to output directory
                     try {
                         const htmlContent = await blob.text();
-                        await fetch('/api/save-export', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                filename: `${title}.html`,
-                                content: htmlContent,
-                                metadata: {
-                                    id: title,
-                                    type: meta.type || 'project',
-                                    title: meta.title || title,
-                                    brief: meta.brief || '',
-                                    date: meta.date || new Date().toISOString().slice(0, 10),
-                                    tags: meta.tags || [],
-                                    chdVersion: '2.4',
-                                    htmlFile: `${title}.html`
-                                }
-                            })
+                        const success = await FileService.saveExport({
+                            filename: `${title}.html`,
+                            content: htmlContent,
+                            metadata: {
+                                id: title,
+                                type: meta.type || 'project',
+                                title: meta.title || title,
+                                brief: meta.brief || '',
+                                date: meta.date || new Date().toISOString().slice(0, 10),
+                                tags: meta.tags || [],
+                                chdVersion: '2.4',
+                                htmlFile: `${title}.html`
+                            }
                         });
-                        console.log('Export synced to output directory');
+                        
+                        if (success) {
+                            console.log('Export synced to output directory');
+                            toast({
+                                title: "导出成功",
+                                description: "HTML 文件已保存到输出目录",
+                                type: "success",
+                            });
+                        } else {
+                            throw new Error("同步到输出目录失败");
+                        }
                     } catch (saveErr) {
                         console.error('Failed to sync export to output:', saveErr);
+                        toast({
+                            title: "同步失败",
+                            description: "无法保存到输出目录，仅下载文件",
+                            type: "warning",
+                        });
                     }
 
                     const url = URL.createObjectURL(blob);
@@ -471,7 +484,11 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                         URL.revokeObjectURL(url);
                     } catch (err: any) {
                         console.error('Export failed:', err);
-                        alert('导出失败：' + (err.message || '未知错误'));
+                        toast({
+                            title: "导出失败",
+                            description: err.message || '未知错误',
+                            type: "error",
+                        });
                     } finally {
                         setIsExporting(false);
                     }

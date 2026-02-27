@@ -1,5 +1,8 @@
+import { mutate } from 'swr';
 import { ApiClient } from './core/ApiClient';
 import { ApiResponse, CapacityStats } from '@/types/file-system';
+import { QUERY_KEYS } from '@/constants/query-keys';
+import { ErrorHandler } from './core/ErrorHandler';
 
 export class ConfigService {
   /**
@@ -7,9 +10,10 @@ export class ConfigService {
    */
   static async getCapacity(): Promise<CapacityStats> {
     try {
-      return await ApiClient.get<CapacityStats>('/api/config/capacity');
+      return await ApiClient.get<CapacityStats>(QUERY_KEYS.CAPACITY);
     } catch (error) {
-      console.error('Failed to get capacity:', error);
+      const appError = ErrorHandler.handleError(error);
+      console.error('Failed to get capacity:', appError);
       // Return default/fallback
       return { limit: 1000, count: 0, usage: 0 };
     }
@@ -20,10 +24,15 @@ export class ConfigService {
    */
   static async updateCapacityLimit(limit: number): Promise<boolean> {
     try {
-      await ApiClient.post('/api/config/capacity', { limit });
+      await ApiClient.post(QUERY_KEYS.CAPACITY, { limit });
+      
+      // Auto-mutation
+      mutate(QUERY_KEYS.CAPACITY);
+      
       return true;
     } catch (error) {
-      console.error('Failed to update capacity:', error);
+      const appError = ErrorHandler.handleError(error);
+      console.error('Failed to update capacity:', appError);
       return false;
     }
   }
@@ -33,9 +42,10 @@ export class ConfigService {
    */
   static async getAppInfo(): Promise<any> {
     try {
-      return await ApiClient.get<any>('/api/app-info');
+      return await ApiClient.get<any>(QUERY_KEYS.APP_INFO);
     } catch (error) {
-      console.error('Failed to get app info:', error);
+      const appError = ErrorHandler.handleError(error);
+      console.error('Failed to get app info:', appError);
       return null;
     }
   }
@@ -46,9 +56,17 @@ export class ConfigService {
   static async updateConfig(config: any): Promise<boolean> {
     try {
       const result = await ApiClient.post<{ success: boolean }>('/api/config', config);
+      
+      if (result && result.success) {
+        // Refresh app info and possibly files if paths changed
+        mutate(QUERY_KEYS.APP_INFO);
+        mutate(QUERY_KEYS.FILES); 
+      }
+      
       return result && result.success;
     } catch (error) {
-      console.error('Failed to update config:', error);
+      const appError = ErrorHandler.handleError(error);
+      console.error('Failed to update config:', appError);
       return false;
     }
   }

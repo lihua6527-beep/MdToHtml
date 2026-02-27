@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
 import PathManager from '@/lib/path-manager';
+import { ApiResponse } from '@/types/file-system';
 
 export async function POST(request: Request) {
   try {
@@ -9,11 +10,19 @@ export async function POST(request: Request) {
     const file = formData.get('file') as File;
 
     if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+      const response: ApiResponse = {
+        success: false,
+        error: 'No file uploaded'
+      };
+      return NextResponse.json(response, { status: 400 });
     }
 
     if (!file.name.endsWith('.md') && !file.name.endsWith('.markdown')) {
-      return NextResponse.json({ error: 'Only Markdown files are allowed' }, { status: 400 });
+      const response: ApiResponse = {
+        success: false,
+        error: 'Only Markdown files are allowed'
+      };
+      return NextResponse.json(response, { status: 400 });
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
@@ -50,20 +59,26 @@ export async function POST(request: Request) {
 
     const stats = fs.statSync(filePath);
 
-    return NextResponse.json({
+    const response: ApiResponse = {
       success: true,
-      post: {
-        slug: file.name.replace(/\.(md|markdown)$/i, ''),
-        mtime: stats.mtimeMs,
-        status: status
+      data: {
+        post: {
+          slug: file.name.replace(/\.(md|markdown)$/i, ''),
+          mtime: stats.mtimeMs,
+          status: status
+        }
       }
-    });
+    };
+    return NextResponse.json(response);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Upload failed:', error);
-    return NextResponse.json(
-      { error: 'Upload failed', details: String(error) },
-      { status: 500 }
-    );
+    const response: ApiResponse = {
+      success: false,
+      error: 'Upload failed',
+      message: error.message,
+      details: String(error)
+    };
+    return NextResponse.json(response, { status: 500 });
   }
 }

@@ -10,6 +10,8 @@ import { CapacityWarningDialog } from './CapacityWarningDialog';
 import { TrashService } from '../services/TrashService';
 import { TrashItem } from '../types/file-system';
 import { useTrash } from '../hooks/useFileSystem';
+import { useToast } from './ui/use-toast';
+import { QUERY_KEYS } from '@/constants/query-keys';
 
 interface RecycleBinProps {
   onClose: () => void;
@@ -22,6 +24,7 @@ interface RecycleBinProps {
 
 export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, documentCount = 0, capacityLimit = 100, onDeleteOldestDocuments, onRestore }) => {
   const { files, isLoading, refresh } = useTrash();
+  const { toast } = useToast();
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [warningDialog, setWarningDialog] = useState<{
     isOpen: boolean;
@@ -121,8 +124,8 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
         await new Promise(resolve => setTimeout(resolve, 500));
         
         refresh(); // Refresh trash list
-        mutate('/api/files'); // Refresh document list
-        mutate('/api/config/capacity'); // Refresh capacity stats
+        mutate(QUERY_KEYS.FILES); // Refresh document list
+        mutate(QUERY_KEYS.CAPACITY); // Refresh capacity stats
 
         setSelectedFiles(prev => {
           const newSet = new Set(prev);
@@ -131,15 +134,33 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
         });
         if (onRestore) onRestore();
         
+        toast({
+          title: "恢复成功",
+          description: `已成功恢复 ${result.success} 个文件`,
+          type: "success",
+        });
+
         if (result.failed > 0) {
-           alert(`部分恢复失败: ${result.errors.join(', ')}`);
+           toast({
+             title: "部分恢复失败",
+             description: result.errors.join(', '),
+             type: "warning",
+           });
         }
       } else {
-        alert(`恢复失败: ${result.errors.join(', ')}`);
+        toast({
+          title: "恢复失败",
+          description: result.errors.join(', '),
+          type: "error",
+        });
       }
     } catch (e) {
       console.error('Restore failed', e);
-      alert('恢复出错');
+      toast({
+        title: "恢复出错",
+        description: (e as Error).message,
+        type: "error",
+      });
     }
   };
 
@@ -164,12 +185,20 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
                         await performRestore(fileNames);
                         setWarningDialog(prev => ({ ...prev, isOpen: false, isLoading: false }));
                     } else {
-                        alert('无法执行自动清理');
+                        toast({
+                          title: "操作失败",
+                          description: "无法执行自动清理",
+                          type: "error",
+                        });
                         setWarningDialog(prev => ({ ...prev, isLoading: false }));
                     }
                 } catch (err) {
                     console.error('Cleanup failed', err);
-                    alert('清理失败');
+                    toast({
+                      title: "清理失败",
+                      description: "无法清理旧文件，请重试",
+                      type: "error",
+                    });
                     setWarningDialog(prev => ({ ...prev, isLoading: false }));
                 }
             }
@@ -189,22 +218,40 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
       
       if (result.success > 0 || result.failed === 0) {
         refresh();
-        mutate('/api/config/capacity'); // Refresh capacity stats
+        mutate(QUERY_KEYS.CAPACITY); // Refresh capacity stats
         setSelectedFiles(prev => {
           const newSet = new Set(prev);
           fileNames.forEach(n => newSet.delete(n));
           return newSet;
         });
+
+        toast({
+          title: "删除成功",
+          description: `已永久删除 ${result.success} 个文件`,
+          type: "success",
+        });
         
         if (result.failed > 0) {
-           alert(`部分删除失败: ${result.errors.join(', ')}`);
+           toast({
+             title: "部分删除失败",
+             description: result.errors.join(', '),
+             type: "warning",
+           });
         }
       } else {
-        alert(`删除失败: ${result.errors.join(', ')}`);
+        toast({
+          title: "删除失败",
+          description: result.errors.join(', '),
+          type: "error",
+        });
       }
     } catch (e) {
       console.error('Delete failed', e);
-      alert('删除出错');
+      toast({
+        title: "删除出错",
+        description: (e as Error).message,
+        type: "error",
+      });
     }
   };
 
@@ -213,18 +260,31 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
     if (!confirm('确定要清空回收站吗？所有文件将被永久删除！')) return;
 
     try {
-      const res = await fetch('/api/trash/empty', { method: 'POST' });
-      if (res.ok) {
+      const success = await TrashService.emptyTrash();
+      if (success) {
         refresh();
         setSelectedFiles(new Set());
-      } else {
-        alert('清空失败');
-      }
-    } catch (e) {
-      console.error('Empty trash failed', e);
-      alert('清空出错');
-    }
-  };
+        toast({
+           title: "清空成功",
+           description: "回收站已清空",
+           type: "success",
+         });
+       } else {
+         toast({
+           title: "清空失败",
+           description: "无法清空回收站，请重试",
+           type: "error",
+         });
+       }
+     } catch (e) {
+       console.error('Empty trash failed', e);
+       toast({
+         title: "清空出错",
+         description: (e as Error).message,
+         type: "error",
+       });
+     }
+   };
 
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return bytes + ' B';
