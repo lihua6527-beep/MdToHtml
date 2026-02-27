@@ -1,13 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
-import PathManager from '@/lib/path-manager';
-import MetadataCacheManager from '@/lib/cache-manager';
+import PathManager from './path-manager';
+import { MetadataCacheManager } from './cache-manager';
+import { FileItem } from '@/types/file-system';
+import { MARKDOWN_EXT_RE } from './constants';
 
-// Use absolute path to ensure reliability across environments
-// Removed static initialization to support dynamic path changes
-const cacheManager = MetadataCacheManager;
-const MARKDOWN_EXT_RE = /\.(md|markdown)$/i;
+const cacheManager = MetadataCacheManager.getInstance();
 
 export function getPostSlugs() {
   // Use cache manager to get valid file list
@@ -75,7 +74,7 @@ export function getPostBySlug(slug: string) {
   return { slug: realSlug, content: fileContents, status, historyCount };
 }
 
-export function getAllPosts() {
+export function getAllPosts(): FileItem[] {
   // Use CacheManager for O(1) access
   const entries = cacheManager.getAll();
   

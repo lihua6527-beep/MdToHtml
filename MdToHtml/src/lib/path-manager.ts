@@ -2,6 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import ConfigManager from './config-manager';
+import { TRASH_DIR_NAME } from './constants';
 
 class PathManager {
   private static instance: PathManager;

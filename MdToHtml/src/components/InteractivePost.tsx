@@ -14,6 +14,7 @@ import { FloatingUndoRedo } from '@/components/FloatingUndoRedo';
 import { parseCHDBlocks } from '@/lib/chdParser';
 import { clsx } from 'clsx';
 import { HtmlBundler } from '@/lib/export/HtmlBundler';
+import { parseFrontmatter } from '@/lib/simple-frontmatter';
 import { useTheme } from '@/components/ThemeProvider';
 import { BottomToolbar } from '@/components/CHD/BottomToolbar';
 import { CardStyle } from '@/types/chd';
@@ -437,6 +438,9 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                     const title = decodedSlug || 'Untitled';
                     const blob = await HtmlBundler.bundle(content, title, theme);
                     
+                    // Parse metadata from markdown
+                    const meta = parseFrontmatter(content);
+
                     // Sync to output directory
                     try {
                         const htmlContent = await blob.text();
@@ -445,7 +449,17 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 filename: `${title}.html`,
-                                content: htmlContent
+                                content: htmlContent,
+                                metadata: {
+                                    id: title,
+                                    type: meta.type || 'project',
+                                    title: meta.title || title,
+                                    brief: meta.brief || '',
+                                    date: meta.date || new Date().toISOString().slice(0, 10),
+                                    tags: meta.tags || [],
+                                    chdVersion: '2.4',
+                                    htmlFile: `${title}.html`
+                                }
                             })
                         });
                         console.log('Export synced to output directory');

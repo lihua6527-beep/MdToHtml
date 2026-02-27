@@ -17,6 +17,9 @@ export interface AppConfig {
   paths?: Partial<PathConfig>;
   system?: Partial<SystemConfig>;
   capacityLimit?: number;
+  exportOptions?: {
+    emitJson?: boolean;
+  };
   // Legacy support
   inputPath?: string;
   outputPath?: string;
@@ -47,12 +50,21 @@ class ConfigManager {
     try {
       if (fs.existsSync(this.configPath)) {
         const content = fs.readFileSync(this.configPath, 'utf-8');
-        return JSON.parse(content);
+        const cfg = JSON.parse(content);
+        cfg.exportOptions = cfg.exportOptions || {};
+        if (typeof cfg.exportOptions.emitJson === 'undefined') {
+          cfg.exportOptions.emitJson = false;
+        }
+        return cfg;
       }
     } catch (error) {
       console.error('Failed to load config:', error);
     }
-    return {};
+    return {
+      exportOptions: {
+        emitJson: false
+      }
+    };
   }
 
   private migrateLegacyConfig() {
@@ -101,6 +113,7 @@ class ConfigManager {
       ...newConfig,
       paths: { ...this.config.paths, ...newConfig.paths },
       system: { ...this.config.system, ...newConfig.system },
+      exportOptions: { ...this.config.exportOptions, ...newConfig.exportOptions },
     };
     this.saveConfig();
   }

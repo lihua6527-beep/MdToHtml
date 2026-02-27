@@ -7,29 +7,27 @@ import { FileText, ChevronRight, Layout, PenTool, Clock, AlertCircle, CheckCircl
 import { clsx } from 'clsx';
 import { CHDRenderer } from './CHD/CHDRenderer';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useFiles, useCapacity } from '../hooks/useFileSystem';
 import { CapacityProgressBar } from './CapacityProgressBar';
 import { RecycleBin } from './RecycleBin';
 import { CapacityWarningDialog } from './CapacityWarningDialog';
-
-interface Post {
-  slug: string;
-  mtime: number;
-  birthtime?: number; // Added for import time sorting
-  status?: string;
-}
+import { FileItem, SortMethod } from '../types/file-system';
+import { DEFAULT_CAPACITY } from '../lib/constants';
 
 interface DocumentListProps {
-  initialPosts: Post[];
+  initialPosts: FileItem[];
   onOpenSettings?: () => void;
   className?: string;
 }
 
 export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpenSettings, className }) => {
   const router = useRouter();
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
+  const { files: rawFiles, refresh } = useFiles(initialPosts);
+  const { stats: capacityStats, refresh: refreshCapacity } = useCapacity();
+  const [posts, setPosts] = useState<FileItem[]>(initialPosts);
   const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number; slug: string | null }>({ visible: false, x: 0, y: 0, slug: null });
-  const [sortMethod, setSortMethod] = useLocalStorage<'import' | 'visited' | 'modified'>('chd_sort_method', 'import');
+  const [sortMethod, setSortMethod] = useLocalStorage<SortMethod>('chd_sort_method', 'import');
   
   // Layout State (Default: true for Wide Mode)
   const [isExpanded, setIsExpanded] = useLocalStorage<boolean>('chd_sidebar_expanded', true);
@@ -39,7 +37,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
   const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
   const [showSortSubmenu, setShowSortSubmenu] = useState(false);
   const [showCapacitySubmenu, setShowCapacitySubmenu] = useState(false);
-  const [capacityLimit, setCapacityLimit] = useState<number>(100);
+  const capacityLimit = capacityStats?.limit || DEFAULT_CAPACITY;
   const [showRecycleBin, setShowRecycleBin] = useState(false);
   const [warningDialog, setWarningDialog] = useState<{
     isOpen: boolean;
@@ -50,18 +48,15 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
   }>({ isOpen: false, message: '', onConfirm: () => {}, isLoading: false, cleanupLabel: '' });
 
   useEffect(() => {
-    setPosts(initialPosts);
-  }, [initialPosts]);
-
-  useEffect(() => {
     const handlePathsUpdated = () => {
+      refresh();
       router.refresh();
     };
     window.addEventListener('app-paths-updated', handlePathsUpdated);
     return () => {
       window.removeEventListener('app-paths-updated', handlePathsUpdated);
     };
-  }, [router]);
+  }, [router, refresh]);
 
   useEffect(() => {
     // Client-side sorting
@@ -69,7 +64,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
         const visitedStr = localStorage.getItem('visited_docs');
         const visitedMap: Record<string, number> = visitedStr ? JSON.parse(visitedStr) : {};
 
-        const sorted = [...initialPosts].sort((a, b) => {
+        const sorted = [...(rawFiles || [])].sort((a, b) => {
             if (sortMethod === 'visited') {
                 const timeA = visitedMap[a.slug] || 0;
                 const timeB = visitedMap[b.slug] || 0;
@@ -90,20 +85,12 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
     } catch (e) {
         console.error('Failed to sort posts', e);
     }
-  }, [initialPosts, sortMethod]);
+  }, [rawFiles, sortMethod]);
 
   useEffect(() => {
     if (!showSettingsMenu) {
         setShowSortSubmenu(false);
         setShowCapacitySubmenu(false);
-    } else {
-        // Fetch capacity when menu opens
-        fetch('/api/config/capacity')
-            .then(res => res.json())
-            .then(data => {
-                if (data.limit) setCapacityLimit(data.limit);
-            })
-            .catch(console.error);
     }
   }, [showSettingsMenu]);
 
@@ -115,9 +102,8 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
             body: JSON.stringify({ limit })
         });
         if (res.ok) {
-            setCapacityLimit(limit);
+            refreshCapacity(); // Refresh stats immediately
             setShowSettingsMenu(false);
-            // Optionally refresh stats or trigger a re-fetch if needed
         }
     } catch (e) {
         console.error('Failed to update capacity', e);
@@ -158,7 +144,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
         body: JSON.stringify({ slug, deleteOutput })
       });
       if (res.ok) {
-        setPosts(prev => prev.filter(p => p.slug !== slug));
+        refresh();
       } else {
         alert('删除失败');
       }
@@ -168,7 +154,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
     } finally {
       setContextMenu(prev => ({ ...prev, visible: false }));
     }
-  }, []);
+  }, [refresh]);
 
   const toggleSelectionMode = () => {
     setIsSelectionMode(prev => !prev);
@@ -201,7 +187,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
       });
 
       if (res.ok) {
-        setPosts(prev => prev.filter(p => !selectedSlugs.has(p.slug)));
+        refresh();
         setSelectedSlugs(new Set());
         setIsSelectionMode(false);
       } else {
@@ -289,15 +275,7 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
       router.refresh();
       
       // 2. Fetch latest list manually to update UI immediately
-      try {
-          const res = await fetch('/api/files');
-          const data = await res.json();
-          if (data.files && Array.isArray(data.files)) {
-              setPosts(data.files);
-          }
-      } catch (e) {
-          console.error('Failed to refresh list manually', e);
-      }
+      refresh();
   };
 
   if (showRecycleBin) {

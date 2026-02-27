@@ -6,5 +6,8 @@
     "input": "",
     "output": ""
   },
-  "system": {}
+  "system": {},
+  "exportOptions": {
+    "emitJson": true
+  }
 }

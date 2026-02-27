@@ -2,11 +2,8 @@ import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 import PathManager from './path-manager';
-
-export interface TrashStats {
-    count: number;
-    size: number; // in bytes
-}
+import { TrashStats, TrashItem } from '../types/file-system';
+import { DEFAULT_CAPACITY, TRASH_DIR_NAME } from './constants';
 
 class TrashManager {
     private static instance: TrashManager;
@@ -98,16 +95,18 @@ class TrashManager {
             }
         });
 
-        // Auto-cleanup if exceeds limit (500)
-        this.cleanupOldFiles();
+        // Auto-cleanup if exceeds limit
+        this.cleanupOldFiles(DEFAULT_CAPACITY);
 
         return { success, failed, errors };
     }
 
-    private cleanupOldFiles(limit: number = 500) {
+    private cleanupOldFiles(limit: number = DEFAULT_CAPACITY) {
         try {
             const files = this.getFiles();
             if (files.length <= limit) return;
+            
+            console.log(`[TrashManager] Auto-cleanup triggered. Count: ${files.length}, Limit: ${limit}`);
 
             // Sort by deletedAt ascending (oldest first)
             files.sort((a, b) => a.deletedAt - b.deletedAt);
@@ -116,6 +115,7 @@ class TrashManager {
             toDelete.forEach(file => {
                 try {
                     fs.unlinkSync(path.join(this.trashDir, file.name));
+                    console.log(`[TrashManager] Auto-deleted old file: ${file.name}`);
                 } catch (e) {
                     console.error(`[TrashManager] Failed to auto-cleanup ${file.name}`, e);
                 }
@@ -165,7 +165,7 @@ class TrashManager {
         return { count, size };
     }
 
-    public getFiles(): { name: string; originalName: string; size: number; deletedAt: number }[] {
+    public getFiles(): TrashItem[] {
         this.ensureTrashDir();
         if (!fs.existsSync(this.trashDir)) return [];
 
@@ -202,7 +202,7 @@ class TrashManager {
                 } catch (e) {
                     return null;
                 }
-            }).filter(f => f !== null) as any[];
+            }).filter(f => f !== null) as TrashItem[];
         } catch (e) {
             console.error('[TrashManager] Failed to list trash files', e);
             return [];

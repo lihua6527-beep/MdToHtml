@@ -161,6 +161,25 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
     }
   };
 
+  const handleToggleEmitJson = async (value: boolean) => {
+    try {
+      const res = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          exportOptions: { emitJson: value }
+        })
+      });
+      if (res.ok) {
+        fetchInfo();
+      } else {
+        alert('保存输出配置失败');
+      }
+    } catch (e) {
+      alert('保存输出配置出错');
+    }
+  };
+
   useEffect(() => {
     if (isOpen) {
       fetchInfo();
@@ -317,6 +336,39 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
                     "bg-red-500",
                     "被删除的文件将移动到此文件夹。"
                 )}
+              </div>
+
+              {/* Output Options */}
+              <div className="space-y-2 pt-4 border-t border-border-soft">
+                <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider flex items-center gap-2">
+                  <FileText className="w-4 h-4" /> 输出配置
+                </h3>
+                <div className="bg-bg-page rounded-lg p-4 border border-border-soft">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium text-text-primary">同时生成 JSON 元信息文件</div>
+                      <div className="text-xs text-text-muted mt-1">与 HTML 同名的 .json 文件，用于博客索引</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant={(info.config.exportOptions?.emitJson ? 'outline' : 'default') as any}
+                        size="sm"
+                        onClick={() => handleToggleEmitJson(false)}
+                        className="h-7 px-3 text-xs"
+                      >
+                        否
+                      </Button>
+                      <Button 
+                        variant={(info.config.exportOptions?.emitJson ? 'default' : 'outline') as any}
+                        size="sm"
+                        onClick={() => handleToggleEmitJson(true)}
+                        className="h-7 px-3 text-xs"
+                      >
+                        是
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Storage Settings */}

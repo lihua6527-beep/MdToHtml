@@ -1,17 +1,28 @@
 import { NextResponse } from 'next/server';
 import { getAllPosts } from '@/lib/posts';
+import { ApiResponse, FileItem } from '@/types/file-system';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
     const posts = getAllPosts();
-    return NextResponse.json({ files: posts });
-  } catch (error) {
+    const response: ApiResponse<FileItem[]> = {
+      success: true,
+      data: posts,
+      meta: {
+        total: posts.length,
+        timestamp: Date.now()
+      }
+    };
+    return NextResponse.json(response);
+  } catch (error: any) {
     console.error('Error reading posts:', error);
-    return NextResponse.json(
-      { error: 'Failed to list files' },
-      { status: 500 }
-    );
+    const response: ApiResponse = {
+      success: false,
+      error: 'Failed to list files',
+      message: error.message
+    };
+    return NextResponse.json(response, { status: 500 });
   }
 }

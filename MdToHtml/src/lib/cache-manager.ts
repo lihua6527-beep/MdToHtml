@@ -3,29 +3,8 @@ import path from 'path';
 import matter from 'gray-matter';
 import PathManager from './path-manager';
 import TrashManager from './trash-manager';
-
-const CACHE_FILE_NAME = '.metadata_cache.json';
-const DEFAULT_CAPACITY = 500; // Updated to 500 as per plan
-const CACHE_VERSION = '2.0';
-const MARKDOWN_EXT_RE = /\.(md|markdown)$/i;
-
-export interface CacheEntry {
-  path: string; // Filename (basename)
-  mtime: number;
-  birthtime: number; // Creation time (Import time)
-  status?: string;
-  title?: string;
-  tags?: string[];
-  excerpt?: string;
-  [key: string]: any;
-}
-
-export interface MetadataCache {
-  version: string;
-  lastUpdated: number;
-  capacity_limit: number;
-  entries: CacheEntry[];
-}
+import { CacheEntry, MetadataCache } from '../types/file-system';
+import { CACHE_FILE_NAME, DEFAULT_CAPACITY, CACHE_VERSION, MARKDOWN_EXT_RE } from './constants';
 
 export class MetadataCacheManager {
   private static instance: MetadataCacheManager;
@@ -147,6 +126,8 @@ export class MetadataCacheManager {
         f !== CACHE_FILE_NAME
       );
 
+      console.log(`[CacheManager] Scanning ${mdFiles.length} files in ${this.baseDir}`);
+
       const currentFilesSet = new Set(mdFiles);
       let hasChanges = false;
 
@@ -164,6 +145,7 @@ export class MetadataCacheManager {
             
             const newEntry: CacheEntry = {
               path: file,
+              slug: file.replace(MARKDOWN_EXT_RE, ''),
               mtime: stats.mtimeMs,
               birthtime: stats.birthtimeMs,
               status: data.status,
@@ -174,6 +156,7 @@ export class MetadataCacheManager {
             
             this.entryMap.set(file, newEntry);
             hasChanges = true;
+            console.log(`[CacheManager] Synced entry: ${file}`);
           }
         } catch (e) {
           console.warn(`[CacheManager] Failed to process file ${file}:`, e);
@@ -186,6 +169,7 @@ export class MetadataCacheManager {
         if (!currentFilesSet.has(key)) {
           this.entryMap.delete(key);
           hasChanges = true;
+          console.log(`[CacheManager] Removed stale entry: ${key}`);
         }
       }
 
@@ -290,6 +274,7 @@ export class MetadataCacheManager {
 
     // Write file
     fs.writeFileSync(fullPath, content, 'utf8');
+    console.log(`[CacheManager] File written: ${fullPath}`);
 
     // Update Cache
     const stats = fs.statSync(fullPath);
@@ -297,12 +282,13 @@ export class MetadataCacheManager {
     
     const entry: CacheEntry = {
               path: filename,
+              slug: safeSlug.replace(/\.md$/i, ''),
               mtime: stats.mtimeMs,
               birthtime: stats.birthtimeMs,
               status: data.status,
               title: data.title || safeSlug.replace(/\.md$/i, ''),
-      tags: data.tags,
-      excerpt: excerpt || undefined
+              tags: data.tags,
+              excerpt: excerpt || undefined
     };
 
     this.entryMap.set(filename, entry);
@@ -320,6 +306,7 @@ export class MetadataCacheManager {
      if (this.baseDir !== this.currentBaseDir) {
          this.scanAndSync();
      }
+     console.log(`[CacheManager] Deleting slug: ${slug}`);
      const candidates = MARKDOWN_EXT_RE.test(slug) ? [slug] : [`${slug}.md`, `${slug}.markdown`];
      const filename =
         candidates.find(c => this.entryMap.has(c)) ||

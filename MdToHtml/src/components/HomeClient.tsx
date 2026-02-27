@@ -1,50 +1,21 @@
 'use client';
 
-import React, { useState, useCallback, useEffect } from 'react';
-import { DocumentList } from '@/components/DocumentList';
-import { Upload, FileText, CheckCircle2, Settings } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { PathSettingsPanel } from '@/components/PathSettingsPanel';
-
-interface Post {
-  slug: string;
-  mtime: number;
-  birthtime?: number; // Added for import time sorting
-  status?: string;
-}
+import React, { useState } from 'react';
+import { clsx } from 'clsx';
+import { Settings, Upload, FileText } from 'lucide-react';
+import { mutate } from 'swr';
+import { DocumentList } from './DocumentList';
+import { PathSettingsPanel } from './PathSettingsPanel';
+import { FileItem } from '../types/file-system';
 
 interface HomeClientProps {
-  initialPosts: Post[];
+  initialPosts: FileItem[];
 }
 
 export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
-  const [posts, setPosts] = useState<Post[]>(initialPosts);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-
-  // Fetch latest posts on mount and focus
-  useEffect(() => {
-    const fetchPosts = async () => {
-      try {
-        const res = await fetch('/api/files');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.files) {
-             setPosts(data.files);
-          }
-        }
-      } catch (e) {
-        console.error('Failed to fetch posts', e);
-      }
-    };
-
-    fetchPosts();
-
-    const onFocus = () => fetchPosts();
-    window.addEventListener('focus', onFocus);
-    return () => window.removeEventListener('focus', onFocus);
-  }, []);
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -93,22 +64,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
                 body: formData
             });
 
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success && data.post) {
-                    // Update posts list
-                    setPosts(prev => {
-                        const existingIdx = prev.findIndex(p => p.slug === data.post.slug);
-                        if (existingIdx >= 0) {
-                            const newPosts = [...prev];
-                            newPosts[existingIdx] = data.post;
-                            return newPosts;
-                        } else {
-                            return [data.post, ...prev];
-                        }
-                    });
-                }
-            } else {
+            if (!res.ok) {
                 console.error('Failed to upload', file.name);
             }
         } catch (err) {
@@ -116,6 +72,8 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
         }
     }
     
+    // Refresh list
+    mutate('/api/files');
     setIsUploading(false);
   };
 
@@ -123,7 +81,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
     <div className="flex h-screen bg-bg-page overflow-hidden transition-colors duration-300">
       {/* Left Sidebar */}
       <DocumentList 
-        initialPosts={posts} 
+        initialPosts={initialPosts} 
         onOpenSettings={() => setShowSettings(true)} 
         className="shrink-0 border-r border-border-soft"
       />

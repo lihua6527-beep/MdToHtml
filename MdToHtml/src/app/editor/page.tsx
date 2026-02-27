@@ -399,12 +399,26 @@ export default function EditorPage() {
                         // Sync to output directory
                         try {
                             const htmlContent = await blob.text();
+                            
+                            // Parse frontmatter
+                            const { data: frontmatter } = matter(content);
+                            
                             await fetch('/api/save-export', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                     filename: `${title}.html`,
-                                    content: htmlContent
+                                    content: htmlContent,
+                                    metadata: {
+                                        id: title,
+                                        type: frontmatter.type || 'project',
+                                        title: frontmatter.title || title,
+                                        brief: frontmatter.brief || '',
+                                        date: frontmatter.date ? new Date(frontmatter.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+                                        tags: frontmatter.tags || [],
+                                        chdVersion: '2.4',
+                                        htmlFile: `${title}.html`
+                                    }
                                 })
                             });
                             console.log('Export synced to output directory');

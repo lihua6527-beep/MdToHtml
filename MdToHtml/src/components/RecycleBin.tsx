@@ -3,16 +3,12 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { FileText, Trash2, RotateCcw, AlertCircle, CheckSquare, Square, X, CheckCircle2, RefreshCw } from 'lucide-react';
 import { clsx } from 'clsx';
+import { mutate } from 'swr';
 import { CapacityProgressBar } from './CapacityProgressBar';
 import { Button } from './ui/button';
 import { CapacityWarningDialog } from './CapacityWarningDialog';
-
-interface TrashFile {
-  name: string; // physical name
-  originalName: string;
-  size: number;
-  deletedAt: number;
-}
+import { TrashItem } from '../types/file-system';
+import { useTrash } from '../hooks/useFileSystem';
 
 interface RecycleBinProps {
   onClose: () => void;
@@ -24,10 +20,8 @@ interface RecycleBinProps {
 }
 
 export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, documentCount = 0, capacityLimit = 100, onDeleteOldestDocuments, onRestore }) => {
-  const [files, setFiles] = useState<TrashFile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { files, isLoading, refresh } = useTrash();
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
-  const [trashCount, setTrashCount] = useState(0);
   const [warningDialog, setWarningDialog] = useState<{
     isOpen: boolean;
     message: string;
@@ -43,6 +37,8 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
     fileName: string;
   }>({ visible: false, x: 0, y: 0, fileName: '' });
 
+  const trashCount = files.length;
+
   useEffect(() => {
     const handleGlobalClick = () => {
         setContextMenu(prev => ({ ...prev, visible: false }));
@@ -55,6 +51,7 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
     };
   }, []);
 
+
   const handleContextMenu = (e: React.MouseEvent, fileName: string) => {
     e.preventDefault();
     e.stopPropagation();
@@ -66,35 +63,15 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
     });
   };
 
-  const fetchFiles = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('/api/trash/files');
-      if (res.ok) {
-        const data = await res.json();
-        setFiles(data.files || []);
-        setTrashCount(data.files?.length || 0);
-      }
-    } catch (e) {
-      console.error('Failed to fetch trash files', e);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchFiles();
-  }, [fetchFiles]);
-
   useEffect(() => {
     const handlePathsUpdated = () => {
-      fetchFiles();
+      refresh();
     };
     window.addEventListener('app-paths-updated', handlePathsUpdated);
     return () => {
       window.removeEventListener('app-paths-updated', handlePathsUpdated);
     };
-  }, [fetchFiles]);
+  }, [refresh]);
 
   const toggleSelection = (fileName: string) => {
     const newSet = new Set(selectedFiles);
@@ -145,13 +122,15 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
         // Add 500ms delay to ensure FS stability and provide visual feedback
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        setFiles(prev => prev.filter(f => !fileNames.includes(f.name)));
+        refresh(); // Refresh trash list
+        mutate('/api/files'); // Refresh document list
+        mutate('/api/config/capacity'); // Refresh capacity stats
+
         setSelectedFiles(prev => {
           const newSet = new Set(prev);
           fileNames.forEach(n => newSet.delete(n));
           return newSet;
         });
-        setTrashCount(prev => prev - fileNames.length);
         if (onRestore) onRestore();
       } else {
         alert('恢复失败');
@@ -210,13 +189,13 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
         body: JSON.stringify({ files: fileNames })
       });
       if (res.ok) {
-        setFiles(prev => prev.filter(f => !fileNames.includes(f.name)));
+        refresh();
+        mutate('/api/config/capacity'); // Refresh capacity stats
         setSelectedFiles(prev => {
           const newSet = new Set(prev);
           fileNames.forEach(n => newSet.delete(n));
           return newSet;
         });
-        setTrashCount(prev => prev - fileNames.length);
       } else {
         alert('删除失败');
       }
@@ -233,9 +212,8 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
     try {
       const res = await fetch('/api/trash/empty', { method: 'POST' });
       if (res.ok) {
-        setFiles([]);
+        refresh();
         setSelectedFiles(new Set());
-        setTrashCount(0);
       } else {
         alert('清空失败');
       }

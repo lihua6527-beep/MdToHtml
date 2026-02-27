@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Database, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useCapacity } from '../hooks/useFileSystem';
 
 interface CapacityStats {
   limit: number;
@@ -18,45 +19,20 @@ interface CapacityProgressBarProps {
 }
 
 export const CapacityProgressBar: React.FC<CapacityProgressBarProps> = ({ current, limit: propLimit, variant = 'default', label = '存储容量' }) => {
-  const [stats, setStats] = useState<CapacityStats | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { stats, isLoading } = useCapacity();
+  
+  // If props are provided, use them (override hook)
+  const isControlled = current !== undefined && propLimit !== undefined;
+  
+  const displayStats = isControlled ? {
+      count: current!,
+      limit: propLimit!,
+      usage: Math.round((current! / propLimit!) * 100)
+  } : stats;
 
-  const fetchStats = async () => {
-    if (current !== undefined && propLimit !== undefined) {
-        setStats({
-            count: current,
-            limit: propLimit,
-            usage: Math.round((current / propLimit) * 100)
-        });
-        setLoading(false);
-        return;
-    }
-
-    try {
-      const res = await fetch('/api/config/capacity');
-      if (res.ok) {
-        const data = await res.json();
-        setStats(data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch capacity stats', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchStats();
-    if (current === undefined) {
-        // Poll every 30 seconds to keep updated only if not controlled
-        const interval = setInterval(fetchStats, 30000);
-        return () => clearInterval(interval);
-    }
-  }, [current, propLimit]);
-
-  if (loading || !stats) return null;
-
-  const { limit, count, usage } = stats;
+  if (!isControlled && (isLoading || !displayStats)) return null;
+  
+  const { limit, count, usage } = displayStats!;
   
   // Determine color based on usage
   let colorClass = 'bg-green-500';
