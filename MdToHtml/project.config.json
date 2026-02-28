@@ -1,0 +1,13 @@
+{
+  "projectName": "MdToHtml",
+  "version": "1.0.0",
+  "description": "Root configuration for MdToHtml project wrapper",
+  "paths": {
+    "source": "./MdToHtml",
+    "docs": "./MdToHtml/docs",
+    "scripts": "./MdToHtml/scripts"
+  },
+  "startup": {
+    "command": "start.bat"
+  }
+}

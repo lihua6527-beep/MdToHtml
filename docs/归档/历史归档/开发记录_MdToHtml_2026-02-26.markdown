@@ -1,0 +1,30 @@
+# 开发记录
+
+## 2026-02-26
+
+### 1. Tags 渲染策略与 CHD 协议更新 (Corrected)
+- **背景**: 用户明确指出 Tags 的高级渲染（图标+磨砂玻璃）仅应应用于文档的 Frontmatter（元数据）区域，而非每个独立的 Card。Card 内部的 Tags 不应显示，或者使用普通文本渲染（目前选择不显示以保持整洁）。同时指出了 `warning` 并非有效的 CHD 卡片样式。
+- **变更内容**:
+  - **Frontmatter Tags**: 在 `CHDRenderer` 的顶部标题区域新增 Tags 渲染逻辑。
+    - 样式: `Icon + Glassmorphism` (磨砂玻璃效果)。
+    - 图标库: 集成 `Cpu`, `Zap`, `TrendingUp` 等图标。
+  - **Card Tags**: **移除** `Card.tsx` 中所有的 Tags 渲染逻辑。普通卡片不再展示 Tags。
+  - **样式修正**: 移除 `Card.tsx` 中关于 `warning` 样式的无效引用。
+- **影响范围**: 文档头部元数据及所有卡片显示。
+- **验证状态**: 
+  - `Card.tsx`: 已移除 Tags 相关代码。
+  - `CHDRenderer.tsx`: 已实现 Frontmatter Tags 渲染。
+
+### 2. Tags 样式增强与主题集成
+- **背景**: 用户要求提供多样化的 Tags 样式（不仅仅是磨砂玻璃），并且能够通过主题编辑器进行选择。用户明确选中了 5 种样式（Glass, Tech, Gradient, Outline, Pop）。
+- **变更内容**:
+  - **TagRenderer 组件**: 创建 `src/components/CHD/TagRenderer.tsx`，集中管理 Tags 渲染逻辑。
+    - 实现 5 种风格: `glass` (磨砂), `tech` (科技), `gradient` (渐变), `outline` (描边), `pop` (波普)。
+    - 实现 `getSmartIcon`: 基于 Tag 内容的智能图标映射（AI -> Brain, Data -> Database, etc.）。
+  - **主题编辑器集成**: 在 `BottomToolbar` 的主题面板右侧新增 Tags 样式选择器。
+  - **状态持久化**: Tags 样式选择绑定到 Frontmatter 的 `tag-style` 字段，确保刷新后保留。
+  - **交互流程**: BottomToolbar (Select Style) -> EditorPage (Update Frontmatter) -> CHDRenderer (Pass Style Prop) -> TagRenderer (Render).
+- **验证状态**:
+  - 代码逻辑已闭环。
+  - 样式选择器已集成至 UI。
+  - 智能图标映射已覆盖常用领域 (AI, Dev, Data)。

@@ -1,0 +1,46 @@
+# 项目目录结构
+
+## 根目录 (Root)
+
+- `MdToHtml/`: 项目主要目录，包含所有源码、文档、脚本与测试
+- `start.bat`: Windows 一键启动脚本 (便捷入口)
+- `README.md`: 项目主文档 (单一本源)
+- `.cursorrules`: 项目经验与风格约定（根目录极简与并列风格）
+
+> **注意**: 根目录仅允许上述 4 个条目，保持极简。所有其他文件均应归档至 `MdToHtml` 目录下。
+
+## MdToHtml 子目录
+
+- `src/`: 源代码
+  - `app/`: Next.js App Router 页面
+  - `components/`: React 组件
+  - `lib/`: 工具函数与库
+  - `hooks/`: 自定义 Hooks
+  - `ml/`: 机器学习模块 (Python)
+- `docs/`: 项目文档
+  - `技术规范/`: 技术细节、架构设计
+  - `管理与运维/`: 进度、待办、运维手册
+  - `架构决策记录/`: ADRs
+- `public/`: 静态资源
+- `scripts/`: 辅助与自动化脚本
+  - `verify_deployment.py`: 部署验证脚本
+  - `migrate_readme.py`: README 迁移脚本
+- `tests/`: 自动化测试目录
+  - `unit/`: 单元测试
+  - `integration/`: 集成测试
+- `project.config.json`: 项目路径配置文件
+- `.github/`: CI/CD 配置
+
+## 自动化脚本说明
+
+所有脚本均位于 `MdToHtml/scripts/` 目录下。
+
+### 迁移与验证
+
+1.  `verify_deployment.py`: 验证根目录结构约束、文件完整性，并执行服务启动与负载测试 (20次请求, <500ms)。
+2.  `migrate_readme.py`: 将 `MdToHtml/README.md` 迁移至根目录，并自动修正路径引用。
+
+### 测试
+
+-   单元测试 (`MdToHtml/tests/unit`): 覆盖迁移脚本逻辑 (覆盖率 > 90%)。
+-   集成测试 (`MdToHtml/tests/integration`): 模拟完整工作流 (环境检查 -> 服务启动 -> 健康检查 -> 访问测试 -> 资源清理)。

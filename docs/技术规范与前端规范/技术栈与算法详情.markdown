@@ -1,0 +1,180 @@
+# 技术栈与算法详情 (Tech Stack & Algorithms)
+
+## 0. 架构约束与治理 (Architecture Governance)
+
+### 0.1 核心原则 (Core Principles)
+项目严格遵循 **“Windows 本地化、轻量化、静态化”** 的原则。
+
+*   **OS**: 仅支持 **Windows 10/11**。
+*   **Runtime**: Node.js (LTS Version)。
+*   **禁止项**:
+    *   禁止引入数据库 (SQLite/PostgreSQL 等)。
+    *   禁止引入 Docker/K8s 等容器化技术。
+    *   禁止引入重型后端框架 (NestJS/Django)。
+    *   禁止复杂的并发/多线程处理逻辑。
+
+### 0.2 代码与工程规范 (Engineering Standards)
+*   **文件系统交互**:
+    *   **读写安全**: 严格限制在项目根目录的 `input/` 和 `output/` 文件夹内。
+    *   **路径处理**: 使用 Windows 风格路径分隔符或 Node.js `path` 模块兼容处理。
+*   **构建与发布**:
+    *   **静态导出**: 必须使用 `output: 'export'` (Next.js SSG)。
+    *   **本地脚本**: 必须提供 `.bat` 或 `.ps1` 脚本用于自动化操作。
+
+### 0.3 性能与安全 (Performance & Security)
+*   **性能指标**: 单个 Markdown 文件转换时间 < 2s。
+*   **安全合规**: 本地沙箱运行，确保程序不会访问 `input`/`output` 之外的文件系统区域；核心转换功能在断网环境下必须可用。
+
+---
+
+## 1. 核心理念与技术映射 (Philosophy to Tech Mapping)
+
+> **你的系统本质上是在回答一个问题： 当AI能生成无限内容时，如何确保输出的品质与一致性？**
+> 答案是： **协议化输入、自动化评分、可视化调优、多态化输出**。
+
+本项目通过以下技术栈具体实现了上述理念：
+
+| 核心理念 | 关键技术实现 | 对应模块/文件 |
+| :--- | :--- | :--- |
+| **协议化输入** | CHD (Canonical HTML Deck) 协议, Markdown AST 解析 | `src/lib/chdParser.ts`, `CHD_protocol.md` |
+| **自动化评分** | 基于规则的文档质量打分引擎 | `src/lib/scorer.ts` |
+| **可视化调优** | CodeMirror 双向绑定编辑器, 实时预览 | `src/components/Editor/`, `src/components/CHD/` |
+| **多态化输出** | Next.js SSG 静态生成, 响应式 Grid 布局 | `app/api/save/`, `src/components/CHD/Section.tsx` |
+
+## 2. 技术栈 (Tech Stack)
+
+### 2.1 桌面端混合架构 (Desktop Hybrid Architecture) - [New]
+- **Core**: Electron (Main Process) + Next.js (Renderer Process)
+- **Server**: Express.js (Running in Main Process)
+  - 替代 Next.js API Routes，提供文件系统读写能力。
+  - 通过 `get-port` 自动扫描可用端口。
+- **Packaging**: electron-builder
+  - 支持 Windows (NSIS) 打包。
+  - 实现了 "便携优先 > 配置覆盖 > 文档兜底" 的路径管理策略 (`PathManager`)。
+
+### 2.2 前端渲染引擎 (Frontend Rendering Engine)
+- **Framework**: [Next.js 14 (App Router)](https://nextjs.org/) - 提供服务端渲染 (SSR) 和静态生成 (SSG) 能力，确保文档加载速度和 SEO。
+- **Core Library**: [React 18](https://react.dev/) - 利用 Server Components 与 Client Components 的混合架构，分离静态内容与动态交互。
+- **Styling**: 
+    - [Tailwind CSS](https://tailwindcss.com/) - 原子化 CSS 框架，构建系统的视觉基座。
+    - [shadcn/ui](https://ui.shadcn.com/) - 基于 Radix UI 的无头组件库，提供 Button, Dialog 等标准交互组件，支持 A11y。
+- **Language**: TypeScript - 强类型约束，确保 CHD 数据结构解析的安全性。
+- **Icons**: Lucide React - 现代、轻量级的图标库。
+- **Markdown Plugins**:
+    - [remark-breaks](https://github.com/remarkjs/remark-breaks) - 支持 GitHub Flavor 的硬换行逻辑 (Soft break -> Hard break)。
+    - [remark-gfm](https://github.com/remarkjs/remark-gfm) - 支持表格、删除线等 GFM 扩展。
+    - [remark-math](https://github.com/remarkjs/remark-math) & [rehype-katex](https://github.com/remarkjs/rehype-katex) - 数学公式渲染。
+
+### 2.3 核心组件 (Core Components)
+- **CodeMirrorEditor**: 基于 [CodeMirror 6](https://codemirror.net/) 的专业级 Markdown 编辑器，支持语法高亮、行号显示、代码折叠与双向滚动同步。
+- **CHDRenderer**: 解析 Markdown AST 并映射为 Grid 布局的核心组件，支持行级交互同步。
+- **GlobalErrorBoundary**: 全局异常熔断组件，捕获渲染层错误（如非法 CHD 语法），提供优雅降级 UI 与重试机制。
+- **Card**: 遵循“百万级数据展示范式”的卡片组件，支持多种视觉变体 (Stat, Highlight, Quote 等) 及高亮状态。
+- **Section**: 负责 L1 层级的网格容器，实现自然流布局。
+
+### 2.4 脚本与工具 (Scripts & Tools)
+- **PowerShell / Batch**: Windows 原生脚本语言，用于项目启动 (`start.bat`)、环境校验 (`validate_root.ps1`)。
+- **Node.js**: 运行时环境，承载 Next.js 构建任务及运维脚本（如智能端口扫描 `setup-port.js`）。
+- **Testing**:
+    - **Jest**: 单元测试框架，配合 React Testing Library 进行组件快照与逻辑测试。
+    - **Cheerio**: 静态页面解析库，用于自动化巡检生成的 HTML 产物。
+
+### 2.5 自动保存与交互机制 (Auto-Save & Interaction)
+- **文件**: `src/components/InteractivePost.tsx`
+- **逻辑**:
+  - **防抖 (Debounce)**: 使用 `setTimeout` 实现 5 秒延迟保存。
+  - **静默保存**: `saveFile(true)` 参数控制是否弹出提示框，用于自动保存场景。
+  - **保存即退出 (Save & Exit)**: 手动触发保存（按钮或快捷键）成功后，自动执行 `setIsEditing(false)` 退出编辑模式，实现“所见即所得”的闭环体验。
+- **优势**: 
+  - 减少服务器请求频率。
+  - 区分“编辑中备份”与“编辑完成交付”两种心智模型。
+
+### 2.6 属性解析与渲染清洗 (Attribute Parsing & Rendering)
+- **文件**: `src/lib/attributeParser.ts`, `src/components/CHD/Section.tsx`
+- **逻辑**:
+  - **解析层**: 支持未闭合属性解析，防止输入时的解析抖动。
+  - **渲染层清洗**: 在 `Section.tsx` 中强制执行 `title.replace(/\{.*?\}/g, '')`，确保即使解析层遗漏，UI 层也能兜底过滤掉配置代码，防止元数据泄漏到最终界面。
+
+### 2.7 AI数据采集 (AI Data Collection)
+- **文件**: `src/lib/data-collector.ts`, `src/app/api/save/route.ts`
+- **目的**: 构建高质量的 AI 训练数据集，捕捉用户编辑过程中的思维链 (Chain of Thought)。
+- **逻辑**:
+  - **触发时机**: 用户手动触发保存 (Save) 时。
+  - **存储结构**:
+    - 目录: `data/training_dataset/[slug]/`
+    - 基准文件 (`initial.md`): 首次采集时的文件内容（作为 Base）。
+    - 增量日志 (`history.jsonl`): 记录每次保存的内容快照与时间戳。
+  - **流程**:
+    1. 检查目标目录是否存在，不存在则创建。
+    2. 若 `initial.md` 不存在，读取当前文件内容（或新内容）写入作为基准。
+    3. 将本次保存的新内容追加写入 `history.jsonl`。
+
+---
+
+## 3. 核心算法 (Core Algorithms)
+
+### 3.1 智能尺寸计算与自动对齐 (Smart Sizing & Auto-Alignment)
+**位置**: `src/components/CHD/CHDRenderer.tsx` & `src/components/CHD/Section.tsx`
+
+为了解决卡片大小不一和排版单调的问题，系统实现了一套基于文本量的启发式尺寸计算算法，并结合 CSS Grid 实现了临界区域的自动对齐：
+
+1.  **输入**: 卡片的纯文本内容长度 (`textLen`)。
+2.  **逻辑**:
+    *   **Micro Card**: `textLen < 150` -> `col-span-1`。适用于短文本、关键指标、简单列表。
+    *   **Medium Card**: `150 <= textLen <= 400` -> `col-span-2`。适用于中等长度的描述、代码片段。
+    *   **Macro Card**: `textLen > 400` -> `col-span-2` (限制最大宽度，防止霸屏)。长文本强制换行而非无限拉伸。
+3.  **自动对齐 (Auto-Alignment)**:
+    *   **Grid Flow Dense**: 在 `Section` 容器中启用了 `grid-flow-dense` 算法。
+    *   **效果**: 当用户手动调整某张卡片为 `col-span-2` (导致当前行剩余空间不足) 时，后续较小的卡片 (`col-span-1`) 会自动回填到前一行的空缺中，消除布局孔洞，实现紧凑的“Bento Grid”风格布局。
+    *   **Summary Override**: 针对 `style="summary"` 的卡片，渲染器强制将其设置为 `col-span-4` (全宽)，确保其作为独立行展示，不参与紧凑流布局。
+
+
+### 3.2 幽灵卡片过滤 (Ghost Card Filtering)
+**位置**: `src/components/CHD/CHDRenderer.tsx`
+
+解析 Markdown 时，分隔符和空行容易产生无效的 AST 节点（幽灵卡片），导致页面出现莫名其妙的空白或细线。
+
+**过滤逻辑**:
+1.  **预清洗**: 移除所有仅仅包含 `---`、空格或换行符的内容块。
+2.  **严格匹配**: 只有以 `###` 开头的节点才被视为有效卡片。
+3.  **尾部修剪**: 自动去除每个卡片内容末尾的 `---` 分隔符。
+
+### 3.3 静态资源自动化巡检与单文件导出 (Static Asset Inspection & Single-File Export)
+**位置**: `scripts/process_single_file.js` & `/api/save-export`
+
+为了确保输出产物的独立性与渲染一致性，系统采用了**双重导出策略**：
+
+1.  **单文件结构 (Single-File Structure)**: 
+    *   配置 `trailingSlash: false`，使 Next.js 生成 `slug.html` 而非 `slug/index.html`。
+    *   **同步导出 (Sync Export)**: 编辑器端的“导出 HTML”按钮会触发客户端渲染，抓取当前完美的 DOM/CSS 状态，生成内联样式的 HTML，并通过 `/api/save-export` 接口同步保存到 `output/` 目录。这确保了静态产物与编辑器预览的**像素级一致 (Pixel-perfect)**。
+
+2.  **目录治理 (Directory Governance)**:
+    *   **系统归档**: 自动将 `index.html`, `404.html` 等非内容页面移动到 `output/system/`。
+    *   **中文解码**: 自动将 URL 编码的文件名重命名为可读中文。
+    *   **依赖清理**: 删除 `_next` 等外部依赖目录，确保 HTML 文件的自包含性。
+
+3.  **自动化巡检 (Legacy)**:
+    *   (已废弃/降级) `verify-static-build.js` 曾用于检查 `next build` 产物，现主要依赖上述同步导出机制保证质量。
+
+---
+
+## 4. 健壮性与质量保障 (Robustness & QA)
+
+### 4.1 风险点识别与改进方向 (Risk Mitigation)
+*   **编辑器 (Editor)**: 引入 `ErrorBoundary` 包裹预览组件，防止非法 CHD 语法导致渲染崩溃。
+*   **解析器 (Parser)**: 针对大文本解析，评估引入 Web Worker 或 Time Slicing 解析以避免 UI 卡顿。
+*   **数据持久化**: 增加 `try-catch` 保护 `localStorage` 写入，防止配额超限。
+*   **路由 (Router)**: 完善 `not-found.tsx` 与全局异常捕获。
+
+### 4.2 测试策略 (Testing Strategy)
+*   **单元测试 (Unit Testing)**: 
+    *   目标: 核心工具库覆盖率 > 90%。
+    *   重点: `src/lib/chdParser.ts` (边界条件), `src/lib/validator.ts` (非法输入)。
+*   **集成测试 (Integration Testing)**:
+    *   场景: 编辑器输入 -> 解析 -> 渲染 -> 滚动同步的全链路验证。
+*   **混沌工程 (Chaos Engineering)**:
+    *   模拟快速随机输入、断网加载、本地存储损坏等异常场景。
+
+### 4.3 监控 (Monitoring)
+*   **前端监控**: 建议接入 Sentry 捕获运行时 JS 错误。
+*   **性能监控**: 关注 Core Web Vitals (LCP, CLS, FID)。

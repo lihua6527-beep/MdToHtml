@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHD 高保真编辑器原型</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        
+        :root {
+            /* Default Theme: Ocean */
+            --primary: #2C6CFF;
+            --bg-page: #F0F5FF;
+            --bg-card: #FFFFFF;
+            --text-primary: #0A1120;
+            --text-secondary: #475569;
+            --border-soft: #E2E8F0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Preview Area (Top) --- */
+        .preview-area {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+
+        .preview-card {
+            background: var(--bg-card);
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            width: 100%;
+            max-width: 800px;
+            min-height: 300px;
+        }
+
+        /* --- Bottom Toolbar (Fixed) --- */
+        .bottom-toolbar {
+            height: 320px; /* Fixed height as per sketch density */
+            background: #FFFFFF;
+            border-top: 1px solid var(--border-soft);
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+            display: flex;
+            z-index: 50;
+        }
+
+        /* --- Left Sidebar (Tabs) --- */
+        .toolbar-sidebar {
+            width: 80px;
+            background: #F8FAFC;
+            border-right: 1px solid var(--border-soft);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 1.5rem;
+            gap: 1.5rem;
+        }
+
+        .tab-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #64748B;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            background: #E2E8F0;
+            color: #334155;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(var(--primary), 0.3);
+        }
+
+        .tab-icon {
+            width: 20px;
+            height: 20px;
+            margin-bottom: 4px;
+        }
+
+        .tab-label {
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        /* --- Content Area --- */
+        .toolbar-content {
+            flex: 1;
+            display: none; /* Hidden by default */
+            padding: 1.5rem 2rem;
+        }
+
+        .toolbar-content.active {
+            display: flex; /* Flex row for 3 columns */
+            gap: 3rem;
+        }
+
+        /* --- Columns --- */
+        .col-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            border-right: 1px dashed #E2E8F0;
+            padding-right: 2rem;
+        }
+        
+        .col-panel:last-child {
+            border-right: none;
+        }
+
+        .panel-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #64748B;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* --- Controls --- */
+        
+        /* Theme Colors */
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 0.75rem;
+        }
+        
+        .color-swatch {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.1s;
+        }
+        .color-swatch:hover { transform: scale(1.05); }
+        .color-swatch.active { border-color: #0f172a; transform: scale(1.05); }
+
+        /* Layout Grid */
+        .layout-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .layout-btn {
+            padding: 0.75rem;
+            border: 1px solid var(--border-soft);
+            border-radius: 8px;
+            text-align: center;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .layout-btn:hover { background: #F1F5F9; }
+        .layout-btn.active {
+            border-color: var(--primary);
+            background: #EFF6FF;
+            color: var(--primary);
+        }
+
+        /* Section Colors (Vertical) */
+        .section-color-list {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        
+        .section-dot {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .section-dot.active { border-color: #0f172a; box-shadow: 0 0 0 2px white inset; }
+
+        /* Card Content Styles (Grid) */
+        .style-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+        }
+
+        .style-item {
+            aspect-ratio: 4/3;
+            border: 1px solid var(--border-soft);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .style-item:hover { border-color: var(--primary); }
+        .style-item.active { background: var(--primary); color: white; border-color: var(--primary); }
+
+        /* Card Shapes (List) */
+        .shape-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            max-height: 240px;
+            overflow-y: auto;
+        }
+
+        .shape-option {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .shape-option:hover { background: #F8FAFC; }
+        .shape-option.active { background: #F1F5F9; border-color: var(--border-soft); }
+
+        .shape-preview {
+            width: 40px;
+            height: 24px;
+            background: #CBD5E1;
+            /* Shapes */
+        }
+
+        /* Shapes Definitions */
+        .preview-rect { border-radius: 2px; }
+        .preview-cut { clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px); }
+        .preview-arrow { clip-path: polygon(0% 0%, 85% 0%, 100% 50%, 85% 100%, 0% 100%, 15% 50%); }
+        .preview-circle { border-radius: 50%; width: 24px; }
+        .preview-float { box-shadow: 0 4px 6px rgba(0,0,0,0.2); transform: translateY(-2px); }
+
+        /* Segment Control */
+        .segment-control {
+            background: #F1F5F9;
+            padding: 4px;
+            border-radius: 8px;
+            display: flex;
+        }
+        .segment-btn {
+            flex: 1;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            text-align: center;
+            border-radius: 6px;
+            cursor: pointer;
+            color: #64748B;
+        }
+        .segment-btn.active {
+            background: white;
+            color: #0F172A;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        /* Toggle */
+        .toggle-switch {
+            width: 44px;
+            height: 24px;
+            background: #CBD5E1;
+            border-radius: 99px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .toggle-switch.active { background: var(--primary); }
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            left: 2px; top: 2px;
+            width: 20px; height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: transform 0.2s;
+        }
+        .toggle-switch.active::after { transform: translateX(20px); }
+
+    </style>
+</head>
+<body>
+
+    <!-- Main Preview Area -->
+    <main class="preview-area">
+        <div class="preview-card">
+            <h1 class="text-3xl font-bold mb-6">高保真原型预览</h1>
+            <p class="text-slate-500 mb-8">请操作底部面板以体验交互。</p>
+            
+            <!-- Dynamic Content Simulation -->
+            <div id="demo-section" class="border-l-4 border-[var(--primary)] pl-6 py-2 mb-8">
+                <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                    <span class="w-2 h-8 rounded-full bg-[var(--primary)]"></span>
+                    2.1 核心功能
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Card 1 -->
+                    <div class="bg-slate-50 p-6 rounded-lg border border-slate-100">
+                        <div class="w-10 h-10 rounded bg-[var(--primary)] text-white flex items-center justify-center mb-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                        </div>
+                        <h3 class="font-bold mb-2">极速渲染</h3>
+                        <p class="text-sm text-slate-500">基于 Rust 内核的毫秒级转换引擎。</p>
+                    </div>
+                    <!-- Card 2 -->
+                    <div class="bg-slate-50 p-6 rounded-lg border border-slate-100">
+                        <div class="w-10 h-10 rounded bg-[var(--primary)] text-white flex items-center justify-center mb-4">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+                        </div>
+                        <h3 class="font-bold mb-2">智能布局</h3>
+                        <p class="text-sm text-slate-500">自动适配网格、时间轴与环形结构。</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Toolbar -->
+    <div class="bottom-toolbar">
+        
+        <!-- 1. Left Sidebar (Tabs) -->
+        <div class="toolbar-sidebar">
+            <div class="tab-btn active" onclick="switchTab('theme', this)">
+                <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01"></path></svg>
+                <span class="tab-label">主题</span>
+            </div>
+            <div class="tab-btn" onclick="switchTab('layout', this)">
+                <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+                <span class="tab-label">布局</span>
+            </div>
+            <div class="tab-btn" onclick="switchTab('card', this)">
+                <svg class="tab-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                <span class="tab-label">卡片</span>
+            </div>
+        </div>
+
+        <!-- 2. Content Area -->
+        
+        <!-- Tab 1: Theme (主题) -->
+        <div id="panel-theme" class="toolbar-content active">
+            <!-- Col 1: Style -->
+            <div class="col-panel" style="flex: 1.2;">
+                <div class="panel-title">主题风格</div>
+                <div class="theme-grid">
+                    <div class="color-swatch active" style="background: #2C6CFF;" onclick="setTheme(0)" title="Ocean"></div>
+                    <div class="color-swatch" style="background: #6BD0CC;" onclick="setTheme(1)" title="Mint"></div>
+                    <div class="color-swatch" style="background: #6C53B3;" onclick="setTheme(2)" title="Lavender"></div>
+                    <div class="color-swatch" style="background: #41C187;" onclick="setTheme(3)" title="Earth"></div>
+                    <div class="color-swatch" style="background: #855D36;" onclick="setTheme(4)" title="Caramel"></div>
+                </div>
+                <div class="mt-4">
+                    <div class="panel-title">背景风格</div>
+                    <div class="flex gap-3">
+                        <div class="w-8 h-8 rounded-full border border-slate-300 bg-[#F0F5FF]"></div>
+                        <div class="w-8 h-8 rounded-full border border-slate-200 bg-white"></div>
+                        <div class="w-8 h-8 rounded-full border border-slate-200 bg-[#F8FAFC]"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Col 2: Layout Options (Placeholder for "Layout" in Sketch 1, but moving some to Section tab as per Sketch 2) -->
+            <div class="col-panel">
+                 <div class="panel-title">全局设置</div>
+                 <div class="flex flex-col gap-4">
+                     <div class="flex justify-between items-center">
+                         <span class="text-sm text-slate-600">标题间距</span>
+                         <div class="segment-control">
+                             <div class="segment-btn">1</div>
+                             <div class="segment-btn active">2</div>
+                             <div class="segment-btn">3</div>
+                         </div>
+                     </div>
+                     <div class="flex justify-between items-center">
+                         <span class="text-sm text-slate-600">分割线</span>
+                         <div class="toggle-switch active"></div>
+                     </div>
+                 </div>
+            </div>
+
+            <!-- Col 3: Spacer/Extension -->
+            <div class="col-panel bg-slate-50/50 rounded-lg border-none flex items-center justify-center">
+                <span class="text-slate-300 text-sm">空白 留作扩展</span>
+            </div>
+        </div>
+
+        <!-- Tab 2: Layout (布局/分区) -->
+        <div id="panel-layout" class="toolbar-content">
+            <!-- Col 1: Layout Mode -->
+            <div class="col-panel" style="flex: 1.2;">
+                <div class="flex items-center gap-2 mb-4 bg-slate-100 p-2 rounded">
+                    <span class="text-xs font-bold text-slate-500">当前选区:</span>
+                    <span class="text-sm font-bold text-slate-800">2.1 核心功能</span>
+                </div>
+                <div class="panel-title">布局模式</div>
+                <div class="layout-grid">
+                    <div class="layout-btn active">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                        <span>并列 (Grid)</span>
+                    </div>
+                    <div class="layout-btn">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>时间轴</span>
+                    </div>
+                    <div class="layout-btn">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                        <span>环绕 (Hub)</span>
+                    </div>
+                    <div class="layout-btn">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        <span>环形 (Ring)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Col 2: Section Color (Vertical) -->
+            <div class="col-panel" style="flex: 0.8;">
+                <div class="panel-title">分区配色 (统一)</div>
+                <div class="section-color-list">
+                    <div class="section-dot active" style="background: #e2e8f0;" title="Default"></div>
+                    <div class="section-dot" style="background: #f87171;" title="Red"></div>
+                    <div class="section-dot" style="background: #fbbf24;" title="Orange"></div>
+                    <div class="section-dot" style="background: #34d399;" title="Green"></div>
+                    <div class="section-dot" style="background: #60a5fa;" title="Blue"></div>
+                    <div class="section-dot" style="background: #a78bfa;" title="Purple"></div>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-4 leading-tight">
+                    * 二级标题总管卡片颜色，卡片自身不可独立改色。
+                </p>
+            </div>
+
+            <!-- Col 3: Props -->
+            <div class="col-panel">
+                <div class="panel-title">版式微调</div>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-slate-600">标题大小</span>
+                        <div class="segment-control">
+                            <div class="segment-btn">S</div>
+                            <div class="segment-btn active">M</div>
+                            <div class="segment-btn">L</div>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm text-slate-600">正文大小</span>
+                        <div class="segment-control">
+                            <div class="segment-btn">S</div>
+                            <div class="segment-btn active">M</div>
+                            <div class="segment-btn">L</div>
+                        </div>
+                    </div>
+                    <div class="bg-blue-50 p-3 rounded text-xs text-blue-700 leading-relaxed mt-2">
+                        智能算法: 每行卡片数会自动根据卡片数量优化 (3/4/5列)，也可在上方手动锁定。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Card (卡片) -->
+        <div id="panel-card" class="toolbar-content">
+            <!-- Col 1: Content Style (Grid) -->
+            <div class="col-panel" style="flex: 1;">
+                <div class="panel-title">内容样式 (语义)</div>
+                <div class="style-grid">
+                    <div class="style-item active">
+                        <div class="w-6 h-4 border border-current rounded-sm"></div>
+                        <span>标准</span>
+                    </div>
+                    <div class="style-item">
+                        <div class="w-6 h-4 bg-current opacity-20 rounded-sm"></div>
+                        <span>高亮</span>
+                    </div>
+                    <div class="style-item">
+                        <span class="font-serif text-lg">“</span>
+                        <span>引用</span>
+                    </div>
+                    <div class="style-item">
+                        <span class="font-bold text-lg">123</span>
+                        <span>数据</span>
+                    </div>
+                    <div class="style-item">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span>图片</span>
+                    </div>
+                    <div class="style-item">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                        <span>列表</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Col 2: Shape (Vertical List) -->
+            <div class="col-panel" style="flex: 1;">
+                <div class="panel-title">卡片形态 (物理)</div>
+                <div class="shape-list">
+                    <div class="shape-option active">
+                        <div class="shape-preview preview-rect"></div>
+                        <span class="text-sm">标准矩形 (Rectangle)</span>
+                    </div>
+                    <div class="shape-option">
+                        <div class="shape-preview preview-cut"></div>
+                        <span class="text-sm">赛博切角 (Cut)</span>
+                    </div>
+                    <div class="shape-option">
+                        <div class="shape-preview preview-arrow"></div>
+                        <span class="text-sm">箭头 (Arrow)</span>
+                    </div>
+                    <div class="shape-option">
+                        <div class="shape-preview preview-arrow" style="transform: scaleX(-1);"></div>
+                        <span class="text-sm">反向箭头 (Rev Arrow)</span>
+                    </div>
+                    <div class="shape-option">
+                        <div class="shape-preview preview-float"></div>
+                        <span class="text-sm">悬浮 (Float)</span>
+                    </div>
+                    <div class="shape-option">
+                        <div class="shape-preview preview-circle"></div>
+                        <span class="text-sm">圆形 (Circle)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Col 3: Warning -->
+            <div class="col-panel flex items-center justify-center bg-amber-50 rounded-lg border border-amber-100">
+                <div class="text-center p-4">
+                    <svg class="w-8 h-8 text-amber-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                    <p class="text-xs text-amber-800 font-medium mb-1">部分布局受限</p>
+                    <p class="text-[10px] text-amber-700 leading-relaxed">
+                        在 Hub (环绕) 或 Timeline (时间轴) 模式下，卡片形态可能被强制锁定以保证视觉连续性。
+                    </p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Themes Data
+        const themes = [
+            { name: 'Ocean', primary: '#2C6CFF', bg: '#F0F5FF', text: '#0A1120' },
+            { name: 'Mint', primary: '#6BD0CC', bg: '#F0FDFA', text: '#134E4A' },
+            { name: 'Lavender', primary: '#6C53B3', bg: '#FAF9FC', text: '#1C1C1C' },
+            { name: 'Earth', primary: '#41C187', bg: '#FBFBFB', text: '#04260E' },
+            { name: 'Caramel', primary: '#855D36', bg: '#FDFBF6', text: '#492D11' },
+        ];
+
+        function switchTab(tabName, btn) {
+            // Update Sidebar
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Update Content
+            document.querySelectorAll('.toolbar-content').forEach(c => c.classList.remove('active'));
+            document.getElementById('panel-' + tabName).classList.add('active');
+        }
+
+        function setTheme(index) {
+            const t = themes[index];
+            document.documentElement.style.setProperty('--primary', t.primary);
+            document.documentElement.style.setProperty('--bg-page', t.bg);
+            document.documentElement.style.setProperty('--text-primary', t.text);
+            
+            // Update active state
+            document.querySelectorAll('.color-swatch').forEach((el, i) => {
+                if (i === index) el.classList.add('active');
+                else el.classList.remove('active');
+            });
+        }
+    </script>
+</body>
+</html>

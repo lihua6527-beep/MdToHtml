@@ -1,0 +1,272 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* 默认主题 (Ocean Blue fallback) */
+    --bg-page: 220 100% 97%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 214 100% 99%;
+    
+    --text-primary: 221 52% 8%;
+    --text-secondary: 215 19% 35%;
+    --text-muted: 215 20% 65%;
+    
+    --border-soft: 0 0% 91%;
+    --border-highlight: 212 96% 78%;
+    
+    --primary: 222 100% 59%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 213 100% 94%;
+    --accent: 213 85% 97%;
+    
+    --ring: 213 82% 85%;
+    
+    --chart-1: 214 100% 75%;
+    --chart-2: 220 100% 63%;
+    --chart-3: 158 62% 63%;
+    --chart-4: 200 97% 75%;
+    --chart-5: 221 100% 73%;
+
+    --sidebar-background: 220 100% 99%;
+    --sidebar-foreground: 0 0% 13%;
+    --sidebar-primary: 0 0% 13%;
+    --sidebar-primary-foreground: 0 0% 96%;
+    --sidebar-accent: 0 0% 93%;
+    --sidebar-accent-foreground: 0 0% 13%;
+    --sidebar-border: 0 0% 91%;
+    --sidebar-ring: 0 0% 82%;
+
+    --radius-card: 0.75rem;
+    --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --font-heading: ui-sans-serif, system-ui, sans-serif;
+    --font-body: ui-sans-serif, system-ui, sans-serif;
+
+    /* Shadcn defaults */
+    --background: 0 0% 100%;
+    --foreground: 221 52% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 221 52% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 221 52% 8%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 213 100% 94%;
+    --muted-foreground: 215 16% 47%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 91%;
+    --input: 0 0% 91%;
+    --radius: 0.5rem;
+  }
+
+  /* Theme 1: Ocean Blue (Ocean Professional) */
+  [data-theme="ocean"] {
+    --bg-page: 220 100% 97%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 214 100% 99%;
+    --text-primary: 221 52% 8%;
+    --text-secondary: 215 19% 35%;
+    --text-muted: 215 20% 65%;
+    --primary: 222 100% 59%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 213 100% 94%;
+    --accent: 213 85% 97%;
+    --border-soft: 0 0% 91%;
+    --border-highlight: 212 96% 78%;
+    --ring: 213 82% 85%;
+    
+    --chart-1: 214 100% 75%;
+    --chart-2: 220 100% 63%;
+    --chart-3: 158 62% 63%;
+    --chart-4: 200 97% 75%;
+    --chart-5: 221 100% 73%;
+
+    --sidebar-background: 220 100% 99%;
+    --sidebar-foreground: 0 0% 13%;
+    --sidebar-primary: 0 0% 13%;
+    --sidebar-primary-foreground: 0 0% 96%;
+    --sidebar-accent: 0 0% 93%;
+    --sidebar-accent-foreground: 0 0% 13%;
+    --sidebar-border: 0 0% 91%;
+    --sidebar-ring: 0 0% 82%;
+  }
+
+  /* Theme 2: Mint Fresh */
+  [data-theme="mint"] {
+    --bg-page: 166 76% 97%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 166 80% 99%;
+    --text-primary: 166 42% 12%;
+    --text-secondary: 166 25% 35%;
+    --text-muted: 166 20% 65%;
+    --primary: 166 80% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 166 60% 94%;
+    --accent: 166 50% 96%;
+    --border-soft: 166 20% 90%;
+    --border-highlight: 166 60% 80%;
+    --ring: 166 60% 80%;
+    
+    --chart-1: 166 70% 70%;
+    --chart-2: 150 60% 65%;
+    --chart-3: 180 60% 65%;
+    --chart-4: 140 60% 70%;
+    --chart-5: 160 60% 75%;
+
+    --sidebar-background: 166 76% 98%;
+    --sidebar-foreground: 166 42% 15%;
+    --sidebar-primary: 166 80% 40%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 166 30% 94%;
+    --sidebar-accent-foreground: 166 42% 15%;
+    --sidebar-border: 166 20% 90%;
+    --sidebar-ring: 166 60% 80%;
+  }
+
+  /* Theme 3: Violet Dream */
+  [data-theme="violet"] {
+    --bg-page: 265 80% 98%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 265 80% 99%;
+    --text-primary: 265 42% 12%;
+    --text-secondary: 265 25% 35%;
+    --text-muted: 265 20% 65%;
+    --primary: 265 80% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 265 60% 96%;
+    --accent: 265 50% 97%;
+    --border-soft: 265 20% 92%;
+    --border-highlight: 265 60% 85%;
+    --ring: 265 60% 85%;
+    
+    --chart-1: 265 70% 75%;
+    --chart-2: 280 60% 70%;
+    --chart-3: 250 60% 70%;
+    --chart-4: 300 60% 75%;
+    --chart-5: 260 60% 80%;
+
+    --sidebar-background: 265 80% 99%;
+    --sidebar-foreground: 265 42% 15%;
+    --sidebar-primary: 265 80% 60%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 265 30% 96%;
+    --sidebar-accent-foreground: 265 42% 15%;
+    --sidebar-border: 265 20% 92%;
+    --sidebar-ring: 265 60% 85%;
+  }
+
+  /* Theme 4: Sunset Orange */
+  [data-theme="sunset"] {
+    --bg-page: 25 100% 98%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 30 100% 99%;
+    --text-primary: 20 42% 12%;
+    --text-secondary: 20 25% 35%;
+    --text-muted: 20 20% 65%;
+    --primary: 25 90% 55%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 25 60% 96%;
+    --accent: 25 50% 97%;
+    --border-soft: 25 20% 92%;
+    --border-highlight: 25 60% 85%;
+    --ring: 25 60% 85%;
+    
+    --chart-1: 25 80% 70%;
+    --chart-2: 40 70% 65%;
+    --chart-3: 10 70% 70%;
+    --chart-4: 35 70% 75%;
+    --chart-5: 20 70% 75%;
+
+    --sidebar-background: 25 100% 99%;
+    --sidebar-foreground: 20 42% 15%;
+    --sidebar-primary: 25 90% 55%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 25 30% 96%;
+    --sidebar-accent-foreground: 20 42% 15%;
+    --sidebar-border: 25 20% 92%;
+    --sidebar-ring: 25 60% 85%;
+  }
+
+  /* Theme 5: Slate Dark (Dark Mode Support) */
+  [data-theme="slate"] {
+    --bg-page: 220 20% 14%; /* Slate-900 like */
+    --bg-card: 220 20% 18%; /* Slate-800 like */
+    --bg-card-highlight: 220 20% 20%;
+    --text-primary: 220 20% 98%;
+    --text-secondary: 220 20% 80%;
+    --text-muted: 220 20% 60%;
+    --primary: 220 90% 60%; /* Blue-500 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 20% 25%;
+    --accent: 220 20% 30%;
+    --border-soft: 220 20% 25%;
+    --border-highlight: 220 20% 35%;
+    --ring: 220 60% 60%;
+    
+    --chart-1: 220 70% 60%;
+    --chart-2: 200 60% 55%;
+    --chart-3: 240 60% 65%;
+    --chart-4: 210 60% 60%;
+    --chart-5: 230 60% 65%;
+
+    --sidebar-background: 220 20% 16%;
+    --sidebar-foreground: 220 20% 90%;
+    --sidebar-primary: 220 90% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 20% 25%;
+    --sidebar-accent-foreground: 220 20% 90%;
+    --sidebar-border: 220 20% 25%;
+    --sidebar-ring: 220 60% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Card Shape Utilities */
+  .shape-cut {
+    clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0% 100%, 0% 20px);
+  }
+  
+  .shape-arrow {
+    clip-path: polygon(0% 0%, 85% 0%, 100% 50%, 85% 100%, 0% 100%, 15% 50%);
+  }
+  
+  .shape-circle {
+    clip-path: circle(50% at 50% 50%);
+  }
+
+  .shape-round {
+    clip-path: circle(50% at 50% 50%);
+  }
+  
+  .shape-pill {
+    clip-path: inset(0% 0% 0% 0% round 9999px);
+  }
+
+  .shape-leaf {
+    clip-path: inset(0% 0% 0% 0% round 50% 0% 50% 0%);
+  }
+
+  .shape-diamond {
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  }
+
+  .shape-hexagon {
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  }
+
+  .shape-message {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 75%, 75% 75%, 75% 100%, 50% 75%, 0% 75%);
+  }
+}

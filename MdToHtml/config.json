@@ -1,0 +1,13 @@
+{
+  "autoSave": true,
+  "theme": "light",
+  "capacityLimit": 50,
+  "paths": {
+    "input": "",
+    "output": ""
+  },
+  "system": {},
+  "exportOptions": {
+    "emitJson": true
+  }
+}

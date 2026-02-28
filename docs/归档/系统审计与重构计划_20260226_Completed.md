@@ -1,0 +1,93 @@
+# 系统审计与重构计划书
+
+**日期**: 2026-02-26
+**分支**: `refactor/audit-system`
+**作者**: AI Assistant
+
+## 1. 系统技术栈现状分析
+
+通过对 `package.json` 和源代码的审计，当前系统采用以下技术栈：
+
+- **核心框架**: Next.js 14.1.0 (React 18)
+- **桌面端封装**: Electron (支持 Windows/Portable 打包)
+- **UI 组件库**: Radix UI (Headless), Tailwind CSS (Styling), Lucide React (Icons)
+- **编辑器核心**: 
+  - 依赖库: `@uiw/react-codemirror`, `react-markdown`, `rehype-katex`
+  - 实现方式: 混合使用了 CodeMirror 和原生 Textarea (`MarkdownEditor.tsx` 目前主要基于 Textarea 实现了一套轻量级编辑器逻辑)
+- **工具库**: `fs-extra` (文件操作), `gray-matter` (Frontmatter 解析), `concurrently` (开发并行运行)
+
+## 2. 敏捷开发带来的潜在隐患分析
+
+在快速迭代的敏捷开发过程中，我们发现以下潜在风险：
+
+1.  **组件臃肿 ("God Component" 现象)**:
+    - 核心业务逻辑往往堆积在单个文件中，导致文件行数过长，阅读和维护困难。
+    - **典型案例**: `src/components/Editor/MarkdownEditor.tsx` 包含了大量的静态数据（演示文稿）、业务逻辑（拖拽、自动保存）、UI 渲染和事件处理，耦合度极高。
+
+2.  **硬编码与配置分散**:
+    - 许多配置项（如默认文档内容、菜单项定义）直接硬编码在组件内部，修改这些配置需要改动组件代码，违反了"开闭原则"。
+
+3.  **类型定义不规范**:
+    - 部分组件内部定义了接口，未抽离到统一的 `types` 目录，导致类型复用困难。
+
+4.  **文档滞后**:
+    - 随着功能快速增加，部分架构设计文档可能未及时更新，导致新加入的开发者（或 AI）难以快速理解系统全貌。
+
+## 3. 重点重构方案：编辑器代码拆分
+
+针对 `src/components/Editor/MarkdownEditor.tsx` 文件过长且过度耦合的问题，制定以下拆分方案：
+
+### 3.1 问题诊断
+该文件目前约 500+ 行，其中：
+- **静态数据**: `EXAMPLE_CONTENT` 和 `INITIAL_CONTENT` 占据了约 250 行（占比 50%）。
+- **配置数据**: Slash 命令菜单的 `components` 数组硬编码在组件内。
+- **业务逻辑**: 包含自动保存、拖拽、滚动同步等逻辑。
+
+### 3.2 拆分策略 (不影响功能)
+我们将采用 **"关注点分离" (Separation of Concerns)** 的原则进行重构：
+
+1.  **数据层抽离** (Phase 1 - 已完成):
+    - 创建 `src/data/editor-defaults.ts`: 存放 `EXAMPLE_CONTENT`, `INITIAL_CONTENT`。
+    - 创建 `src/config/editor-menu.ts`: 存放 Slash 菜单的配置项 (`components` 数组)。
+
+2.  **逻辑层抽离** (Phase 2 - 进行中):
+    - **拖拽逻辑**: 抽离为 `src/hooks/editor/useEditorDragDrop.ts`。
+      - 职责: 处理 `onDragOver`, `onDragLeave`, `onDrop` 事件，管理 `isDragging` 状态。
+    - **文件 IO 逻辑**: 抽离为 `src/hooks/editor/useEditorIO.ts`。
+      - 职责: 处理 `handleLoad`, `handleSave` 以及 `filePath` 状态管理。
+    - **滚动同步逻辑**: 抽离为 `src/hooks/editor/useEditorScroll.ts`。
+      - 职责: 处理 `scrollToLine` 和滚动事件传播。
+
+### 3.3 预期收益
+- **文件瘦身**: 预计减少 `MarkdownEditor.tsx` 代码量 60% 以上。
+- **可维护性**: 修改默认文档内容或菜单项无需触碰编辑器核心逻辑。
+- **可复用性**: 拖拽和文件操作逻辑可在其他编辑器组件复用。
+- **工程化**: 建立更清晰的 `data/`, `config/`, `hooks/editor/` 目录结构。
+
+## 4. 执行计划
+
+### Phase 1: 数据与配置分离 (Completed)
+1.  [x] 创建 `src/data` 和 `src/config` 目录。
+2.  [x] 移动静态常量到新文件。
+3.  [x] 在 `MarkdownEditor.tsx` 中引入新文件。
+4.  [x] 验证编辑器加载默认内容和 Slash 菜单功能是否正常。
+
+### Phase 2: 逻辑层原子化重构 (Completed)
+76.  [x] 创建 `src/hooks/editor` 目录。
+77.  [x] 抽离 `useEditorDragDrop` Hook。
+78.  [x] 抽离 `useEditorIO` Hook。
+79.  [x] 更新 `MarkdownEditor.tsx` 整合 Hooks。
+80.  [x] 启动预览验证全流程功能。
+
+### Phase 3: 交互层重构与渲染修复 (Completed)
+81.  [x] **渲染修复**: 修复 `attributeParser.ts` 对中文大括号 `｛｝` 的支持，解决标题属性渲染问题。
+82.  [x] **逻辑抽离**: 针对 `InteractivePost.tsx` 进行重构。
+     - 抽离 `useCHDSelection` (选择状态管理)。
+     - 抽离 `useScoring` (实时评分逻辑)。
+     - 抽离 `useVisitHistory` (访问记录逻辑)。
+83.  [x] **类型标准化**: 创建 `src/types/chd.ts` 统一 CHD 协议相关类型。
+### Phase 4: 渲染引擎与交互修复 (New - Completed)
+85. [x] **属性泄漏修复**: 在 `Section.tsx` 增加强制正则清洗，解决标题显示 `{key=value}` 问题。
+86. [x] **分割线逻辑重构**: 将分割线渲染上移至 `CHDRenderer`，实现“每两个分区之间显示”的正确逻辑。
+87. [x] **交互闭环**: 修复手动保存后无法自动退出编辑模式的问题。
+88. [x] **编译修复**: 修复 `editor/page.tsx` 缺少的依赖导入。
