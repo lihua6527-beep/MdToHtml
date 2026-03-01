@@ -126,8 +126,8 @@
     --sidebar-ring: 166 60% 80%;
   }
 
-  /* Theme 3: Violet Dream */
-  [data-theme="violet"] {
+  /* Theme 3: Lavender Dream */
+  [data-theme="lavender"] {
     --bg-page: 265 80% 98%;
     --bg-card: 0 0% 100%;
     --bg-card-highlight: 265 80% 99%;
@@ -158,68 +158,68 @@
     --sidebar-ring: 265 60% 85%;
   }
 
-  /* Theme 4: Sunset Orange */
-  [data-theme="sunset"] {
-    --bg-page: 25 100% 98%;
+  /* Theme 4: Earth Organic */
+  [data-theme="earth"] {
+    --bg-page: 140 20% 98%;
     --bg-card: 0 0% 100%;
-    --bg-card-highlight: 30 100% 99%;
-    --text-primary: 20 42% 12%;
-    --text-secondary: 20 25% 35%;
-    --text-muted: 20 20% 65%;
-    --primary: 25 90% 55%;
+    --bg-card-highlight: 140 20% 99%;
+    --text-primary: 140 42% 12%;
+    --text-secondary: 140 25% 35%;
+    --text-muted: 140 20% 65%;
+    --primary: 140 80% 40%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 25 60% 96%;
-    --accent: 25 50% 97%;
-    --border-soft: 25 20% 92%;
-    --border-highlight: 25 60% 85%;
-    --ring: 25 60% 85%;
+    --secondary: 140 60% 94%;
+    --accent: 140 50% 96%;
+    --border-soft: 140 20% 90%;
+    --border-highlight: 140 60% 80%;
+    --ring: 140 60% 80%;
     
-    --chart-1: 25 80% 70%;
-    --chart-2: 40 70% 65%;
-    --chart-3: 10 70% 70%;
-    --chart-4: 35 70% 75%;
-    --chart-5: 20 70% 75%;
+    --chart-1: 140 70% 70%;
+    --chart-2: 120 60% 65%;
+    --chart-3: 160 60% 65%;
+    --chart-4: 100 60% 70%;
+    --chart-5: 140 60% 75%;
 
-    --sidebar-background: 25 100% 99%;
-    --sidebar-foreground: 20 42% 15%;
-    --sidebar-primary: 25 90% 55%;
+    --sidebar-background: 140 20% 99%;
+    --sidebar-foreground: 140 42% 15%;
+    --sidebar-primary: 140 80% 40%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 25 30% 96%;
-    --sidebar-accent-foreground: 20 42% 15%;
-    --sidebar-border: 25 20% 92%;
-    --sidebar-ring: 25 60% 85%;
+    --sidebar-accent: 140 30% 94%;
+    --sidebar-accent-foreground: 140 42% 15%;
+    --sidebar-border: 140 20% 90%;
+    --sidebar-ring: 140 60% 80%;
   }
 
-  /* Theme 5: Slate Dark (Dark Mode Support) */
-  [data-theme="slate"] {
-    --bg-page: 220 20% 14%; /* Slate-900 like */
-    --bg-card: 220 20% 18%; /* Slate-800 like */
-    --bg-card-highlight: 220 20% 20%;
-    --text-primary: 220 20% 98%;
-    --text-secondary: 220 20% 80%;
-    --text-muted: 220 20% 60%;
-    --primary: 220 90% 60%; /* Blue-500 */
+  /* Theme 5: Caramel Vintage */
+  [data-theme="caramel"] {
+    --bg-page: 30 20% 98%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 30 20% 99%;
+    --text-primary: 30 42% 12%;
+    --text-secondary: 30 25% 35%;
+    --text-muted: 30 20% 65%;
+    --primary: 30 60% 35%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 220 20% 25%;
-    --accent: 220 20% 30%;
-    --border-soft: 220 20% 25%;
-    --border-highlight: 220 20% 35%;
-    --ring: 220 60% 60%;
+    --secondary: 30 40% 94%;
+    --accent: 30 30% 96%;
+    --border-soft: 30 20% 90%;
+    --border-highlight: 30 40% 80%;
+    --ring: 30 40% 80%;
     
-    --chart-1: 220 70% 60%;
-    --chart-2: 200 60% 55%;
-    --chart-3: 240 60% 65%;
-    --chart-4: 210 60% 60%;
-    --chart-5: 230 60% 65%;
+    --chart-1: 30 50% 70%;
+    --chart-2: 45 60% 65%;
+    --chart-3: 15 50% 70%;
+    --chart-4: 60 50% 75%;
+    --chart-5: 30 50% 75%;
 
-    --sidebar-background: 220 20% 16%;
-    --sidebar-foreground: 220 20% 90%;
-    --sidebar-primary: 220 90% 60%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 20% 25%;
-    --sidebar-accent-foreground: 220 20% 90%;
-    --sidebar-border: 220 20% 25%;
-    --sidebar-ring: 220 60% 60%;
+    --sidebar-background: 30 20% 99%;
+    --sidebar-foreground: 30 42% 15%;
+    --sidebar-primary: 30 60% 35%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 30 30% 94%;
+    --sidebar-accent-foreground: 30 42% 15%;
+    --sidebar-border: 30 20% 90%;
+    --sidebar-ring: 30 40% 80%;
   }
 }
 
