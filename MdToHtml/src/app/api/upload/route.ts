@@ -76,8 +76,7 @@ export async function POST(request: Request) {
     const response: ApiResponse = {
       success: false,
       error: 'Upload failed',
-      message: error.message,
-      details: String(error)
+      message: error.message
     };
     return NextResponse.json(response, { status: 500 });
   }

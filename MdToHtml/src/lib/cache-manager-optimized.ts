@@ -17,7 +17,11 @@ export class OptimizedMetadataCacheManager {
   private currentBaseDir: string;
   private lastScanTime: number;
   private scanInterval: number = 30000; // 30 seconds
+  private minScanInterval: number = 10000; // 10 seconds
+  private maxScanInterval: number = 60000; // 60 seconds
   private isScanning: boolean = false;
+  private isPreloading: boolean = false;
+  private hotFiles: Set<string> = new Set();
 
   private constructor() {
     this.currentBaseDir = PathManager.getInputPath();
@@ -36,10 +40,61 @@ export class OptimizedMetadataCacheManager {
     this.entryMap = new Map();
 
     this.loadCache();
+    // Load hot files from visit history
+    this.loadHotFiles();
     // Perform initial scan
     this.scanAndSync();
+    // Start cache preloading
+    this.preloadCache();
     // Start periodic scan
     this.startPeriodicScan();
+  }
+
+  /**
+   * Load hot files from visit history
+   */
+  private loadHotFiles() {
+    try {
+      const visitHistory = localStorage.getItem('visited_docs');
+      if (visitHistory) {
+        const history = JSON.parse(visitHistory) as Record<string, number>;
+        // Get top 10 most visited files
+        const sorted = Object.entries(history)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10);
+        sorted.forEach(([slug]) => {
+          this.hotFiles.add(slug);
+        });
+      }
+    } catch (e) {
+      console.warn('[OptimizedCacheManager] Failed to load hot files:', e);
+    }
+  }
+
+  /**
+   * Preload cache with hot files
+   */
+  private preloadCache() {
+    if (this.isPreloading) return;
+    
+    this.isPreloading = true;
+    setTimeout(() => {
+      try {
+        const hotFilesArray = Array.from(this.hotFiles);
+        if (hotFilesArray.length > 0) {
+          console.log(`[OptimizedCacheManager] Preloading ${hotFilesArray.length} hot files`);
+          
+          // Batch preload
+          hotFilesArray.forEach(slug => {
+            this.getPost(slug);
+          });
+        }
+      } catch (e) {
+        console.warn('[OptimizedCacheManager] Failed to preload cache:', e);
+      } finally {
+        this.isPreloading = false;
+      }
+    }, 1000);
   }
 
   public static getInstance(): OptimizedMetadataCacheManager {
@@ -53,11 +108,41 @@ export class OptimizedMetadataCacheManager {
    * Start periodic cache synchronization
    */
   private startPeriodicScan() {
-    setInterval(() => {
+    const runScan = () => {
       if (!this.isScanning) {
         this.scanAndSync();
       }
-    }, this.scanInterval);
+      // Adjust scan interval based on system activity
+      setTimeout(runScan, this.scanInterval);
+    };
+    runScan();
+  }
+
+  /**
+   * Adjust scan interval based on file count and system activity
+   */
+  private adjustScanInterval(fileCount: number, hasChanges: boolean) {
+    // Base interval adjustment based on file count
+    let newInterval = this.scanInterval;
+    
+    if (fileCount < 10) {
+      // Fewer files, can scan less frequently
+      newInterval = Math.min(this.maxScanInterval, this.scanInterval * 1.5);
+    } else if (fileCount > 100) {
+      // More files, need to scan more frequently
+      newInterval = Math.max(this.minScanInterval, this.scanInterval * 0.7);
+    }
+    
+    // If there are changes, scan more frequently
+    if (hasChanges) {
+      newInterval = Math.max(this.minScanInterval, newInterval * 0.8);
+    }
+    
+    // Update interval if changed
+    if (Math.abs(newInterval - this.scanInterval) > 5000) {
+      this.scanInterval = newInterval;
+      console.log(`[OptimizedCacheManager] Adjusted scan interval to ${this.scanInterval}ms`);
+    }
   }
 
   public reload() {
@@ -225,6 +310,9 @@ export class OptimizedMetadataCacheManager {
           keep.forEach(e => this.entryMap.set(e.path, e));
           hasChanges = true;
         }
+
+        // 5. Adjust scan interval based on file count and changes
+        this.adjustScanInterval(mdFiles.length, hasChanges);
 
         if (hasChanges) {
           this.saveCache();

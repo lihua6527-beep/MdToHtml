@@ -5,15 +5,32 @@ import { TrashService } from '@/services/TrashService';
 import { ConfigService } from '@/services/ConfigService';
 import { QUERY_KEYS } from '@/constants/query-keys';
 
+// Cache configuration
+const SWR_CONFIG = {
+  // 缓存时间：5分钟
+  dedupingInterval: 5 * 60 * 1000,
+  // 聚焦时不自动重验证，减少不必要的请求
+  revalidateOnFocus: false,
+  // 网络恢复时不自动重验证
+  revalidateOnReconnect: false,
+  // 保持之前的数据，提升用户体验
+  keepPreviousData: true,
+  // 错误重试次数
+  errorRetryCount: 3,
+  // 错误重试间隔
+  errorRetryInterval: 1000
+};
+
 // Hook for files list
 export function useFiles(fallbackData?: FileItem[]) {
   const { data, error, isLoading, mutate: refresh } = useSWR<FileItem[]>(
     QUERY_KEYS.FILES, 
     () => FileService.getAllFiles(),
     {
+      ...SWR_CONFIG,
       fallbackData,
-      // Keep previous data while revalidating for smoother UX
-      keepPreviousData: true
+      // 文件列表使用更长的缓存时间
+      dedupingInterval: 10 * 60 * 1000
     }
   );
   
@@ -31,7 +48,9 @@ export function useCapacity() {
     QUERY_KEYS.CAPACITY, 
     () => ConfigService.getCapacity(),
     {
-      refreshInterval: 30000 // Poll every 30s
+      ...SWR_CONFIG,
+      // 容量统计需要定期更新
+      refreshInterval: 60000 // Poll every 60s
     }
   );
   
@@ -47,7 +66,12 @@ export function useCapacity() {
 export function useTrash() {
   const { data, error, isLoading } = useSWR<TrashItem[]>(
     QUERY_KEYS.TRASH_FILES, 
-    () => TrashService.getTrashFiles()
+    () => TrashService.getTrashFiles(),
+    {
+      ...SWR_CONFIG,
+      // 回收站使用中等缓存时间
+      dedupingInterval: 8 * 60 * 1000
+    }
   );
   
   return {

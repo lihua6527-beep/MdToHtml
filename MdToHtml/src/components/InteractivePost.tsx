@@ -58,11 +58,9 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
   // Wrapper for content updates to ensure auto-save works even in View Mode
   const handleContentUpdate = useCallback((newContent: string) => {
     setContent(newContent);
-    // If not in edit mode (e.g. status toggle, drag & drop), trigger save immediately
-    if (!isEditing) {
-        triggerSaveRef.current?.(newContent);
-    }
-  }, [setContent, isEditing]);
+    // Trigger save for all content updates, including in edit mode
+    triggerSaveRef.current?.(newContent);
+  }, [setContent]);
 
   // Note: We use useHistory's undo, so we ignore the ones from useMarkdownInteraction
   const { updateAttribute, updateContent, updateTitle, updateFrontmatter, moveCard, deleteCard, addCard, operationLog, batchUpdateAttributes } = useMarkdownInteraction(content, handleContentUpdate);
@@ -100,23 +98,70 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
   // Parse Frontmatter for Global Settings
   const frontmatter = useMemo(() => {
     try {
+        // First, try to parse normally
         const { data } = matter(content);
         return data || {};
     } catch (e) {
-        console.warn('Frontmatter parsing failed', e);
-        return {};
+        console.warn('Frontmatter parsing failed, attempting to clean up duplicate keys', e);
+        // If parsing fails due to duplicate keys, clean up the content
+        try {
+            const lines = content.split('\n');
+            let inFrontmatter = false;
+            let frontmatterEnd = -1;
+            const frontmatterLines: string[] = [];
+            const contentLines: string[] = [];
+            const seenKeys = new Set<string>();
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                
+                if (line.trim() === '---') {
+                    if (!inFrontmatter) {
+                        inFrontmatter = true;
+                        frontmatterLines.push(line);
+                    } else {
+                        frontmatterEnd = i;
+                        frontmatterLines.push(line);
+                        inFrontmatter = false;
+                    }
+                } else if (inFrontmatter) {
+                    const match = line.trim().match(/^([a-zA-Z0-9_-]+):\s*(.*)$/);
+                    if (match) {
+                        const key = match[1];
+                        if (!seenKeys.has(key)) {
+                            seenKeys.add(key);
+                            frontmatterLines.push(line);
+                        }
+                    } else {
+                        frontmatterLines.push(line);
+                    }
+                } else {
+                    contentLines.push(line);
+                }
+            }
+            
+            // Reassemble the content with cleaned frontmatter
+            const cleanedContent = [...frontmatterLines, ...contentLines].join('\n');
+            const { data } = matter(cleanedContent);
+            return data || {};
+        } catch (e2) {
+            console.warn('Failed to clean up frontmatter', e2);
+            return {};
+        }
     }
   }, [content]);
 
   // Get document type from frontmatter
-  const documentType = frontmatter.type || 'project';
+  const documentType = useMemo(() => {
+    return frontmatter.type || 'project';
+  }, [frontmatter]);
 
   // Type to label mapping
   const typeLabels: Record<string, string> = {
     project: '项目',
     paper: '论文',
-    knowledge: '知识分享',
-    other: '其他文档'
+    knowledge: '知识',
+    other: '其他'
   };
 
   // Type to color mapping
@@ -285,11 +330,12 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
   };
 
   const handleTypeChange = (newType: string) => {
-      // Update frontmatter with new type
+      // 1. 立即更新UI状态（乐观更新）
       updateFrontmatter({
           type: newType
       });
-      // Close dropdown
+      
+      // 2. 关闭下拉菜单
       setShowTypeDropdown(false);
   };
 
@@ -346,24 +392,31 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
               </Button>
 
               {/* Document Type Label with Dropdown */}
-              <div className="relative">
+              <div className="relative z-50">
                   <button 
-                      onClick={() => setShowTypeDropdown(!showTypeDropdown)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${typeColors[documentType] || typeColors.project} transition-all hover:shadow-md`}
+                      onClick={(e) => {
+                          e.stopPropagation();
+                          setShowTypeDropdown(!showTypeDropdown);
+                      }}
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${typeColors[documentType] || typeColors.project} transition-all hover:shadow-md flex items-center gap-1`}
                       title="点击修改文档类型"
                   >
                       {typeLabels[documentType] || typeLabels.project}
+                      <span className={`ml-1 transition-transform ${showTypeDropdown ? 'rotate-180' : ''}`}>▼</span>
                   </button>
                   {showTypeDropdown && (
-                      <div className="absolute top-full left-0 mt-2 w-32 bg-bg-card border border-border-soft rounded-lg shadow-xl p-1 z-50 animate-in fade-in slide-in-from-top-2">
+                      <div className="absolute top-full left-0 mt-2 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-1 z-500 animate-in fade-in slide-in-from-top-2">
                           {Object.entries(typeLabels).map(([type, label]) => (
                               <button
                                   key={type}
-                                  onClick={() => handleTypeChange(type)}
+                                  onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleTypeChange(type);
+                                  }}
                                   className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2 ${
                                       documentType === type 
                                           ? `bg-primary/10 text-primary ${typeColors[type] || typeColors.project}` 
-                                          : 'hover:bg-bg-page text-text-primary'
+                                          : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-text-primary'
                                   }`}
                               >
                                   <div className={`w-2 h-2 rounded-full ${typeColors[type] || typeColors.project}`} />
@@ -781,4 +834,4 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
   );
 };
 
-export default InteractivePost;
+export default React.memo(InteractivePost);

@@ -1,5 +1,6 @@
 import { useCallback, useState, useEffect } from 'react';
 import { parseCHDBlocks, CHDBlock } from '@/lib/chdParser';
+import matter from 'gray-matter';
 
 export interface OperationLogEntry {
   type: string;
@@ -158,31 +159,113 @@ export function useMarkdownInteraction(
         newFm.push('---');
         newFm.push(''); // Empty line after
         
+        // Insert frontmatter at the beginning, but preserve the rest of the content
         lines = [...newFm, ...lines];
     } else {
-        // Update existing
+        // Update existing - first clean up any duplicate keys
         const fmLines = lines.slice(1, fmEnd);
+        const existingKeys = new Set<string>();
+        const cleanedFmLines: string[] = [];
         
+        // First pass: remove duplicate keys, keeping only the last occurrence
+        for (let i = fmLines.length - 1; i >= 0; i--) {
+            const line = fmLines[i].trim();
+            if (line) {
+                const match = line.match(/^([a-zA-Z0-9_-]+):\s*(.*)$/);
+                if (match) {
+                    const key = match[1];
+                    if (!existingKeys.has(key)) {
+                        existingKeys.add(key);
+                        cleanedFmLines.unshift(line);
+                    }
+                } else {
+                    // Keep non-key-value lines (comments, empty lines, etc.)
+                    cleanedFmLines.unshift(line);
+                }
+            } else {
+                // Keep empty lines
+                cleanedFmLines.unshift(line);
+            }
+        }
+        
+        // Now update or add new keys
         Object.entries(updatesMap).forEach(([key, val]) => {
             let found = false;
-            for (let i = 0; i < fmLines.length; i++) {
-                const match = fmLines[i].match(/^([a-zA-Z0-9_-]+):\s*(.*)$/);
+            for (let i = 0; i < cleanedFmLines.length; i++) {
+                const line = cleanedFmLines[i].trim();
+                const match = line.match(/^([a-zA-Z0-9_-]+):\s*(.*)$/);
                 if (match && match[1] === key) {
-                    fmLines[i] = `${key}: ${val}`;
+                    cleanedFmLines[i] = `${key}: ${val}`;
                     found = true;
                     break;
                 }
             }
             if (!found) {
-                fmLines.push(`${key}: ${val}`);
+                cleanedFmLines.push(`${key}: ${val}`);
             }
         });
         
         // Reassemble
-        lines = [lines[0], ...fmLines, ...lines.slice(fmEnd)];
+        lines = [lines[0], ...cleanedFmLines, ...lines.slice(fmEnd)];
     }
 
-    handleUpdate(lines.join('\n'));
+    // Ensure the frontmatter is properly formatted
+    const updatedContent = lines.join('\n');
+    
+    // Validate the updated content to prevent breaking changes
+    try {
+        // Try to parse the updated content to ensure it's valid
+        const { data } = matter(updatedContent);
+        // If parsing succeeds, update the content
+        handleUpdate(updatedContent);
+    } catch (e) {
+        console.warn('Frontmatter update failed, trying to clean up and retry:', e);
+        // If parsing fails, try to clean up the content and retry
+        try {
+            const lines = updatedContent.split('\n');
+            let inFrontmatter = false;
+            const frontmatterLines: string[] = [];
+            const contentLines: string[] = [];
+            const seenKeys = new Set<string>();
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                
+                if (line.trim() === '---') {
+                    if (!inFrontmatter) {
+                        inFrontmatter = true;
+                        frontmatterLines.push(line);
+                    } else {
+                        frontmatterLines.push(line);
+                        inFrontmatter = false;
+                    }
+                } else if (inFrontmatter) {
+                    const match = line.trim().match(/^([a-zA-Z0-9_-]+):\s*(.*)$/);
+                    if (match) {
+                        const key = match[1];
+                        if (!seenKeys.has(key)) {
+                            seenKeys.add(key);
+                            frontmatterLines.push(line);
+                        }
+                    } else {
+                        frontmatterLines.push(line);
+                    }
+                } else {
+                    contentLines.push(line);
+                }
+            }
+            
+            // Reassemble the content with cleaned frontmatter
+            const cleanedContent = [...frontmatterLines, ...contentLines].join('\n');
+            // Try to parse again
+            const { data } = matter(cleanedContent);
+            // If parsing succeeds, update the content
+            handleUpdate(cleanedContent);
+        } catch (e2) {
+            console.warn('Failed to clean up frontmatter, reverting changes:', e2);
+            // If cleanup also fails, don't update the content
+        }
+    }
   }, [markdown, handleUpdate, logOperation]);
 
   const updateAttribute = useCallback((blockIndex: number, key: string, value: any) => {

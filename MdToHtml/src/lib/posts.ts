@@ -58,7 +58,51 @@ export function getPostBySlug(slug: string) {
      throw new Error(`File not found: ${realSlug}`);
   }
 
-  const fileContents = fs.readFileSync(path.join(postsDirectory, matchedFilename), 'utf8');
+  let fileContents = fs.readFileSync(path.join(postsDirectory, matchedFilename), 'utf8');
+
+  // Clean up duplicate keys in frontmatter to prevent parsing errors
+  try {
+      const lines = fileContents.split('\n');
+      let inFrontmatter = false;
+      let frontmatterEnd = -1;
+      const frontmatterLines: string[] = [];
+      const contentLines: string[] = [];
+      const seenKeys = new Set<string>();
+      
+      for (let i = 0; i < lines.length; i++) {
+          const line = lines[i];
+          
+          if (line.trim() === '---') {
+              if (!inFrontmatter) {
+                  inFrontmatter = true;
+                  frontmatterLines.push(line);
+              } else {
+                  frontmatterEnd = i;
+                  frontmatterLines.push(line);
+                  inFrontmatter = false;
+              }
+          } else if (inFrontmatter) {
+              const match = line.trim().match(/^([a-zA-Z0-9_-]+):\s*(.*)$/);
+              if (match) {
+                  const key = match[1];
+                  if (!seenKeys.has(key)) {
+                      seenKeys.add(key);
+                      frontmatterLines.push(line);
+                  }
+              } else {
+                  frontmatterLines.push(line);
+              }
+          } else {
+              contentLines.push(line);
+          }
+      }
+      
+      // Reassemble the content with cleaned frontmatter
+      fileContents = [...frontmatterLines, ...contentLines].join('\n');
+  } catch (e) {
+      console.warn('Failed to clean up frontmatter:', e);
+      // If cleanup fails, use the original content
+  }
 
   // Read History Count for Scoring
   try {
@@ -85,6 +129,7 @@ export function getAllPosts(): FileItem[] {
     status: entry.status,
     title: entry.title,
     tags: entry.tags,
+    type: entry.type,
     excerpt: entry.excerpt
   }));
 }

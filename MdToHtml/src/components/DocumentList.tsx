@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { FileText, ChevronRight, Layout, PenTool, Clock, AlertCircle, CheckCircle2, Settings, Trash2, CheckSquare, Square, Eye, X, ArrowUpDown, Calendar, Monitor, Maximize2, Minimize2, Database } from 'lucide-react';
@@ -25,7 +25,7 @@ interface DocumentListProps {
   className?: string;
 }
 
-export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpenSettings, className }) => {
+const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOpenSettings, className }) => {
   const router = useRouter();
   const { toast } = useToast();
   const { error, isErrorVisible, handleError, clearError } = useErrorHandler();
@@ -65,13 +65,13 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
     };
   }, [router, refresh]);
 
-  useEffect(() => {
-    // Client-side sorting
+  // Client-side sorting with useMemo
+  const sortedPosts = useMemo(() => {
     try {
         const visitedStr = localStorage.getItem('visited_docs');
         const visitedMap: Record<string, number> = visitedStr ? JSON.parse(visitedStr) : {};
 
-        const sorted = [...(rawFiles || [])].sort((a, b) => {
+        return [...(rawFiles || [])].sort((a, b) => {
             if (sortMethod === 'visited') {
                 const timeA = visitedMap[a.slug] || 0;
                 const timeB = visitedMap[b.slug] || 0;
@@ -87,12 +87,15 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
                 return b.mtime - a.mtime;
             }
         });
-
-        setPosts(sorted);
     } catch (e) {
         console.error('Failed to sort posts', e);
+        return rawFiles || [];
     }
   }, [rawFiles, sortMethod]);
+
+  useEffect(() => {
+    setPosts(sortedPosts);
+  }, [sortedPosts]);
 
   useEffect(() => {
     if (!showSettingsMenu) {
@@ -457,8 +460,8 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
                                  const typeLabels: Record<string, string> = {
                                    project: '项目',
                                    paper: '论文',
-                                   knowledge: '知识分享',
-                                   other: '其他文档'
+                                   knowledge: '知识',
+                                   other: '其他'
                                  };
                                  const typeColors: Record<string, string> = {
                                    project: 'bg-blue-100 text-blue-700',
@@ -511,8 +514,8 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
                          const typeLabels: Record<string, string> = {
                            project: '项目',
                            paper: '论文',
-                           knowledge: '知识分享',
-                           other: '其他文档'
+                           knowledge: '知识',
+                           other: '其他'
                          };
                          const typeColors: Record<string, string> = {
                            project: 'bg-blue-100 text-blue-700',
@@ -723,3 +726,5 @@ export const DocumentList: React.FC<DocumentListProps> = ({ initialPosts, onOpen
     </div>
   );
 };
+
+export const DocumentList = React.memo(DocumentListComponent);

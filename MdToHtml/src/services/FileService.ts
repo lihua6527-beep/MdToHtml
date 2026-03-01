@@ -5,6 +5,7 @@ import PermissionManager, { PermissionLevel } from './core/PermissionManager';
 import { FileItem, FileDeleteRequest, FileSaveRequest, FileSaveResponse } from '@/types/file-system';
 import { QUERY_KEYS } from '@/constants/query-keys';
 import { ErrorHandler } from './core/ErrorHandler';
+import matter from 'gray-matter';
 
 export class FileService {
   private static readonly BASE_URL = QUERY_KEYS.FILES;
@@ -263,6 +264,69 @@ export class FileService {
     } catch (error) {
       const appError = ErrorHandler.handleError(error);
       console.error('Failed to move file:', appError);
+      return false;
+    }
+  }
+
+  /**
+   * Update file type
+   * @param slug File slug
+   * @param type New file type
+   * @returns True if successful
+   */
+  static async updateFileType(slug: string, type: string): Promise<boolean> {
+    try {
+      console.log(`[FileService] Updating file type for ${slug} to ${type}`);
+      
+      // Check permission
+      try {
+        PermissionManager.requirePermission(PermissionLevel.WRITE);
+        console.log('[FileService] Permission check passed');
+      } catch (permError) {
+        console.error('[FileService] Permission error:', permError);
+        return false;
+      }
+      
+      // Get file content
+      const content = await this.getFileBySlug(slug);
+      console.log(`[FileService] Got file content: ${content ? 'success' : 'failed'}`);
+      
+      if (!content) {
+        console.error(`File not found: ${slug}`);
+        return false;
+      }
+      
+      // Update frontmatter
+      try {
+        const { data, content: body } = matter(content);
+        console.log('[FileService] Parsed frontmatter successfully');
+        
+        const updatedData = {
+          ...data,
+          type: type
+        };
+        
+        const updatedContent = matter.stringify(body, updatedData);
+        console.log('[FileService] Generated updated content');
+        
+        // Save file
+        const success = await this.saveFile(slug, updatedContent);
+        console.log(`[FileService] Save file result: ${success}`);
+        
+        if (success) {
+          // Refresh cache
+          mutate(QUERY_KEYS.FILES);
+          console.log('[FileService] Refreshed cache');
+        }
+        
+        return success;
+      } catch (parseError) {
+        console.error('[FileService] Frontmatter parsing error:', parseError);
+        return false;
+      }
+    } catch (error) {
+      const appError = ErrorHandler.handleError(error);
+      console.error('Failed to update file type:', appError);
       return false;
     }
   }
