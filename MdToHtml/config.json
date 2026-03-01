@@ -1,13 +1,17 @@
 {
   "autoSave": true,
   "theme": "light",
-  "capacityLimit": 50,
+  "capacityLimit": 100,
   "paths": {
     "input": "",
     "output": ""
   },
   "system": {},
   "exportOptions": {
-    "emitJson": true
+    "emitJson": false
+  },
+  "renderOptions": {
+    "showDivider": true,
+    "titleSpacing": "4"
   }
 }

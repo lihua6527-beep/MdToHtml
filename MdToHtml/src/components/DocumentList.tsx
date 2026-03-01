@@ -22,7 +22,7 @@ import SettingsMenu from '@/components/ui/SettingsMenu';
 
 interface DocumentListProps {
   initialPosts: FileItem[];
-  onOpenSettings?: () => void;
+  onOpenSettings?: (type: 'file' | 'render' | 'protocol') => void;
   className?: string;
 }
 
@@ -55,14 +55,16 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
 
   useEffect(() => {
     const handlePathsUpdated = () => {
+      console.log('Received app-paths-updated event, refreshing files and capacity');
       refresh();
+      refreshCapacity();
       router.refresh();
     };
     window.addEventListener('app-paths-updated', handlePathsUpdated);
     return () => {
       window.removeEventListener('app-paths-updated', handlePathsUpdated);
     };
-  }, [router, refresh]);
+  }, [router, refresh, refreshCapacity]);
 
   // Client-side sorting with useMemo
   const sortedPosts = useMemo(() => {
@@ -431,11 +433,7 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
            <SettingsMenu
              isVisible={showSettingsMenu}
              onClose={() => setShowSettingsMenu(false)}
-             onOpenFilePaths={() => onOpenSettings?.()}
-             capacityLimit={capacityLimit}
-             onUpdateCapacity={updateCapacity}
-             sortMethod={sortMethod}
-             onUpdateSortMethod={setSortMethod}
+             onOpenSettings={onOpenSettings}
            />
 
            <button 

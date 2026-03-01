@@ -76,8 +76,12 @@ export class ApiClient {
               console.error(`API Request failed: ${url}`, error);
               throw error;
             }
-            // If data is present, return it. Otherwise return the whole response or null depending on T
-            return apiResponse.data as T;
+            // If data is present, return it. Otherwise return the whole response
+            if ('data' in apiResponse && apiResponse.data !== undefined) {
+              return apiResponse.data as T;
+            } else {
+              return data as T;
+            }
           }
 
           // Fallback for non-standard responses

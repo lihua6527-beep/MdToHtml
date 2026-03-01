@@ -5,7 +5,7 @@ import { clsx } from 'clsx';
 import { Settings, Upload, FileText } from 'lucide-react';
 import { mutate } from 'swr';
 import { DocumentList } from './DocumentList';
-import { PathSettingsPanel } from './PathSettingsPanel';
+import { SettingsPanel } from './SettingsPanel';
 import { FileItem } from '../types/file-system';
 
 interface HomeClientProps {
@@ -16,6 +16,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsType, setSettingsType] = useState<'file' | 'render' | 'protocol'>('file');
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -82,7 +83,10 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
       {/* Left Sidebar */}
       <DocumentList 
         initialPosts={initialPosts} 
-        onOpenSettings={() => setShowSettings(true)} 
+        onOpenSettings={(type) => {
+          setSettingsType(type);
+          setShowSettings(true);
+        }} 
         className="shrink-0 border-r border-border-soft"
       />
 
@@ -135,7 +139,11 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
       </div>
       
       {/* Settings Panel */}
-      <PathSettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
+      <SettingsPanel 
+        isOpen={showSettings} 
+        onClose={() => setShowSettings(false)} 
+        settingsType={settingsType} 
+      />
     </div>
   );
 };

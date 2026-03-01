@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Layout } from 'lucide-react';
 import { CHDRenderer } from '@/components/CHD/CHDRenderer';
 import { useVisitHistory } from '@/hooks/useVisitHistory';
@@ -15,6 +15,7 @@ import { TagStyleType } from '@/components/CHD/TagRenderer';
 import { useDocumentState } from '@/hooks/useDocumentState';
 import NavigationHeader from '@/components/ui/NavigationHeader';
 import { clsx } from 'clsx';
+import { ConfigService } from '@/services/ConfigService';
 
 interface InteractivePostProps {
   initialContent: string;
@@ -26,6 +27,7 @@ interface InteractivePostProps {
 
 const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug, decodedSlug, initialStatus, historyCount = 0 }) => {
   const { theme, setTheme } = useTheme();
+  const [globalConfig, setGlobalConfig] = useState<any>(null);
   
   // Record Visit History
   useVisitHistory(decodedSlug);
@@ -72,6 +74,27 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
     initialStatus,
     historyCount
   });
+  
+  // Fetch global config on component mount and when app-paths-updated event is triggered
+  useEffect(() => {
+    const fetchGlobalConfig = async () => {
+      const appInfo = await ConfigService.getAppInfo();
+      if (appInfo) {
+        setGlobalConfig(appInfo.config);
+      }
+    };
+    
+    fetchGlobalConfig();
+    
+    const handleConfigUpdated = () => {
+      fetchGlobalConfig();
+    };
+    
+    window.addEventListener('app-paths-updated', handleConfigUpdated);
+    return () => {
+      window.removeEventListener('app-paths-updated', handleConfigUpdated);
+    };
+  }, []);
   
   // Toolbar State - Replaced with useCHDSelection hook
   const { activeSectionProps, activeCardProps, selectedSectionTitle } = useCHDSelection(content, selectedBlockIndex);
@@ -193,8 +216,8 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
             onCardDelete={deleteCard}
             onCardAdd={(sectionBlockIndex) => addCard(sectionBlockIndex)}
             tagStyle={(frontmatter['tag-style'] as TagStyleType) || 'glass'}
-            globalTitleSpacing={String(frontmatter['title-spacing'] || '2')}
-            globalShowDivider={(frontmatter['show-divider'] === true || frontmatter['show-divider'] === 'true') || true}
+            globalTitleSpacing={String(frontmatter['title-spacing'] || globalConfig?.renderOptions?.titleSpacing || '2')}
+            globalShowDivider={(frontmatter['show-divider'] === true || frontmatter['show-divider'] === 'true') || globalConfig?.renderOptions?.showDivider || true}
           />
           {/* Document Type Label in Bottom Right */}
           <div className={`absolute bottom-4 right-4 px-3 py-1 rounded-full text-xs font-medium ${typeColors[documentType] || typeColors.project} shadow-md`}>
@@ -272,11 +295,11 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                         batchUpdateAttributes(updates);
                     }
                 }}
-                sectionTitleSpacing={String(frontmatter['title-spacing'] || '2')}
+                sectionTitleSpacing={String(frontmatter['title-spacing'] || globalConfig?.renderOptions?.titleSpacing || '2')}
                 onSectionTitleSpacingChange={(spacing) => {
                     updateFrontmatter('title-spacing', spacing);
                 }}
-                sectionShowDivider={frontmatter['show-divider'] === true || frontmatter['show-divider'] === 'true'}
+                sectionShowDivider={(frontmatter['show-divider'] === true || frontmatter['show-divider'] === 'true') || globalConfig?.renderOptions?.showDivider}
                 onSectionShowDividerChange={(show) => {
                     updateFrontmatter('show-divider', String(show));
                 }}
