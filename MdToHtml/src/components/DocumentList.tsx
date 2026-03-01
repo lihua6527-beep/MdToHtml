@@ -2,10 +2,8 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { FileText, ChevronRight, Layout, PenTool, Clock, AlertCircle, CheckCircle2, Settings, Trash2, CheckSquare, Square, Eye, X, ArrowUpDown, Calendar, Monitor, Maximize2, Minimize2, Database } from 'lucide-react';
+import { FileText, Trash2, Settings } from 'lucide-react';
 import { clsx } from 'clsx';
-import { CHDRenderer } from './CHD/CHDRenderer';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useFiles, useCapacity } from '../hooks/useFileSystem';
 import { CapacityProgressBar } from './CapacityProgressBar';
@@ -18,6 +16,9 @@ import { TrashService } from '@/services/TrashService';
 import { FileService } from '@/services/FileService';
 import { useToast } from '@/components/ui/use-toast';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
+import DocumentItem from '@/components/ui/DocumentItem';
+import ListHeader from '@/components/ui/ListHeader';
+import SettingsMenu from '@/components/ui/SettingsMenu';
 
 interface DocumentListProps {
   initialPosts: FileItem[];
@@ -42,8 +43,6 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
   // Batch selection state
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
-  const [showSortSubmenu, setShowSortSubmenu] = useState(false);
-  const [showCapacitySubmenu, setShowCapacitySubmenu] = useState(false);
   const capacityLimit = capacityStats?.limit || DEFAULT_CAPACITY;
   const [showRecycleBin, setShowRecycleBin] = useState(false);
   const [warningDialog, setWarningDialog] = useState<{
@@ -97,13 +96,6 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
     setPosts(sortedPosts);
   }, [sortedPosts]);
 
-  useEffect(() => {
-    if (!showSettingsMenu) {
-        setShowSortSubmenu(false);
-        setShowCapacitySubmenu(false);
-    }
-  }, [showSettingsMenu]);
-
   const updateCapacity = async (limit: number) => {
     try {
         const success = await ConfigService.updateCapacityLimit(limit);
@@ -138,7 +130,6 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
     const handleGlobalClick = () => {
         setContextMenu(prev => ({ ...prev, visible: false }));
         setShowSettingsMenu(false);
-        // showSortSubmenu will be handled by the effect above
     };
     window.addEventListener('click', handleGlobalClick);
     window.addEventListener('contextmenu', handleGlobalClick); // Close on right click elsewhere
@@ -369,68 +360,21 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
             cleanupLabel={warningDialog.cleanupLabel}
             isLoading={warningDialog.isLoading}
         />
+        
         {/* Header */}
-        <div className="h-14 flex items-center justify-between px-4 border-b border-border-soft shrink-0 bg-bg-card z-10">
-           {isSelectionMode ? (
-             <div className="flex items-center gap-2 w-full">
-                <button onClick={selectAll} className="text-text-secondary hover:text-text-primary">
-                    {selectedSlugs.size === posts.length && posts.length > 0 ? <CheckSquare size={18} /> : <Square size={18} />}
-                </button>
-                <span className="text-sm font-medium text-text-primary flex-1">已选 {selectedSlugs.size} 项</span>
-                <button 
-                    onClick={() => performBatchDelete(false)} 
-                    className="text-text-secondary hover:text-red-500 p-1"
-                    title="仅删除源文件"
-                    disabled={selectedSlugs.size === 0}
-                >
-                    <FileText size={18} />
-                </button>
-                <button 
-                    onClick={() => performBatchDelete(true)} 
-                    className="text-text-secondary hover:text-red-500 p-1"
-                    title="删除源文件与输出"
-                    disabled={selectedSlugs.size === 0}
-                >
-                    <Trash2 size={18} />
-                </button>
-                <button onClick={toggleSelectionMode} className="text-text-secondary hover:text-text-primary ml-2 text-sm">
-                    取消
-                </button>
-             </div>
-           ) : (
-             <>
-               <div className="flex items-center gap-2 font-bold text-text-primary">
-                  <Layout className="w-5 h-5 text-primary" />
-                  <span>文档列表</span>
-               </div>
-               <div className="flex items-center gap-1">
-                   <button 
-                     onClick={() => setIsExpanded(!isExpanded)}
-                     className="text-text-secondary hover:text-primary transition-colors p-1 rounded-md hover:bg-bg-page"
-                     title={isExpanded ? "收起列表" : "展开列表"}
-                   >
-                     {isExpanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-                   </button>
-                   <button 
-                     onClick={() => setShowRecycleBin(true)}
-                     className="text-text-secondary hover:text-primary transition-colors p-1 rounded-md hover:bg-bg-page"
-                     title="回收站 (拖拽文档至此删除)"
-                     onDrop={handleDropToTrash}
-                     onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
-                   >
-                     <Trash2 size={18} />
-                   </button>
-                   <button 
-                     onClick={toggleSelectionMode}
-                     className="text-text-secondary hover:text-primary transition-colors p-1 rounded-md hover:bg-bg-page"
-                     title="批量管理"
-                   >
-                     <CheckSquare size={18} />
-                   </button>
-               </div>
-             </>
-           )}
-        </div>
+        <ListHeader
+          isSelectionMode={isSelectionMode}
+          selectedSlugs={selectedSlugs}
+          posts={posts}
+          isExpanded={isExpanded}
+          onToggleExpanded={() => setIsExpanded(!isExpanded)}
+          onToggleRecycleBin={() => setShowRecycleBin(true)}
+          onToggleSelectionMode={toggleSelectionMode}
+          onSelectAll={selectAll}
+          onBatchDelete={performBatchDelete}
+          onDropToTrash={handleDropToTrash}
+          onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+        />
         
         <CapacityProgressBar />
 
@@ -439,124 +383,17 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
            {posts.map((post) => {
              const isSelected = selectedSlugs.has(post.slug);
              
-             if (isSelectionMode) {
-                 return (
-                    <div 
-                        key={post.slug}
-                        onClick={() => toggleSlugSelection(post.slug)}
-                        className={clsx(
-                            "block px-3 py-2 rounded-md transition-colors flex items-center gap-3 cursor-pointer select-none",
-                            isSelected ? "bg-primary/10" : "hover:bg-bg-page"
-                        )}
-                    >
-                        <div className={clsx("shrink-0", isSelected ? "text-primary" : "text-text-secondary")}>
-                            {isSelected ? <CheckSquare size={18} /> : <Square size={18} />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                           <div className="flex items-center gap-2">
-                               {/* Document Type Label */}
-                               {(() => {
-                                 const type = post.type || 'project';
-                                 const typeLabels: Record<string, string> = {
-                                   project: '项目',
-                                   paper: '论文',
-                                   knowledge: '知识',
-                                   other: '其他'
-                                 };
-                                 const typeColors: Record<string, string> = {
-                                   project: 'bg-blue-100 text-blue-700',
-                                   paper: 'bg-green-100 text-green-700',
-                                   knowledge: 'bg-purple-100 text-purple-700',
-                                   other: 'bg-gray-100 text-gray-700'
-                                 };
-                                 return (
-                                   <div className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${typeColors[type] || typeColors.project}`}>
-                                     {typeLabels[type] || typeLabels.project}
-                                   </div>
-                                 );
-                               })()}
-                               <div className={clsx("truncate font-medium", isSelected ? "text-primary" : "text-text-primary")}>{post.slug}</div>
-                               {/* Status Icons */}
-                               {(post.status === 'pending' || post.status === 'incomplete') && (
-                                 <div title="未完成" className="text-amber-500 shrink-0"><AlertCircle size={14} /></div>
-                               )}
-                               {post.status === 'modified' && (
-                                 <div title="已修改" className="text-blue-500 shrink-0"><PenTool size={14} /></div>
-                               )}
-                               {(post.status === 'done' || post.status === 'completed') && (
-                                 <div title="已完成" className="text-green-600 shrink-0"><CheckCircle2 size={14} /></div>
-                               )}
-                           </div>
-                           <div className="flex items-center gap-1 text-[10px] text-text-muted mt-0.5">
-                                <Clock size={10} />
-                                <span>{new Date(post.mtime).toLocaleDateString()}</span>
-                            </div>
-                        </div>
-                    </div>
-                 );
-             }
-
              return (
-                <div 
-                   key={post.slug} 
-                   draggable={true}
-                   onDragStart={(e) => handleDragStart(e, post.slug)}
-                   onContextMenu={(e) => handleContextMenu(e, post.slug)}
-                   className="px-3 py-3 rounded-md hover:bg-bg-page transition-colors flex items-start gap-3 group relative"
-                 >
-                   <Link 
-                     href={`/editor/${post.slug}`}
-                     className="flex-1 flex items-start gap-3 min-w-0 text-sm text-text-primary/80 hover:text-text-primary transition-colors"
-                   >
-                       {/* Document Type Label */}
-                       {(() => {
-                         const type = post.type || 'project';
-                         const typeLabels: Record<string, string> = {
-                           project: '项目',
-                           paper: '论文',
-                           knowledge: '知识',
-                           other: '其他'
-                         };
-                         const typeColors: Record<string, string> = {
-                           project: 'bg-blue-100 text-blue-700',
-                           paper: 'bg-green-100 text-green-700',
-                           knowledge: 'bg-purple-100 text-purple-700',
-                           other: 'bg-gray-100 text-gray-700'
-                         };
-                         return (
-                           <div className={`px-2 py-1 rounded-full text-xs font-medium ${typeColors[type] || typeColors.project} shrink-0 mt-0.5`}>
-                             {typeLabels[type] || typeLabels.project}
-                           </div>
-                         );
-                       })()}
-                       
-                       <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                              <div className="truncate font-medium flex-1 pr-6">{post.slug}</div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                  {(post.status === 'pending' || post.status === 'incomplete') && (
-                                    <div title="未完成" className="text-amber-500 shrink-0 p-1">
-                                        <AlertCircle size={16} />
-                                    </div>
-                                  )}
-                                  {post.status === 'modified' && (
-                                    <div title="已修改" className="text-blue-500 shrink-0 p-1">
-                                        <PenTool size={16} />
-                                    </div>
-                                  )}
-                                  {(post.status === 'done' || post.status === 'completed') && (
-                                    <div title="已完成" className="text-green-600 shrink-0 p-1">
-                                        <CheckCircle2 size={16} />
-                                    </div>
-                                  )}
-                              </div>
-                          </div>
-                          <div className="text-[12px] text-text-muted mt-1">
-                               {new Date(sortMethod === 'import' ? (post.birthtime || post.mtime) : post.mtime).toLocaleDateString()}
-                           </div>
-                       </div>
-                   </Link>
-                 </div>
+               <DocumentItem
+                 key={post.slug}
+                 post={post}
+                 isSelected={isSelected}
+                 isSelectionMode={isSelectionMode}
+                 sortMethod={sortMethod}
+                 onToggleSelection={toggleSlugSelection}
+                 onDragStart={handleDragStart}
+                 onContextMenu={handleContextMenu}
+               />
              );
            })}
         </div>
@@ -591,125 +428,15 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
 
         {/* Settings Footer */}
         <div className="p-4 border-t border-border-soft shrink-0 relative">
-           {showSettingsMenu && (
-               <div 
-                className="absolute bottom-16 left-4 w-56 bg-bg-card border border-border-soft rounded-lg shadow-xl p-2 z-50 animate-in slide-in-from-bottom-2 fade-in duration-200"
-                onClick={(e) => e.stopPropagation()}
-               >
-                   {/* File Path Button */}
-                   <button 
-                       onClick={() => {
-                           setShowSettingsMenu(false);
-                           onOpenSettings?.();
-                       }}
-                       className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-bg-page transition-colors flex items-center gap-2 text-text-primary mb-1"
-                   >
-                       <Settings className="w-4 h-4 text-text-secondary" />
-                       <span>文件路径</span>
-                   </button>
-
-                   {/* Capacity Settings (With Submenu) */}
-                   <div className="relative mb-1">
-                       <button 
-                           onClick={(e) => {
-                               e.stopPropagation();
-                               setShowCapacitySubmenu(!showCapacitySubmenu);
-                               setShowSortSubmenu(false); // Close other submenu
-                           }}
-                           className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between", showCapacitySubmenu ? "bg-bg-page text-primary" : "hover:bg-bg-page text-text-primary")}
-                       >
-                           <div className="flex items-center gap-2">
-                               <Database className="w-4 h-4 text-text-secondary" />
-                               <span>存储容量</span>
-                           </div>
-                           <div className="flex items-center gap-1">
-                               <span className="text-xs text-text-muted">{capacityLimit}</span>
-                               <ChevronRight className={clsx("w-3 h-3 text-text-muted transition-transform", showCapacitySubmenu && "rotate-90")} />
-                           </div>
-                       </button>
-
-                       {/* Capacity Submenu */}
-                       {showCapacitySubmenu && (
-                           <div 
-                               className="absolute left-full bottom-0 ml-2 w-40 bg-bg-card border border-border-soft rounded-lg shadow-xl p-2 animate-in fade-in slide-in-from-left-2 z-50 max-h-60 overflow-y-auto"
-                               onClick={(e) => e.stopPropagation()}
-                           >
-                               {[
-                                   { value: 20, label: '20 (极简)' },
-                                   { value: 50, label: '50 (轻量)' },
-                                   { value: 100, label: '100 (标准)' },
-                                   { value: 200, label: '200 (专业)' },
-                                   { value: 300, label: '300 (扩容)' },
-                                   { value: 500, label: '500 (极限)' }
-                               ].map(option => (
-                                   <button 
-                                       key={option.value}
-                                       onClick={() => updateCapacity(option.value)}
-                                       className={clsx(
-                                           "w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between",
-                                           capacityLimit === option.value ? "bg-primary/10 text-primary" : "hover:bg-bg-page text-text-primary"
-                                       )}
-                                   >
-                                       <span>{option.label}</span>
-                                       {capacityLimit === option.value && <CheckCircle2 className="w-3 h-3" />}
-                                   </button>
-                               ))}
-                           </div>
-                       )}
-                   </div>
-
-                   {/* Sort Method (With Submenu) */}
-                   <div className="relative">
-                       <button 
-                           onClick={(e) => {
-                               e.stopPropagation();
-                               setShowSortSubmenu(!showSortSubmenu);
-                               setShowCapacitySubmenu(false); // Close other submenu
-                           }}
-                           className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-between", showSortSubmenu ? "bg-bg-page text-primary" : "hover:bg-bg-page text-text-primary")}
-                       >
-                           <div className="flex items-center gap-2">
-                               <ArrowUpDown className="w-4 h-4 text-text-secondary" />
-                               <span>排序方式</span>
-                           </div>
-                           <ChevronRight className={clsx("w-3 h-3 text-text-muted transition-transform", showSortSubmenu && "rotate-90")} />
-                       </button>
-
-                       {/* Submenu */}
-                       {showSortSubmenu && (
-                           <div 
-                               className="absolute left-full bottom-0 ml-2 w-48 bg-bg-card border border-border-soft rounded-lg shadow-xl p-2 animate-in fade-in slide-in-from-left-2 z-50"
-                               onClick={(e) => e.stopPropagation()}
-                           >
-                               <button 
-                                   onClick={() => { setSortMethod('import'); setShowSettingsMenu(false); }}
-                                   className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2", sortMethod === 'import' ? "bg-primary/10 text-primary" : "hover:bg-bg-page text-text-primary")}
-                               >
-                                   <Calendar className="w-4 h-4" />
-                                   <span>导入时间</span>
-                                   {sortMethod === 'import' && <CheckCircle2 className="w-3 h-3 ml-auto" />}
-                               </button>
-                               <button 
-                                   onClick={() => { setSortMethod('modified'); setShowSettingsMenu(false); }}
-                                   className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2", sortMethod === 'modified' ? "bg-primary/10 text-primary" : "hover:bg-bg-page text-text-primary")}
-                               >
-                                   <Clock className="w-4 h-4" />
-                                   <span>修改时间</span>
-                                   {sortMethod === 'modified' && <CheckCircle2 className="w-3 h-3 ml-auto" />}
-                               </button>
-                               <button 
-                                   onClick={() => { setSortMethod('visited'); setShowSettingsMenu(false); }}
-                                   className={clsx("w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2", sortMethod === 'visited' ? "bg-primary/10 text-primary" : "hover:bg-bg-page text-text-primary")}
-                               >
-                                   <Eye className="w-4 h-4" />
-                                   <span>最近访问</span>
-                                   {sortMethod === 'visited' && <CheckCircle2 className="w-3 h-3 ml-auto" />}
-                               </button>
-                           </div>
-                       )}
-                   </div>
-               </div>
-           )}
+           <SettingsMenu
+             isVisible={showSettingsMenu}
+             onClose={() => setShowSettingsMenu(false)}
+             onOpenFilePaths={() => onOpenSettings?.()}
+             capacityLimit={capacityLimit}
+             onUpdateCapacity={updateCapacity}
+             sortMethod={sortMethod}
+             onUpdateSortMethod={setSortMethod}
+           />
 
            <button 
              onClick={(e) => {

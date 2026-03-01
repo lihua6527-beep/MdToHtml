@@ -5,12 +5,12 @@ import { FileText, Trash2, RotateCcw, AlertCircle, CheckSquare, Square, X, Check
 import { clsx } from 'clsx';
 import { mutate } from 'swr';
 import { CapacityProgressBar } from './CapacityProgressBar';
-import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 import { CapacityWarningDialog } from './CapacityWarningDialog';
 import { TrashService } from '../services/TrashService';
 import { TrashItem } from '../types/file-system';
 import { useTrash } from '../hooks/useFileSystem';
-import { useToast } from './ui/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { QUERY_KEYS } from '@/constants/query-keys';
 
 interface RecycleBinProps {

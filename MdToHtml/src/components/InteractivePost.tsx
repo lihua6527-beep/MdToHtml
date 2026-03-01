@@ -1,33 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { ChevronLeft, Edit, Save, Eye, Layout, ArrowLeft, CheckCircle, AlertTriangle, X, Download, Loader2, FileText, Database } from 'lucide-react';
+import React, { useRef, useEffect } from 'react';
+import { Layout } from 'lucide-react';
 import { CHDRenderer } from '@/components/CHD/CHDRenderer';
-import { useMarkdownInteraction } from '@/hooks/useMarkdownInteraction';
-import { useHistory } from '@/hooks/useHistory';
-import { useScoring } from '@/hooks/useScoring';
 import { useVisitHistory } from '@/hooks/useVisitHistory';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
 import { FloatingUndoRedo } from '@/components/FloatingUndoRedo';
 import { parseCHDBlocks } from '@/lib/chdParser';
-import { clsx } from 'clsx';
-import { HtmlBundler } from '@/lib/export/HtmlBundler';
-import { parseFrontmatter } from '@/lib/simple-frontmatter';
 import { useTheme } from '@/components/ThemeProvider';
 import { BottomToolbar } from '@/components/CHD/BottomToolbar';
-import { CardStyle } from '@/types/chd';
 import { AVAILABLE_THEMES } from '@/lib/themes';
 import { parseAttributes } from '@/lib/attributeParser';
-import { CardShape } from '@/lib/shapes';
 import { useCHDSelection } from '@/hooks/useCHDSelection';
-import matter from 'gray-matter';
 import { TagStyleType } from '@/components/CHD/TagRenderer';
-
-import { FileService } from '@/services/FileService';
-import { ConfigService } from '@/services/ConfigService';
+import { useDocumentState } from '@/hooks/useDocumentState';
+import NavigationHeader from '@/components/ui/NavigationHeader';
+import { clsx } from 'clsx';
 
 interface InteractivePostProps {
   initialContent: string;
@@ -39,146 +26,58 @@ interface InteractivePostProps {
 
 const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug, decodedSlug, initialStatus, historyCount = 0 }) => {
   const { theme, setTheme } = useTheme();
-  const { toast } = useToast();
-  // Use useHistory for state management instead of simple useState
-  const { 
-    state: content, 
-    pushState: setContent, 
-    undo, 
-    redo, 
-    canUndo, 
-    canRedo 
-  } = useHistory(initialContent, { sessionId: decodedSlug });
-  
-  const [isEditing, setIsEditing] = useState(false);
-  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
-  
-  const triggerSaveRef = useRef<((content: string) => void) | null>(null);
-
-  // Wrapper for content updates to ensure auto-save works even in View Mode
-  const handleContentUpdate = useCallback((newContent: string) => {
-    setContent(newContent);
-    // Trigger save for all content updates, including in edit mode
-    triggerSaveRef.current?.(newContent);
-  }, [setContent]);
-
-  // Note: We use useHistory's undo, so we ignore the ones from useMarkdownInteraction
-  const { updateAttribute, updateContent, updateTitle, updateFrontmatter, moveCard, deleteCard, addCard, operationLog, batchUpdateAttributes } = useMarkdownInteraction(content, handleContentUpdate);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [systemConfig, setSystemConfig] = useState<any>(null);
   
   // Record Visit History
   useVisitHistory(decodedSlug);
-
-  // Fetch system config on load
-  useEffect(() => {
-    const fetchConfig = async () => {
-      try {
-        const appInfo = await ConfigService.getAppInfo();
-        if (appInfo && appInfo.config) {
-          setSystemConfig(appInfo.config);
-        }
-      } catch (error) {
-        console.error('Failed to fetch system config:', error);
-      }
-    };
-    fetchConfig();
-  }, []);
-
-  // Real-time Scoring
-  // Combine initial history count with current session operations for immediate feedback
-  const effectiveHistoryCount = historyCount + operationLog.length;
-  const { scoreResult, showScoreDetails, setShowScoreDetails } = useScoring(content, effectiveHistoryCount);
-
+  
+  // Use custom hook for document state management
+  const {
+    content,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    isEditing,
+    setIsEditing,
+    selectedBlockIndex,
+    setSelectedBlockIndex,
+    isSaving,
+    saveSuccess,
+    handleSave,
+    isExporting,
+    setIsExporting,
+    documentType,
+    showTypeDropdown,
+    setShowTypeDropdown,
+    handleTypeChange,
+    docStatus,
+    isStatusUpdating,
+    handleStatusChange,
+    frontmatter,
+    updateAttribute,
+    updateContent,
+    updateTitle,
+    updateFrontmatter,
+    moveCard,
+    deleteCard,
+    addCard,
+    batchUpdateAttributes,
+    scoreResult,
+    showScoreDetails,
+    setShowScoreDetails,
+    handleBack
+  } = useDocumentState({
+    initialContent,
+    decodedSlug,
+    initialStatus,
+    historyCount
+  });
+  
   // Toolbar State - Replaced with useCHDSelection hook
   const { activeSectionProps, activeCardProps, selectedSectionTitle } = useCHDSelection(content, selectedBlockIndex);
-
-  // Parse Frontmatter for Global Settings
-  const frontmatter = useMemo(() => {
-    try {
-        // First, try to parse normally
-        const { data } = matter(content);
-        return data || {};
-    } catch (e) {
-        console.warn('Frontmatter parsing failed, attempting to clean up duplicate keys', e);
-        // If parsing fails due to duplicate keys, clean up the content
-        try {
-            const lines = content.split('\n');
-            let inFrontmatter = false;
-            let frontmatterEnd = -1;
-            const frontmatterLines: string[] = [];
-            const contentLines: string[] = [];
-            const seenKeys = new Set<string>();
-            
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                
-                if (line.trim() === '---') {
-                    if (!inFrontmatter) {
-                        inFrontmatter = true;
-                        frontmatterLines.push(line);
-                    } else {
-                        frontmatterEnd = i;
-                        frontmatterLines.push(line);
-                        inFrontmatter = false;
-                    }
-                } else if (inFrontmatter) {
-                    const match = line.trim().match(/^([a-zA-Z0-9_-]+):\s*(.*)$/);
-                    if (match) {
-                        const key = match[1];
-                        if (!seenKeys.has(key)) {
-                            seenKeys.add(key);
-                            frontmatterLines.push(line);
-                        }
-                    } else {
-                        frontmatterLines.push(line);
-                    }
-                } else {
-                    contentLines.push(line);
-                }
-            }
-            
-            // Reassemble the content with cleaned frontmatter
-            const cleanedContent = [...frontmatterLines, ...contentLines].join('\n');
-            const { data } = matter(cleanedContent);
-            return data || {};
-        } catch (e2) {
-            console.warn('Failed to clean up frontmatter', e2);
-            return {};
-        }
-    }
-  }, [content]);
-
-  // Get document type from frontmatter
-  const documentType = useMemo(() => {
-    return frontmatter.type || 'project';
-  }, [frontmatter]);
-
-  // Type to label mapping
-  const typeLabels: Record<string, string> = {
-    project: '项目',
-    paper: '论文',
-    knowledge: '知识',
-    other: '其他'
-  };
-
-  // Type to color mapping
-  const typeColors: Record<string, string> = {
-    project: 'bg-blue-100 text-blue-700',
-    paper: 'bg-green-100 text-green-700',
-    knowledge: 'bg-purple-100 text-purple-700',
-    other: 'bg-gray-100 text-gray-700'
-  };
-
-  // Type selection state
-  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
-
-
-
+  
   // Extract Sections for BottomToolbar
-  const sections = useMemo(() => {
+  const sections = React.useMemo(() => {
     if (!content) return [];
     const blocks = parseCHDBlocks(content);
     const lines = content.split('\n');
@@ -194,24 +93,7 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
             };
         });
   }, [content]);
-
-  // Parse Document Status from Frontmatter
-  const [docStatus, setDocStatus] = useState<string | null>(initialStatus || null);
   
-  // Use a ref to track if content has been modified by user
-  const isContentModified = useRef(false);
-
-  // Auto-transition Logic Removed
-  // We trust the user to set the status manually. No auto-reset to 'incomplete'.
-  // This prevents the "flash and revert" bug where existing status is overwritten.
-
-  // Clear selection when exiting edit mode
-  React.useEffect(() => {
-    if (!isEditing) {
-        setSelectedBlockIndex(null);
-    }
-  }, [isEditing]);
-
   // Keyboard Shortcuts for Undo/Redo
   useEffect(() => {
     if (!isEditing) return;
@@ -230,453 +112,57 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isEditing, undo, redo]);
-
-  // Click outside to close type dropdown
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setShowTypeDropdown(false);
-    };
-
-    if (showTypeDropdown) {
-      window.addEventListener('click', handleClickOutside);
-      return () => window.removeEventListener('click', handleClickOutside);
-    }
-  }, [showTypeDropdown]);
-
-  const router = useRouter();
-
-  const isSavingRef = useRef(false);
-  const contentRef = useRef(content);
   
-  // Update ref when content changes
+  // Type to color mapping for document type display
+  const typeColors: Record<string, string> = {
+    project: 'bg-blue-100 text-blue-700',
+    paper: 'bg-green-100 text-green-700',
+    knowledge: 'bg-purple-100 text-purple-700',
+    other: 'bg-gray-100 text-gray-700'
+  };
+  
+  // Type to label mapping
+  const typeLabels: Record<string, string> = {
+    project: '项目',
+    paper: '论文',
+    knowledge: '知识',
+    other: '其他'
+  };
+  
+  // Ref for isSaving state (needed for NavigationHeader)
+  const isSavingRef = useRef(false);
   useEffect(() => {
-    contentRef.current = content;
-  }, [content]);
-
-  // Debounced save function
-  const debouncedSave = useRef(
-    (async (slug: string, contentToSave: string, initialContent: string, operationLog: any[], router: any) => {
-      isSavingRef.current = true;
-      setIsSaving(true);
-      try {
-        console.log('Executing save for:', slug);
-        // Unified Save Logic using FileService
-        const success = await FileService.saveFile(slug, contentToSave, operationLog);
-
-        if (success) {
-            console.log('Save successful');
-            setSaveSuccess(true);
-            setTimeout(() => setSaveSuccess(false), 2000);
-            router.refresh();
-        } else {
-            console.error('Save failed');
-        }
-      } catch(e) {
-        console.error('Save error:', e);
-      } finally {
-        isSavingRef.current = false;
-        setIsSaving(false);
-      }
-    })
-  ).current;
-
-  // Debounce wrapper
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const triggerDebouncedSave = (newContent: string) => {
-    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-    
-    // Set saving state immediately to block navigation
-    isSavingRef.current = true;
-    setIsSaving(true);
-
-    saveTimeoutRef.current = setTimeout(() => {
-        debouncedSave(decodedSlug, newContent, initialContent, operationLog, router);
-    }, 500);
-  };
-
-  // Keep triggerSaveRef up to date
-  useEffect(() => {
-    triggerSaveRef.current = triggerDebouncedSave;
-  });
-
-  // Status Update Loading State
-  const [isStatusUpdating, setIsStatusUpdating] = useState(false);
-
-  const handleStatusChange = (newStatus: string) => {
-      // Prevent rapid clicks
-      if (isStatusUpdating) return;
-      
-      // 1. Immediately update UI state (Optimistic)
-      setDocStatus(newStatus);
-      setIsStatusUpdating(true);
-
-      // 2. Update via robust updateFrontmatter (batch update)
-      // Use setTimeout to allow UI to render the loading state first
-      setTimeout(() => {
-          const isDone = ['done', 'completed'].includes(newStatus);
-          
-          updateFrontmatter({
-              status: newStatus,
-              training_sample: isDone
-          });
-          
-          // Keep loading state for a moment to provide visual feedback
-          setTimeout(() => {
-              setIsStatusUpdating(false);
-          }, 800);
-      }, 50);
-      
-      // Note: triggerDebouncedSave is handled by handleContentUpdate wrapper passed to useMarkdownInteraction
-  };
-
-  const handleTypeChange = (newType: string) => {
-      // 1. 立即更新UI状态（乐观更新）
-      updateFrontmatter({
-          type: newType
-      });
-      
-      // 2. 关闭下拉菜单
-      setShowTypeDropdown(false);
-  };
-
-  const handleBack = async () => {
-    if (isSavingRef.current) {
-        // Wait for save to complete
-        const checkSave = setInterval(() => {
-            if (!isSavingRef.current) {
-                clearInterval(checkSave);
-                router.push('/');
-            }
-        }, 100);
-    } else {
-        router.push('/');
-    }
-  };
-
-  const saveFile = useCallback(async (silent = false, contentOverride?: string) => {
-     // Legacy direct save, kept for manual save button if needed
-     const contentToSave = contentOverride || contentRef.current;
-     await debouncedSave(decodedSlug, contentToSave, initialContent, operationLog, router);
-  }, [decodedSlug, initialContent, operationLog, router, debouncedSave]);
-
-  const handleSave = async () => {
-      await saveFile(false);
-      setIsEditing(false); // Exit edit mode after save
-  };
-
-  // Auto-save
-  useEffect(() => {
-    if (!isEditing || !content) return;
-
-    const timer = setTimeout(() => {
-        saveFile(true); // Silent save
-    }, 5000); // 5 seconds debounce
-
-    return () => clearTimeout(timer);
-  }, [content, isEditing, saveFile]);
+    isSavingRef.current = isSaving;
+  }, [isSaving]);
 
   return (
     <div className="flex flex-col min-h-screen">
        {/* Navigation Header */}
-       <div className="sticky top-0 z-50 h-14 bg-bg-card/80 backdrop-blur-md border-b border-border-soft flex items-center px-4 justify-between shadow-sm print:hidden">
-          <div className="flex items-center gap-4">
-              {/* Back Button */}
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-text-secondary hover:text-primary"
-                onClick={handleBack}
-                disabled={isSaving}
-              >
-                  <ArrowLeft size={20} />
-              </Button>
+       <NavigationHeader
+         decodedSlug={decodedSlug}
+         theme={theme}
+         documentType={documentType}
+         showTypeDropdown={showTypeDropdown}
+         setShowTypeDropdown={setShowTypeDropdown}
+         handleTypeChange={handleTypeChange}
+         docStatus={docStatus}
+         isStatusUpdating={isStatusUpdating}
+         handleStatusChange={handleStatusChange}
+         scoreResult={scoreResult}
+         showScoreDetails={showScoreDetails}
+         setShowScoreDetails={setShowScoreDetails}
+         isEditing={isEditing}
+         setIsEditing={setIsEditing}
+         isSaving={isSaving}
+         saveSuccess={saveSuccess}
+         handleSave={handleSave}
+         content={content}
+         isExporting={isExporting}
+         setIsExporting={setIsExporting}
+         handleBack={handleBack}
+         isSavingRef={isSavingRef}
+       />
 
-              {/* Document Type Label with Dropdown */}
-              <div className="relative z-50">
-                  <button 
-                      onClick={(e) => {
-                          e.stopPropagation();
-                          setShowTypeDropdown(!showTypeDropdown);
-                      }}
-                      className={`px-3 py-1 rounded-full text-xs font-medium ${typeColors[documentType] || typeColors.project} transition-all hover:shadow-md flex items-center gap-1`}
-                      title="点击修改文档类型"
-                  >
-                      {typeLabels[documentType] || typeLabels.project}
-                      <span className={`ml-1 transition-transform ${showTypeDropdown ? 'rotate-180' : ''}`}>▼</span>
-                  </button>
-                  {showTypeDropdown && (
-                      <div className="absolute top-full left-0 mt-2 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-1 z-500 animate-in fade-in slide-in-from-top-2">
-                          {Object.entries(typeLabels).map(([type, label]) => (
-                              <button
-                                  key={type}
-                                  onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleTypeChange(type);
-                                  }}
-                                  className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2 ${
-                                      documentType === type 
-                                          ? `bg-primary/10 text-primary ${typeColors[type] || typeColors.project}` 
-                                          : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-text-primary'
-                                  }`}
-                              >
-                                  <div className={`w-2 h-2 rounded-full ${typeColors[type] || typeColors.project}`} />
-                                  {label}
-                              </button>
-                          ))}
-                      </div>
-                  )}
-              </div>
-
-              {/* Score Indicator */}
-              {scoreResult && (
-                <div className="relative flex items-center">
-                    <button 
-                        onClick={() => setShowScoreDetails(!showScoreDetails)}
-                        className="flex items-center gap-2 ml-4 px-3 py-1 rounded-full bg-secondary/10 border border-border-soft hover:bg-secondary/20 transition-colors"
-                    >
-                        {scoreResult.totalScore >= 90 ? (
-                            <CheckCircle className="w-4 h-4 text-green-500" />
-                        ) : (
-                            <AlertTriangle className="w-4 h-4 text-yellow-500" />
-                        )}
-                        <span className={clsx("text-sm font-semibold", 
-                            scoreResult.totalScore >= 90 ? 'text-green-600' : 'text-yellow-600'
-                        )}>
-                            {scoreResult.totalScore}分
-                        </span>
-                    </button>
-
-                    {showScoreDetails && (
-                        <div className="absolute top-full left-0 mt-2 w-80 bg-bg-card border border-border-soft rounded-xl shadow-lg p-4 z-50 animate-in fade-in slide-in-from-top-2">
-                            <div className="flex justify-between items-center mb-3">
-                                <h4 className="font-bold text-sm text-text-primary">评分详情</h4>
-                                <button onClick={() => setShowScoreDetails(false)} className="text-text-muted hover:text-text-primary">
-                                    <X size={14} />
-                                </button>
-                            </div>
-                            
-                            {/* Dimensions Breakdown */}
-                            <div className="grid grid-cols-2 gap-2 mb-4 p-2 bg-bg-page rounded-lg">
-                                <div className="text-xs text-text-secondary flex justify-between">结构规范: <span className="font-mono font-bold text-text-primary">{scoreResult.dimensions.structure}</span></div>
-                                <div className="text-xs text-text-secondary flex justify-between">内容原子: <span className="font-mono font-bold text-text-primary">{scoreResult.dimensions.atomicity}</span></div>
-                                <div className="text-xs text-text-secondary flex justify-between">元数据: <span className="font-mono font-bold text-text-primary">{scoreResult.dimensions.metadata}</span></div>
-                                <div className="text-xs text-text-secondary flex justify-between">语法正确: <span className="font-mono font-bold text-text-primary">{scoreResult.dimensions.syntax}</span></div>
-                                <div className="text-xs text-text-secondary flex justify-between">样式布局: <span className="font-mono font-bold text-text-primary">{scoreResult.dimensions.styling}</span></div>
-                                
-                                <div className="col-span-2 h-px bg-border-soft my-1" />
-                                
-                                <div className="text-xs text-text-secondary flex justify-between">静态基准: <span className="font-mono font-bold text-text-primary">{scoreResult.baseScore || 0}</span></div>
-                                <div className="text-xs text-text-secondary flex justify-between">过程加分: <span className="font-mono font-bold text-green-600">+{scoreResult.processBonus || 0}</span></div>
-                                <div className="col-span-2 text-[10px] text-text-muted text-right mt-1">
-                                    基于 {scoreResult.historyCount || 0} 次有效编辑
-                                </div>
-                            </div>
-
-                            {/* Issues List */}
-                            {scoreResult.totalScore < 80 && (
-                                <div className="mb-4 p-3 bg-blue-50/50 border border-blue-100 rounded-lg text-xs text-blue-700">
-                                    <div className="flex items-center gap-2 mb-1 font-bold">
-                                        <Loader2 className="w-3 h-3 animate-spin" />
-                                        <span>AI 优化建议</span>
-                                    </div>
-                                    <p className="leading-relaxed opacity-90">
-                                        当前文档评分较低 ({scoreResult.totalScore}分)。建议使用 AI 重新生成文档内容，通常可以获得 85+ 的基准分，再进行人工微调效率更高。
-                                    </p>
-                                </div>
-                            )}
-
-                            {scoreResult.issues.length > 0 ? (
-                                <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-                                    {scoreResult.issues.map((issue, idx) => (
-                                        <div key={idx} className="bg-bg-page rounded p-3 text-xs border border-border-soft">
-                                            <div className="flex items-center gap-1.5 mb-1.5">
-                                                <span className={clsx(
-                                                    "w-2 h-2 rounded-full flex-shrink-0",
-                                                    issue.severity === 'error' ? "bg-red-500" : 
-                                                    issue.severity === 'warning' ? "bg-amber-500" : "bg-blue-500"
-                                                )} />
-                                                <span className="font-bold text-text-primary">Line {issue.line}</span>
-                                                <span className={clsx(
-                                                    "ml-auto text-[10px] px-1.5 py-0.5 rounded uppercase font-bold tracking-wider",
-                                                    issue.severity === 'error' ? "bg-red-100 text-red-600" : 
-                                                    issue.severity === 'warning' ? "bg-amber-100 text-amber-600" : "bg-blue-100 text-blue-600"
-                                                )}>{issue.severity}</span>
-                                            </div>
-                                            <p className="text-text-secondary leading-relaxed break-words whitespace-pre-wrap">{issue.message}</p>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-4 text-text-muted text-xs">
-                                    <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500/50" />
-                                    完美！没有发现扣分项。
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-              )}
-
-              {/* Status Toggle Group (Always Visible) */}
-              <div className="flex items-center gap-1 mx-4 bg-secondary/10 p-1 rounded-lg border border-border-soft">
-                  <button
-                      onClick={() => handleStatusChange('incomplete')}
-                      disabled={isStatusUpdating}
-                      className={clsx(
-                          "flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md transition-all",
-                          ['pending', 'modified', 'incomplete', ''].includes(docStatus || '')
-                            ? "bg-amber-100 text-amber-700 shadow-sm" 
-                            : "text-text-secondary hover:bg-secondary/20",
-                          isStatusUpdating && "opacity-70 cursor-wait"
-                      )}
-                      title="文档需要修改"
-                  >
-                      {isStatusUpdating && ['pending', 'modified', 'incomplete', ''].includes(docStatus || '') && (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                      )}
-                      未完成
-                  </button>
-                  <button
-                      onClick={() => handleStatusChange('completed')}
-                      disabled={isStatusUpdating}
-                      className={clsx(
-                          "flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md transition-all",
-                          ['done', 'completed'].includes(docStatus || '')
-                            ? "bg-green-100 text-green-700 shadow-sm" 
-                            : "text-text-secondary hover:bg-secondary/20",
-                          isStatusUpdating && "opacity-70 cursor-wait"
-                      )}
-                      title="文档已完成并锁定"
-                  >
-                      {isStatusUpdating && ['done', 'completed'].includes(docStatus || '') && (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                      )}
-                      已完成
-                  </button>
-              </div>
-          </div>
-          
-          <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">
-             <div className="text-sm font-bold text-text-primary truncate max-w-[200px]">
-                {decodedSlug}
-             </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            
-            <div className="h-4 w-px bg-border-soft mx-2" />
-
-            {/* Export Button (Top Bar) */}
-            <Button 
-                variant="outline" 
-                size="sm"
-                className="gap-2 text-text-secondary hover:text-primary mr-2"
-                onClick={async () => {
-                    setIsExporting(true);
-                    try {
-                    const title = decodedSlug || 'Untitled';
-                    const blob = await HtmlBundler.bundle(content, title, theme);
-                    
-                    // Parse metadata from markdown
-                    const meta = parseFrontmatter(content);
-
-                    // Sync to output directory
-                    try {
-                        const htmlContent = await blob.text();
-                        const success = await FileService.saveExport({
-                            filename: `${title}.html`,
-                            content: htmlContent,
-                            metadata: {
-                                id: title,
-                                type: meta.type || 'project',
-                                title: meta.title || title,
-                                brief: meta.brief || '',
-                                date: meta.date || new Date().toISOString().slice(0, 10),
-                                tags: meta.tags || [],
-                                chdVersion: '2.4',
-                                htmlFile: `${title}.html`
-                            }
-                        });
-                        
-                        if (success) {
-                            console.log('Export synced to output directory');
-                            toast({
-                                title: "导出成功",
-                                description: "HTML 文件已保存到输出目录",
-                                type: "success",
-                            });
-                        } else {
-                            throw new Error("同步到输出目录失败");
-                        }
-                    } catch (saveErr) {
-                        console.error('Failed to sync export to output:', saveErr);
-                        toast({
-                            title: "同步失败",
-                            description: "无法保存到输出目录，仅下载文件",
-                            type: "warning",
-                        });
-                    }
-
-                    const url = URL.createObjectURL(blob);
-                    
-                    const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `${title}.html`;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                    } catch (err: any) {
-                        console.error('Export failed:', err);
-                        toast({
-                            title: "导出失败",
-                            description: err.message || '未知错误',
-                            type: "error",
-                        });
-                    } finally {
-                        setIsExporting(false);
-                    }
-                }}
-                disabled={isExporting}
-                title="导出为静态网页 (HTML)"
-            >
-                <Download className={`w-4 h-4 ${isExporting ? 'animate-bounce' : ''}`} />
-                <span className="hidden sm:inline">{isExporting ? '导出中...' : '导出 HTML'}</span>
-            </Button>
-
-            {isEditing ? (
-                <>
-                    <Button 
-                        onClick={() => setIsEditing(false)} 
-                        variant="ghost" 
-                        size="sm"
-                        className="gap-2 text-text-secondary"
-                    >
-                        <Eye size={14} /> 取消/预览
-                    </Button>
-                    <Button 
-                        onClick={handleSave} 
-                        variant="default" 
-                        size="sm"
-                        className={clsx("gap-2 transition-all", saveSuccess && "bg-green-600 hover:bg-green-700")}
-                        disabled={isSaving}
-                    >
-                        {saveSuccess ? <CheckCircle size={14} /> : <Save size={14} />} 
-                        {isSaving ? '保存中...' : (saveSuccess ? '已保存' : '保存修改')}
-                    </Button>
-                </>
-            ) : (
-                <Button 
-                    onClick={() => setIsEditing(true)} 
-                    variant="outline" 
-                    size="sm"
-                    className="gap-2"
-                >
-                    <Edit size={14} /> 编辑页面
-                </Button>
-            )}
-          </div>
-       </div>
 
        {/* Floating Undo/Redo */}
        {isEditing && (
@@ -701,14 +187,14 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                 });
             }}
             onBatchCardUpdate={batchUpdateAttributes}
-            onContentUpdate={updateContent}
-            onTitleUpdate={updateTitle}
-            onCardMove={moveCard}
+            onContentUpdate={(lineIndex, newContent) => updateContent(lineIndex, newContent)}
+            onTitleUpdate={(lineIndex, newTitle) => updateTitle(lineIndex, newTitle)}
+            onCardMove={(lineIndex, direction) => moveCard(lineIndex, direction)}
             onCardDelete={deleteCard}
-            onCardAdd={addCard}
+            onCardAdd={(sectionBlockIndex) => addCard(sectionBlockIndex)}
             tagStyle={(frontmatter['tag-style'] as TagStyleType) || 'glass'}
-            globalTitleSpacing={String(frontmatter['title-spacing'] || systemConfig?.renderOptions?.titleSpacing || '2')}
-            globalShowDivider={(frontmatter['show-divider'] === true || frontmatter['show-divider'] === 'true') || systemConfig?.renderOptions?.showDivider || true}
+            globalTitleSpacing={String(frontmatter['title-spacing'] || '2')}
+            globalShowDivider={(frontmatter['show-divider'] === true || frontmatter['show-divider'] === 'true') || true}
           />
           {/* Document Type Label in Bottom Right */}
           <div className={`absolute bottom-4 right-4 px-3 py-1 rounded-full text-xs font-medium ${typeColors[documentType] || typeColors.project} shadow-md`}>
