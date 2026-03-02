@@ -52,9 +52,12 @@ export class PermissionManager {
    */
   private loadRole(): void {
     try {
-      const savedRole = localStorage.getItem('user_role');
-      if (savedRole && Object.values(UserRole).includes(savedRole as UserRole)) {
-        this.currentRole = savedRole as UserRole;
+      // Check if localStorage is available (not in server-side rendering)
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const savedRole = localStorage.getItem('user_role');
+        if (savedRole && Object.values(UserRole).includes(savedRole as UserRole)) {
+          this.currentRole = savedRole as UserRole;
+        }
       }
     } catch (error) {
       console.warn('Failed to load user role:', error);
@@ -67,7 +70,10 @@ export class PermissionManager {
    */
   private saveRole(role: UserRole): void {
     try {
-      localStorage.setItem('user_role', role);
+      // Check if localStorage is available (not in server-side rendering)
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('user_role', role);
+      }
     } catch (error) {
       console.warn('Failed to save user role:', error);
     }

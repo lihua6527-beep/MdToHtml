@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAllPosts } from '@/lib/posts';
 import { ApiResponse, FileItem } from '@/types/file-system';
 
-export const dynamic = 'force-dynamic';
+// export const dynamic = 'force-dynamic'; // 注释掉，因为静态导出不支持
 
 export async function GET() {
   try {

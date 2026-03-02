@@ -19,8 +19,7 @@
     "test:ci": "jest --ci --coverage",
     "test:e2e": "node scripts/verify-static-build.js",
     "dev:electron": "concurrently \"cross-env NEXT_PUBLIC_IS_ELECTRON=true next dev\" \"wait-on tcp:3000 && electron .\"",
-    "build:electron-pre": "cross-env NEXT_EXPORT=true next build",
-    "build:electron": "cross-env ELECTRON_BUILDER_BINARIES_MIRROR=https://github.com/electron-userland/electron-builder-binaries/releases/download/ npm run build:electron-pre && electron-builder",
+    "build:electron": "cross-env ELECTRON_BUILDER_BINARIES_MIRROR=https://github.com/electron-userland/electron-builder-binaries/releases/download/ electron-builder --dir --win portable",
     "preview:electron": "npm run build:electron-pre && cross-env FORCE_SERVE=true electron ."
   },
   "build": {
@@ -36,24 +35,14 @@
       "config.json"
     ],
     "directories": {
-      "output": "release_v2"
+      "output": "c:\\Users\\86171\\Desktop\\MdToHmtl\\release"
     },
     "asar": false,
     "win": {
       "target": [
-        "nsis",
         "portable"
       ],
-      "artifactName": "${productName}-Setup-${version}.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "MdToHtml Pro",
-      "deleteAppDataOnUninstall": true
+      "artifactName": "${productName}-Portable-${version}.${ext}"
     },
     "portable": {
       "artifactName": "${productName}-Portable-${version}.${ext}"

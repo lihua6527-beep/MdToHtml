@@ -69,8 +69,12 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
   // Client-side sorting with useMemo
   const sortedPosts = useMemo(() => {
     try {
-        const visitedStr = localStorage.getItem('visited_docs');
-        const visitedMap: Record<string, number> = visitedStr ? JSON.parse(visitedStr) : {};
+        let visitedMap: Record<string, number> = {};
+        // Check if localStorage is available (not in server-side rendering)
+        if (typeof window !== 'undefined' && window.localStorage) {
+            const visitedStr = localStorage.getItem('visited_docs');
+            visitedMap = visitedStr ? JSON.parse(visitedStr) : {};
+        }
 
         return [...(rawFiles || [])].sort((a, b) => {
             if (sortMethod === 'visited') {

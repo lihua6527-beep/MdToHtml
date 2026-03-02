@@ -6,32 +6,41 @@ const path = require('path');
 // In prod (packaged): app.isPackaged === true
 // We can also force server mode for testing build locally
 const forceServe = process.env.FORCE_SERVE === 'true';
-const shouldLoadLocalServer = app.isPackaged || forceServe;
 
 let mainWindow;
+let serverPromise;
+let shouldLoadLocalServer;
 
 async function createWindow() {
+  // Now app is ready, we can check isPackaged
+  shouldLoadLocalServer = app.isPackaged || forceServe;
+  
   let url;
   
   if (shouldLoadLocalServer) {
-    try {
-      console.log('[Main] Starting local server...');
-      // Start the Express server
-      const { startServer } = require('./server');
-      const port = await startServer();
-      console.log('[Main] Server started on port:', port);
-      url = `http://localhost:${port}`;
-    } catch (err) {
-      console.error('[Main] Failed to start server:', err);
-    }
+    // Start server in parallel
+    console.log('[Main] Starting server initialization...');
+    serverPromise = (async () => {
+      try {
+        const { startServer } = require('./server');
+        const port = await startServer();
+        console.log('[Main] Server started on port:', port);
+        return `http://localhost:${port}`;
+      } catch (err) {
+        console.error('[Main] Failed to start server:', err);
+        return null;
+      }
+    })();
+    
+    // Wait for server to start
+    url = await serverPromise;
   } else {
     // Development mode: connect to Next.js dev server
-    // Note: You must run `next dev` separately or concurrently
     url = 'http://localhost:3000';
   }
 
   console.log('[Main] Creating window...');
-  // Create the browser window.
+  // Create the browser window with optimized settings
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -40,13 +49,22 @@ async function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
+      backgroundThrottling: false, // Improve performance
+      disableBlinkFeatures: 'Auxclick', // Reduce unnecessary features
     },
     title: 'MdToHtml Pro',
-    icon: path.join(__dirname, '../public/favicon.ico') // Adjust if icon exists
+    icon: path.join(__dirname, '../public/favicon.ico'),
+    // Optimize window creation
+    frame: true,
+    resizable: true,
+    maximizable: true,
+    minimizable: true,
+    closable: true
   });
 
   // Show window when ready to avoid visual flashing
   mainWindow.once('ready-to-show', () => {
+    console.log('[Main] Window ready to show');
     mainWindow.show();
     if (shouldLoadLocalServer) {
         // Open DevTools in packaged app for debugging per user request
@@ -54,8 +72,9 @@ async function createWindow() {
     }
   });
 
-  console.log('[Main] Loading URL:', url);
+  // Load URL efficiently
   if (url) {
+    console.log('[Main] Loading URL:', url);
     mainWindow.loadURL(url).catch(e => console.error('[Main] Failed to load URL:', e));
   } else {
     console.error('[Main] URL is undefined!');
@@ -76,7 +95,11 @@ async function createWindow() {
   });
 }
 
+// Track startup time
+const startTime = Date.now();
+
 app.whenReady().then(() => {
+  console.log(`[Main] App ready, startup time: ${Date.now() - startTime}ms`);
   createWindow();
 
   app.on('activate', function () {
@@ -87,3 +110,12 @@ app.whenReady().then(() => {
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit();
 });
+
+// Optimize app startup
+app.commandLine.appendSwitch('disable-gpu-compositing');
+app.commandLine.appendSwitch('disable-software-rasterizer');
+app.commandLine.appendSwitch('enable-features', 'UseOzonePlatform');
+app.commandLine.appendSwitch('ozone-platform', 'auto');
+
+// Reduce startup overhead
+app.disableHardwareAcceleration();

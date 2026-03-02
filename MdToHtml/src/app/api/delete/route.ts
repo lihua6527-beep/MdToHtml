@@ -6,7 +6,7 @@ import MetadataCacheManager from '@/lib/cache-manager';
 import TrashManager from '@/lib/trash-manager';
 import { ApiResponse } from '@/types/file-system';
 
-export const dynamic = 'force-dynamic';
+// export const dynamic = 'force-dynamic'; // 注释掉，因为静态导出不支持
 
 export async function POST(request: NextRequest) {
   try {
