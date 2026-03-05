@@ -235,7 +235,8 @@ export const useDocumentState = ({
     contentToSave: string, 
     initialContent: string, 
     operationLog: any[], 
-    router: any
+    router: any,
+    shouldRefresh: boolean = false
   ) => {
     isSavingRef.current = true;
     setIsSaving(true);
@@ -248,7 +249,9 @@ export const useDocumentState = ({
         console.log('Save successful');
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2000);
-        router.refresh();
+        if (shouldRefresh) {
+          router.refresh();
+        }
       } else {
         console.error('Save failed');
       }
@@ -269,7 +272,7 @@ export const useDocumentState = ({
     setIsSaving(true);
 
     saveTimeoutRef.current = setTimeout(() => {
-      debouncedSave(decodedSlug, newContent, initialContent, operationLog, router);
+      debouncedSave(decodedSlug, newContent, initialContent, operationLog, router, false);
     }, 500);
   }, [decodedSlug, initialContent, operationLog, router, debouncedSave]);
   
@@ -278,10 +281,10 @@ export const useDocumentState = ({
     triggerSaveRef.current = triggerDebouncedSave;
   }, [triggerDebouncedSave]);
   
-  const saveFile = useCallback(async (silent = false, contentOverride?: string) => {
+  const saveFile = useCallback(async (silent = false, contentOverride?: string, shouldRefresh: boolean = false) => {
     // Legacy direct save, kept for manual save button if needed
     const contentToSave = contentOverride || contentRef.current;
-    await debouncedSave(decodedSlug, contentToSave, initialContent, operationLog, router);
+    await debouncedSave(decodedSlug, contentToSave, initialContent, operationLog, router, shouldRefresh);
   }, [decodedSlug, initialContent, operationLog, router, debouncedSave]);
   
   // Auto-save
@@ -289,14 +292,14 @@ export const useDocumentState = ({
     if (!isEditing || !content) return;
 
     const timer = setTimeout(() => {
-      saveFile(true); // Silent save
+      saveFile(true, undefined, false); // Silent save, no refresh
     }, 5000); // 5 seconds debounce
 
     return () => clearTimeout(timer);
   }, [content, isEditing, saveFile]);
   
   const handleSave = useCallback(async () => {
-    await saveFile(false);
+    await saveFile(false, undefined, true); // Manual save with refresh
     setIsEditing(false); // Exit edit mode after save
   }, [saveFile]);
   

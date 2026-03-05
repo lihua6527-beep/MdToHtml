@@ -8,10 +8,10 @@
   },
   "system": {},
   "exportOptions": {
-    "emitJson": false
+    "emitJson": true
   },
   "renderOptions": {
     "showDivider": true,
-    "titleSpacing": "4"
+    "titleSpacing": "2"
   }
 }

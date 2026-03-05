@@ -49,10 +49,6 @@ export interface BottomToolbarProps {
     onSectionColorChange: (color: string) => void;
     sectionColumns: number;
     onSectionColumnsChange: (cols: number) => void;
-    sectionTitleSpacing?: string;
-    onSectionTitleSpacingChange?: (spacing: string) => void;
-    sectionShowDivider?: boolean;
-    onSectionShowDividerChange?: (show: boolean) => void;
     
     // Card Props (if card selected)
     cardShape: CardShape;
@@ -108,10 +104,6 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({
     onSectionColorChange,
     sectionColumns,
     onSectionColumnsChange,
-    sectionTitleSpacing = '2',
-    onSectionTitleSpacingChange,
-    sectionShowDivider = false,
-    onSectionShowDividerChange,
     cardShape,
     onCardShapeChange,
     cardStyle,
@@ -218,32 +210,23 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({
                         </div>
 
                         <div className="flex-none flex flex-col gap-3 min-w-[140px] pl-6">
-                             <div className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">全局微调</div>
+                             <div className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">文档工具</div>
                              <div className="space-y-3">
-                                <div className="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
-                                     <span className="text-sm font-medium text-slate-600">分区与间距</span>
-                                     <div className="flex gap-1">
-                                         {['0', '2', '4', '6', '8'].map(v => (
-                                             <button 
-                                                key={v} 
-                                                onClick={() => onSectionTitleSpacingChange?.(v)}
-                                                className={cn(
-                                                    "w-6 h-6 flex items-center justify-center text-xs rounded text-slate-500 hover:bg-white", 
-                                                    sectionTitleSpacing === v && "bg-white text-slate-900 shadow-sm font-bold"
-                                                )}
-                                             >
-                                                {v}
-                                             </button>
-                                         ))}
-                                     </div>
-                                 </div>
-                                 <div className="flex justify-between items-center bg-slate-50 p-2 rounded-lg border border-slate-100">
-                                     <span className="text-sm font-medium text-slate-600">分割线</span>
-                                     <div 
-                                        className={cn("w-10 h-5 rounded-full relative cursor-pointer transition-colors", sectionShowDivider ? "bg-primary" : "bg-slate-300")}
-                                        onClick={() => onSectionShowDividerChange?.(!sectionShowDivider)}
-                                     >
-                                         <div className={cn("absolute top-1 w-3 h-3 bg-white rounded-full shadow-sm transition-all", sectionShowDivider ? "right-1" : "left-1")} />
+                                <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
+                                     <div className="text-xs font-semibold text-slate-400 mb-2">文档统计</div>
+                                     <div className="space-y-2">
+                                         <div className="flex justify-between items-center">
+                                             <span className="text-xs text-slate-500">字数</span>
+                                             <span className="text-xs font-medium text-slate-700">1,234</span>
+                                         </div>
+                                         <div className="flex justify-between items-center">
+                                             <span className="text-xs text-slate-500">段落</span>
+                                             <span className="text-xs font-medium text-slate-700">8</span>
+                                         </div>
+                                         <div className="flex justify-between items-center">
+                                             <span className="text-xs text-slate-500">卡片</span>
+                                             <span className="text-xs font-medium text-slate-700">12</span>
+                                         </div>
                                      </div>
                                  </div>
                              </div>
