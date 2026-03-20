@@ -223,7 +223,7 @@ function startServer() {
       // Start server with optimized settings
       const server = app.listen(port, () => {
         console.log(`[Express] Server started on port ${port}`);
-        resolve(port);
+        resolve({ port, server });
       });
       
       // Optimize server settings

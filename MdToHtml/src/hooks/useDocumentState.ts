@@ -157,7 +157,10 @@ export const useDocumentState = ({
       // First, try to parse normally
       const { data } = matter(content);
       frontmatter.current = data || {};
-      documentType.current = frontmatter.current.type || 'project';
+      // 只有当 frontmatter 中存在 type 字段时才更新，否则保持之前的类型
+      if (frontmatter.current.type) {
+        documentType.current = frontmatter.current.type;
+      }
     } catch (e) {
       console.warn('Frontmatter parsing failed, attempting to clean up duplicate keys', e);
       // If parsing fails due to duplicate keys, clean up the content
@@ -201,11 +204,14 @@ export const useDocumentState = ({
         const cleanedContent = [...frontmatterLines, ...contentLines].join('\n');
         const { data } = matter(cleanedContent);
         frontmatter.current = data || {};
-        documentType.current = frontmatter.current.type || 'project';
+        // 只有当 frontmatter 中存在 type 字段时才更新，否则保持之前的类型
+        if (frontmatter.current.type) {
+          documentType.current = frontmatter.current.type;
+        }
       } catch (e2) {
         console.warn('Failed to clean up frontmatter', e2);
         frontmatter.current = {};
-        documentType.current = 'project';
+        // 解析失败时保持之前的文档类型，而不是重置为 'project'
       }
     }
   }, [content]);

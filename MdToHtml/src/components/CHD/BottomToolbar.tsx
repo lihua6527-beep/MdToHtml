@@ -49,6 +49,10 @@ export interface BottomToolbarProps {
     onSectionColorChange: (color: string) => void;
     sectionColumns: number;
     onSectionColumnsChange: (cols: number) => void;
+    sectionTitleSpacing: string;
+    onSectionTitleSpacingChange: (spacing: string) => void;
+    sectionShowDivider: boolean;
+    onSectionShowDividerChange: (show: boolean) => void;
     
     // Card Props (if card selected)
     cardShape: CardShape;
@@ -71,9 +75,6 @@ export interface BottomToolbarProps {
     // Section List for Fallback Selection
     sections?: Array<{ title: string, blockIndex: number }>;
     onSelectSection?: (blockIndex: number) => void;
-    
-    // Active Card Block Index (to differentiate from section selection)
-    activeCardBlockIndex?: number;
 }
 
 const THEMES = [
@@ -104,6 +105,10 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({
     onSectionColorChange,
     sectionColumns,
     onSectionColumnsChange,
+    sectionTitleSpacing,
+    onSectionTitleSpacingChange,
+    sectionShowDivider,
+    onSectionShowDividerChange,
     cardShape,
     onCardShapeChange,
     cardStyle,
@@ -119,26 +124,24 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({
     textSize = 'M',
     onTextSizeChange,
     sections = [],
-    onSelectSection,
-    activeCardBlockIndex = -1
+    onSelectSection
 }) => {
     const [activeTab, setActiveTab] = useState<'theme' | 'layout' | 'card'>('theme');
     const [showSectionList, setShowSectionList] = useState(false);
 
     // Auto-switch tab based on selection
     useEffect(() => {
-        // If a specific card is selected (activeCardBlockIndex != -1), switch to card tab
-        if (activeCardBlockIndex !== -1) {
-            setActiveTab('card');
+        // If a block is selected, switch to appropriate tab
+        if (selectedBlockIndex !== null) {
+            // Since we don't know if it's a card or section here,
+            // we'll let the parent component handle tab switching
+            // based on the block type
         } 
-        // If a section is selected (selectedSectionTitle is present but no specific card is active), 
-        // we might want to switch to layout tab, or stay on current tab if user prefers.
-        // User requested: "点击选中分区后不要跳转到卡片样式"
-        // Since we now distinguish between card and section selection, this logic is safer.
+        // If a section is selected (selectedSectionTitle is present), switch to layout tab
         else if (selectedSectionTitle) {
             setActiveTab('layout');
         }
-    }, [activeCardBlockIndex, selectedSectionTitle]);
+    }, [selectedBlockIndex, selectedSectionTitle]);
 
     return (
         <div 

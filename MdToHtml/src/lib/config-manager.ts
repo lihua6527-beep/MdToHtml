@@ -55,23 +55,22 @@ class ConfigManager {
     try {
       if (fs.existsSync(this.configPath)) {
         const content = fs.readFileSync(this.configPath, 'utf-8');
+        if (!content || content.trim() === '') {
+          console.warn('Empty config file, using default config');
+          return this.getDefaultConfig();
+        }
         const cfg = JSON.parse(content);
-        cfg.exportOptions = cfg.exportOptions || {};
-        if (typeof cfg.exportOptions.emitJson === 'undefined') {
-          cfg.exportOptions.emitJson = false;
-        }
-        cfg.renderOptions = cfg.renderOptions || {};
-        if (typeof cfg.renderOptions.showDivider === 'undefined') {
-          cfg.renderOptions.showDivider = true;
-        }
-        if (typeof cfg.renderOptions.titleSpacing === 'undefined') {
-          cfg.renderOptions.titleSpacing = '2';
-        }
-        return cfg;
+        return this.validateConfig(cfg);
       }
     } catch (error) {
       console.error('Failed to load config:', error);
+      // Try to backup corrupted config
+      this.backupCorruptedConfig();
     }
+    return this.getDefaultConfig();
+  }
+
+  private getDefaultConfig(): AppConfig {
     return {
       exportOptions: {
         emitJson: false
@@ -81,6 +80,57 @@ class ConfigManager {
         titleSpacing: '2'
       }
     };
+  }
+
+  private validateConfig(config: any): AppConfig {
+    const validated: AppConfig = {
+      exportOptions: { emitJson: false },
+      renderOptions: { showDivider: true, titleSpacing: '2' }
+    };
+
+    // Validate paths
+    if (config.paths && typeof config.paths === 'object') {
+      validated.paths = {};
+      Object.entries(config.paths).forEach(([key, value]) => {
+        if (typeof value === 'string') {
+          validated.paths![key as keyof PathConfig] = value;
+        }
+      });
+    }
+
+    // Validate export options
+    if (config.exportOptions && typeof config.exportOptions === 'object') {
+      validated.exportOptions = {
+        emitJson: typeof config.exportOptions.emitJson === 'boolean' ? config.exportOptions.emitJson : false
+      };
+    }
+
+    // Validate render options
+    if (config.renderOptions && typeof config.renderOptions === 'object') {
+      validated.renderOptions = {
+        showDivider: typeof config.renderOptions.showDivider === 'boolean' ? config.renderOptions.showDivider : true,
+        titleSpacing: typeof config.renderOptions.titleSpacing === 'string' ? config.renderOptions.titleSpacing : '2'
+      };
+    }
+
+    // Validate capacity limit
+    if (typeof config.capacityLimit === 'number' && config.capacityLimit > 0) {
+      validated.capacityLimit = config.capacityLimit;
+    }
+
+    return validated;
+  }
+
+  private backupCorruptedConfig() {
+    try {
+      if (fs.existsSync(this.configPath)) {
+        const backupPath = this.configPath + '.backup';
+        fs.copyFileSync(this.configPath, backupPath);
+        console.log(`Corrupted config backed up to: ${backupPath}`);
+      }
+    } catch (error) {
+      console.error('Failed to backup corrupted config:', error);
+    }
   }
 
   private migrateLegacyConfig() {

@@ -207,6 +207,14 @@ export const Section: React.FC<SectionProps> = ({
     }
   };
 
+  // 验证同一 section 下的卡片图标使用一致性
+  const validateIconConsistency = () => {
+    if (cards.length === 0) return true;
+    
+    const hasIcons = cards.map(card => !!card.props.icon).filter(Boolean).length;
+    return hasIcons === 0 || hasIcons === cards.length;
+  };
+
   // Determine selection state
   // Section is selected if:
   // 1. Explicitly selected via block index (New Architecture)
@@ -216,6 +224,9 @@ export const Section: React.FC<SectionProps> = ({
       (selectedBlockIndex === null && activeSectionBlockIndex !== undefined && activeSectionBlockIndex === blockIndex) ||
       (activeLine !== undefined && startLine !== undefined && activeLine === startLine)
   );
+
+  // 图标使用一致性状态
+  const isIconConsistent = validateIconConsistency();
 
   return (
     <section 
@@ -274,6 +285,13 @@ export const Section: React.FC<SectionProps> = ({
             {title.replace('## ', '').replace(/\{.*?\}/g, '').trim()}
             </h2>
         </div>
+        
+        {/* 图标使用一致性警告 */}
+        {!isIconConsistent && (
+            <div className="mb-4 p-3 bg-amber-50 text-amber-700 text-sm rounded-lg border border-amber-200 flex items-center gap-2">
+                <span>⚠️ 同一 section 下的卡片要么都使用图标，要么都不使用图标。</span>
+            </div>
+        )}
       </div>
 
       {/* Divider between sections */}

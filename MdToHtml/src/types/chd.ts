@@ -25,4 +25,5 @@ export interface CHDSelectionState {
   activeCardProps: CHDCardProps;
   selectedSectionTitle: string;
   parentSectionIndex: number;
+  selectedBlockIndex: number | null;
 }

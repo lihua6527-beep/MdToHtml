@@ -10,6 +10,7 @@ const forceServe = process.env.FORCE_SERVE === 'true';
 let mainWindow;
 let serverPromise;
 let shouldLoadLocalServer;
+let serverInstance;
 
 async function createWindow() {
   // Now app is ready, we can check isPackaged
@@ -19,21 +20,22 @@ async function createWindow() {
   
   if (shouldLoadLocalServer) {
     // Start server in parallel
-    console.log('[Main] Starting server initialization...');
-    serverPromise = (async () => {
-      try {
-        const { startServer } = require('./server');
-        const port = await startServer();
-        console.log('[Main] Server started on port:', port);
-        return `http://localhost:${port}`;
-      } catch (err) {
-        console.error('[Main] Failed to start server:', err);
-        return null;
-      }
-    })();
-    
-    // Wait for server to start
-    url = await serverPromise;
+      console.log('[Main] Starting server initialization...');
+      serverPromise = (async () => {
+        try {
+          const { startServer } = require('./server');
+          const { port, server } = await startServer();
+          serverInstance = server;
+          console.log('[Main] Server started on port:', port);
+          return `http://localhost:${port}`;
+        } catch (err) {
+          console.error('[Main] Failed to start server:', err);
+          return null;
+        }
+      })();
+      
+      // Wait for server to start
+      url = await serverPromise;
   } else {
     // Development mode: connect to Next.js dev server
     url = 'http://localhost:3000';
@@ -98,6 +100,24 @@ async function createWindow() {
 // Track startup time
 const startTime = Date.now();
 
+// Handle uncaught exceptions during startup
+process.on('uncaughtException', (error) => {
+  console.error('[Main] Uncaught exception during startup:', error);
+  // Try to show an error dialog if possible
+  if (mainWindow) {
+    mainWindow.webContents.send('startup-error', { message: error.message });
+  }
+});
+
+// Handle unhandled promise rejections during startup
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Main] Unhandled promise rejection during startup:', reason);
+  // Try to show an error dialog if possible
+  if (mainWindow) {
+    mainWindow.webContents.send('startup-error', { message: reason instanceof Error ? reason.message : String(reason) });
+  }
+});
+
 app.whenReady().then(() => {
   console.log(`[Main] App ready, startup time: ${Date.now() - startTime}ms`);
   createWindow();
@@ -108,7 +128,27 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', function () {
-  if (process.platform !== 'darwin') app.quit();
+  // Close server if it's running
+  if (serverInstance) {
+    console.log('[Main] Closing server...');
+    serverInstance.close(() => {
+      console.log('[Main] Server closed');
+      if (process.platform !== 'darwin') app.quit();
+    });
+  } else {
+    if (process.platform !== 'darwin') app.quit();
+  }
+});
+
+// Handle app quit event
+app.on('quit', function () {
+  // Ensure server is closed
+  if (serverInstance) {
+    console.log('[Main] Closing server on quit...');
+    serverInstance.close(() => {
+      console.log('[Main] Server closed on quit');
+    });
+  }
 });
 
 // Optimize app startup

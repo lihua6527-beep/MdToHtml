@@ -164,17 +164,27 @@ export class OptimizedMetadataCacheManager {
     try {
       if (fs.existsSync(this.cachePath)) {
         const raw = fs.readFileSync(this.cachePath, 'utf8');
+        if (!raw || raw.trim() === '') {
+          console.warn('[OptimizedCacheManager] Empty cache file, resetting.');
+          this.entryMap.clear();
+          this.cache.entries = [];
+          return;
+        }
         const data = JSON.parse(raw) as MetadataCache;
         
-        if (data.version === CACHE_VERSION) {
+        if (data.version === CACHE_VERSION && Array.isArray(data.entries)) {
           this.cache = data;
           // Rebuild map for O(1) access
           this.entryMap.clear();
           data.entries.forEach(entry => {
-            this.entryMap.set(entry.path, entry);
+            if (entry && typeof entry.path === 'string') {
+              this.entryMap.set(entry.path, entry);
+            }
           });
         } else {
           console.log('[OptimizedCacheManager] Version mismatch or invalid cache, resetting.');
+          this.entryMap.clear();
+          this.cache.entries = [];
         }
       } else {
           // Reset if no cache file found (e.g. new directory)
@@ -186,6 +196,15 @@ export class OptimizedMetadataCacheManager {
       // Reset on error
       this.entryMap.clear();
       this.cache.entries = [];
+      // Try to delete corrupted cache file
+      try {
+        if (fs.existsSync(this.cachePath)) {
+          fs.unlinkSync(this.cachePath);
+          console.log('[OptimizedCacheManager] Deleted corrupted cache file.');
+        }
+      } catch (deleteError) {
+        console.warn('[OptimizedCacheManager] Failed to delete corrupted cache file:', deleteError);
+      }
     }
   }
 
@@ -199,9 +218,15 @@ export class OptimizedMetadataCacheManager {
       this.cache.entries = Array.from(this.entryMap.values())
         .sort((a, b) => b.mtime - a.mtime);
       
+      // Ensure base directory exists
+      if (!fs.existsSync(this.baseDir)) {
+        fs.mkdirSync(this.baseDir, { recursive: true });
+      }
+      
       fs.writeFileSync(this.cachePath, JSON.stringify(this.cache, null, 2), 'utf8');
     } catch (e) {
       console.error('[OptimizedCacheManager] Failed to save cache:', e);
+      // Don't crash the system if cache save fails
     }
   }
 
@@ -223,14 +248,29 @@ export class OptimizedMetadataCacheManager {
 
       // Ensure base directory exists
       if (!fs.existsSync(this.baseDir)) {
-        fs.mkdirSync(this.baseDir, { recursive: true });
+        try {
+          fs.mkdirSync(this.baseDir, { recursive: true });
+        } catch (mkdirError) {
+          console.error('[OptimizedCacheManager] Failed to create base directory:', mkdirError);
+          this.isScanning = false;
+          return;
+        }
         this.isScanning = false;
         return;
       }
 
       // 1. Scan directory
-      const files = fs.readdirSync(this.baseDir);
+      let files: string[] = [];
+      try {
+        files = fs.readdirSync(this.baseDir);
+      } catch (readdirError) {
+        console.error('[OptimizedCacheManager] Failed to read directory:', readdirError);
+        this.isScanning = false;
+        return;
+      }
+
       const mdFiles = files.filter(f => 
+        f && typeof f === 'string' &&
         MARKDOWN_EXT_RE.test(f) && 
         !f.startsWith('.') && // Ignore hidden files like .metadata_cache.json
         f !== CACHE_FILE_NAME
@@ -275,51 +315,65 @@ export class OptimizedMetadataCacheManager {
 
       // Wait for all updates to complete
       Promise.all(updatePromises).then(() => {
-        // 3. Remove entries that no longer exist in FS
-        const keys = Array.from(this.entryMap.keys());
-        for (const key of keys) {
-          if (!currentFilesSet.has(key)) {
-            this.entryMap.delete(key);
-            hasChanges = true;
-            console.log(`[OptimizedCacheManager] Removed stale entry: ${key}`);
+        try {
+          // 3. Remove entries that no longer exist in FS
+          const keys = Array.from(this.entryMap.keys());
+          for (const key of keys) {
+            if (!currentFilesSet.has(key)) {
+              this.entryMap.delete(key);
+              hasChanges = true;
+              console.log(`[OptimizedCacheManager] Removed stale entry: ${key}`);
+            }
           }
-        }
 
-        // 4. Sort and Capacity Check
-        // Get current limit from config (reload if needed)
-        const config = PathManager.getAppConfig();
-        const currentLimit = config.capacityLimit || DEFAULT_CAPACITY;
-        this.cache.capacity_limit = currentLimit; // Update cache internal state
+          // 4. Sort and Capacity Check
+          // Get current limit from config (reload if needed)
+          let currentLimit = DEFAULT_CAPACITY;
+          try {
+            const config = PathManager.getAppConfig();
+            currentLimit = config.capacityLimit || DEFAULT_CAPACITY;
+          } catch (configError) {
+            console.warn('[OptimizedCacheManager] Failed to get config, using default capacity:', configError);
+          }
+          this.cache.capacity_limit = currentLimit; // Update cache internal state
 
-        const sortedEntries = Array.from(this.entryMap.values())
-          .sort((a, b) => b.mtime - a.mtime);
-        
-        if (sortedEntries.length > currentLimit) {
-          // Identify overflow files
-          const overflow = sortedEntries.slice(currentLimit);
-          const keep = sortedEntries.slice(0, currentLimit);
+          const sortedEntries = Array.from(this.entryMap.values())
+            .sort((a, b) => b.mtime - a.mtime);
           
-          console.log(`[OptimizedCacheManager] Capacity exceeded (${sortedEntries.length} > ${currentLimit}). Moving ${overflow.length} files to trash.`);
-          
-          // Move overflow to trash via TrashManager
-          const overflowPaths = overflow.map(e => e.path); // Relative paths
-          TrashManager.moveToTrash(overflowPaths);
-          
-          // Update map to only keep valid entries
-          this.entryMap.clear();
-          keep.forEach(e => this.entryMap.set(e.path, e));
-          hasChanges = true;
+          if (sortedEntries.length > currentLimit) {
+            // Identify overflow files
+            const overflow = sortedEntries.slice(currentLimit);
+            const keep = sortedEntries.slice(0, currentLimit);
+            
+            console.log(`[OptimizedCacheManager] Capacity exceeded (${sortedEntries.length} > ${currentLimit}). Moving ${overflow.length} files to trash.`);
+            
+            // Move overflow to trash via TrashManager
+            try {
+              const overflowPaths = overflow.map(e => e.path); // Relative paths
+              TrashManager.moveToTrash(overflowPaths);
+            } catch (trashError) {
+              console.error('[OptimizedCacheManager] Failed to move files to trash:', trashError);
+            }
+            
+            // Update map to only keep valid entries
+            this.entryMap.clear();
+            keep.forEach(e => this.entryMap.set(e.path, e));
+            hasChanges = true;
+          }
+
+          // 5. Adjust scan interval based on file count and changes
+          this.adjustScanInterval(mdFiles.length, hasChanges);
+
+          if (hasChanges) {
+            this.saveCache();
+          }
+
+          this.lastScanTime = Date.now();
+        } catch (syncError) {
+          console.error('[OptimizedCacheManager] Sync processing failed:', syncError);
+        } finally {
+          this.isScanning = false;
         }
-
-        // 5. Adjust scan interval based on file count and changes
-        this.adjustScanInterval(mdFiles.length, hasChanges);
-
-        if (hasChanges) {
-          this.saveCache();
-        }
-
-        this.lastScanTime = Date.now();
-        this.isScanning = false;
       }).catch((error) => {
         console.error('[OptimizedCacheManager] Scan failed:', error);
         this.isScanning = false;
@@ -367,7 +421,12 @@ export class OptimizedMetadataCacheManager {
     
     // If not in cache, check disk
     if (!filename) {
-      filename = candidates.find(c => fs.existsSync(path.join(this.baseDir, c)));
+      try {
+        filename = candidates.find(c => fs.existsSync(path.join(this.baseDir, c)));
+      } catch (existsError) {
+        console.warn('[OptimizedCacheManager] Failed to check file existence:', existsError);
+        return null;
+      }
     }
     
     // Fallback to first candidate
@@ -378,43 +437,49 @@ export class OptimizedMetadataCacheManager {
     const entry = this.entryMap.get(filename);
     const fullPath = path.join(this.baseDir, filename);
     
-    if (!fs.existsSync(fullPath)) return null;
-
-    // Read content from disk
-    const content = fs.readFileSync(fullPath, 'utf8');
-    
-    // Update cache if file has been modified
     try {
-      const stats = fs.statSync(fullPath);
-      if (!entry || Math.abs(entry.mtime - stats.mtimeMs) > 100) {
-        const { data, excerpt } = matter(content, { excerpt: true });
-        const newEntry: CacheEntry = {
-          path: filename,
-          slug: filename.replace(MARKDOWN_EXT_RE, ''),
-          mtime: stats.mtimeMs,
-          birthtime: stats.birthtimeMs,
-          status: data.status,
-          title: data.title || filename.replace(MARKDOWN_EXT_RE, ''),
-          tags: data.tags,
-          excerpt: excerpt || undefined,
-        };
-        this.entryMap.set(filename, newEntry);
-        this.saveCache();
-        return {
-          slug: filename.replace(MARKDOWN_EXT_RE, ''),
-          content,
-          metadata: newEntry
-        };
-      }
-    } catch (e) {
-      console.warn(`[OptimizedCacheManager] Failed to update cache for ${filename}:`, e);
-    }
+      if (!fs.existsSync(fullPath)) return null;
 
-    return {
-      slug: filename.replace(MARKDOWN_EXT_RE, ''),
-      content,
-      metadata: entry
-    };
+      // Read content from disk
+      const content = fs.readFileSync(fullPath, 'utf8');
+      
+      // Update cache if file has been modified
+      try {
+        const stats = fs.statSync(fullPath);
+        if (!entry || Math.abs(entry.mtime - stats.mtimeMs) > 100) {
+          const { data, excerpt } = matter(content, { excerpt: true });
+          const newEntry: CacheEntry = {
+            path: filename,
+            slug: filename.replace(MARKDOWN_EXT_RE, ''),
+            mtime: stats.mtimeMs,
+            birthtime: stats.birthtimeMs,
+            status: data.status,
+            title: data.title || filename.replace(MARKDOWN_EXT_RE, ''),
+            tags: data.tags,
+            excerpt: excerpt || undefined,
+          };
+          this.entryMap.set(filename, newEntry);
+          this.saveCache();
+          return {
+            slug: filename.replace(MARKDOWN_EXT_RE, ''),
+            content,
+            metadata: newEntry
+          };
+        }
+      } catch (e) {
+        console.warn(`[OptimizedCacheManager] Failed to update cache for ${filename}:`, e);
+        // Continue without updating cache
+      }
+
+      return {
+        slug: filename.replace(MARKDOWN_EXT_RE, ''),
+        content,
+        metadata: entry
+      };
+    } catch (readError) {
+      console.error(`[OptimizedCacheManager] Failed to read file ${filename}:`, readError);
+      return null;
+    }
   }
 
   /**

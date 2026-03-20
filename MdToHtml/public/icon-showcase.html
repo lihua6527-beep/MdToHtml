@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Icon Showcase</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.js" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#6366f1',
+                        'bg-card': '#ffffff',
+                        'border-soft': '#e5e7eb',
+                        'text-primary': '#1f2937',
+                        'text-secondary': '#6b7280',
+                        'chart-1': '#3b82f6',
+                        'chart-2': '#10b981',
+                        'chart-3': '#f59e0b',
+                        'chart-4': '#ef4444',
+                        'chart-5': '#8b5cf6',
+                    },
+                    borderRadius: {
+                        card: '1rem',
+                    },
+                    boxShadow: {
+                        card: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+                    },
+                },
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-12">
+        <h1 class="text-4xl font-bold mb-8 text-center">Card Icon Showcase</h1>
+        <p class="text-center text-gray-600 mb-12">This page showcases all available icons for cards.</p>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            <!-- Icon cards will be generated here -->
+        </div>
+        
+        <div class="mt-16">
+            <h2 class="text-2xl font-bold mb-4">Icon Usage Example</h2>
+            <div class="bg-gray-100 p-6 rounded-lg">
+                <pre class="text-sm font-mono">### Card Title {icon="zap"}
+Card content here...</pre>
+            </div>
+        </div>
+        
+        <div class="mt-8">
+            <h2 class="text-2xl font-bold mb-4">Total Icons: <span id="total-icons">0</span></h2>
+            <p class="text-gray-600">All icons are available for use in rectangular cards.</p>
+        </div>
+    </div>
+    
+    <script>
+        // List of all available icons
+        const allIcons = [
+            { name: 'zap', label: 'Zap' },
+            { name: 'cpu', label: 'Cpu' },
+            { name: 'chart', label: 'BarChart2' },
+            { name: 'chart3', label: 'BarChart3' },
+            { name: 'award', label: 'Award' },
+            { name: 'rocket', label: 'Rocket' },
+            { name: 'clock', label: 'Clock' },
+            { name: 'alert', label: 'AlertTriangle' },
+            { name: 'check', label: 'CheckCircle' },
+            { name: 'checksquare', label: 'CheckSquare' },
+            { name: 'network', label: 'Network' },
+            { name: 'eye', label: 'Eye' },
+            { name: 'tag', label: 'Tag' },
+            { name: 'layers', label: 'Layers' },
+            { name: 'box', label: 'Box' },
+            { name: 'globe', label: 'Globe' },
+            { name: 'trending', label: 'TrendingUp' },
+            { name: 'book', label: 'Book' },
+            { name: 'message', label: 'MessageSquare' },
+            { name: 'settings', label: 'Settings' },
+            { name: 'user', label: 'User' },
+            { name: 'users', label: 'Users' },
+            { name: 'userplus', label: 'UserPlus' },
+            { name: 'shield', label: 'Shield' },
+            { name: 'lightbulb', label: 'Lightbulb' },
+            { name: 'calendar', label: 'Calendar' },
+            { name: 'dollar', label: 'DollarSign' },
+            { name: 'target', label: 'Target' },
+            { name: 'star', label: 'Star' },
+            { name: 'heart', label: 'Heart' },
+            { name: 'bookmark', label: 'Bookmark' },
+            { name: 'camera', label: 'Camera' },
+            { name: 'cloud', label: 'Cloud' },
+            { name: 'database', label: 'Database' },
+            { name: 'download', label: 'Download' },
+            { name: 'file', label: 'File' },
+            { name: 'filetext', label: 'FileText' },
+            { name: 'filecode', label: 'FileCode' },
+            { name: 'fileimage', label: 'FileImage' },
+            { name: 'filevideo', label: 'FileVideo' },
+            { name: 'fileaudio', label: 'FileAudio' },
+            { name: 'filespreadsheet', label: 'FileSpreadsheet' },
+            { name: 'filearchive', label: 'FileArchive' },
+            { name: 'filter', label: 'Filter' },
+            { name: 'flag', label: 'Flag' },
+            { name: 'folder', label: 'Folder' },
+            { name: 'gift', label: 'Gift' },
+            { name: 'github', label: 'Github' },
+            { name: 'home', label: 'Home' },
+            { name: 'image', label: 'Image' },
+            { name: 'key', label: 'Key' },
+            { name: 'link', label: 'Link' },
+            { name: 'lock', label: 'Lock' },
+            { name: 'mail', label: 'Mail' },
+            { name: 'map', label: 'Map' },
+            { name: 'menu', label: 'Menu' },
+            { name: 'moon', label: 'Moon' },
+            { name: 'music', label: 'Music' },
+            { name: 'pentool', label: 'PenTool' },
+            { name: 'piechart', label: 'PieChart' },
+            { name: 'search', label: 'Search' },
+            { name: 'share2', label: 'Share2' },
+            { name: 'sun', label: 'Sun' },
+            { name: 'upload', label: 'Upload' },
+            { name: 'video', label: 'Video' },
+            { name: 'wifi', label: 'Wifi' },
+            { name: 'code', label: 'Code' },
+            { name: 'clipboard', label: 'Clipboard' },
+            { name: 'gitbranch', label: 'GitBranch' },
+            { name: 'grid', label: 'Grid' },
+            { name: 'layout', label: 'Layout' },
+            { name: 'list', label: 'List' },
+            { name: 'monitor', label: 'Monitor' },
+            { name: 'package', label: 'Package' },
+            { name: 'server', label: 'Server' },
+            { name: 'smartphone', label: 'Smartphone' },
+            { name: 'tablet', label: 'Tablet' },
+            { name: 'terminal', label: 'Terminal' },
+            { name: 'chevronright', label: 'ChevronRight' },
+            { name: 'chevrondown', label: 'ChevronDown' },
+            { name: 'chevronup', label: 'ChevronUp' },
+            { name: 'chevronleft', label: 'ChevronLeft' }
+        ];
+        
+        // Update total icons count
+        document.getElementById('total-icons').textContent = allIcons.length;
+        
+        // Generate icon cards
+        const container = document.querySelector('.grid');
+        allIcons.forEach((icon, index) => {
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-card shadow-card p-6 flex flex-col items-center text-center';
+            
+            // Create icon element
+            const iconElement = document.createElement('i');
+            iconElement.className = 'lucide lucide-' + icon.name;
+            iconElement.style.fontSize = '2rem';
+            iconElement.style.color = '#3b82f6';
+            iconElement.style.marginBottom = '1rem';
+            
+            // Create icon name
+            const iconName = document.createElement('h3');
+            iconName.className = 'font-bold mb-2';
+            iconName.textContent = icon.name;
+            
+            // Create icon component
+            const iconComponent = document.createElement('p');
+            iconComponent.className = 'text-sm text-gray-500';
+            iconComponent.textContent = icon.label;
+            
+            // Create usage example
+            const usageExample = document.createElement('div');
+            usageExample.className = 'mt-4 p-2 bg-gray-50 rounded text-xs text-gray-600 font-mono';
+            usageExample.textContent = `{icon="${icon.name}"}`;
+            
+            // Assemble card
+            card.appendChild(iconElement);
+            card.appendChild(iconName);
+            card.appendChild(iconComponent);
+            card.appendChild(usageExample);
+            
+            container.appendChild(card);
+        });
+    </script>
+</body>
+</html>

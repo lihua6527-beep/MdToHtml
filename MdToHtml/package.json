@@ -11,7 +11,8 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/post-build.js",
+    "build": "cross-env NEXT_EXPORT=true next build && node scripts/post-build.js",
+    "build:next": "cross-env NEXT_EXPORT=true next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",

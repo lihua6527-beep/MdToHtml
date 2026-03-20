@@ -5,6 +5,7 @@ import PermissionManager, { PermissionLevel } from './core/PermissionManager';
 import { FileItem, FileDeleteRequest, FileSaveRequest, FileSaveResponse } from '@/types/file-system';
 import { QUERY_KEYS } from '@/constants/query-keys';
 import { ErrorHandler } from './core/ErrorHandler';
+import { logger } from '@/lib/logger';
 import matter from 'gray-matter';
 
 export class FileService {
@@ -28,7 +29,10 @@ export class FileService {
       return [];
     } catch (error) {
       const appError = ErrorHandler.handleError(error);
-      console.error('Failed to fetch files:', appError);
+      logger.error('Failed to fetch files', {
+        module: 'FileService',
+        context: { error: appError }
+      });
       return [];
     }
   }
@@ -44,7 +48,10 @@ export class FileService {
       return result ? result.content : null;
     } catch (error) {
       const appError = ErrorHandler.handleError(error);
-      console.error('Failed to load file:', appError);
+      logger.error('Failed to load file', {
+        module: 'FileService',
+        context: { error: appError, slug }
+      });
       return null;
     }
   }
@@ -75,7 +82,10 @@ export class FileService {
       return success;
     } catch (error) {
       const appError = ErrorHandler.handleError(error);
-      console.error('Failed to delete file:', appError);
+      logger.error('Failed to delete file', {
+        module: 'FileService',
+        context: { error: appError, slug, deleteOutput }
+      });
       return false;
     }
   }
@@ -105,7 +115,10 @@ export class FileService {
       return success;
     } catch (error) {
       const appError = ErrorHandler.handleError(error);
-      console.error('Failed to delete files:', appError);
+      logger.error('Failed to delete files', {
+        module: 'FileService',
+        context: { error: appError, slugs, deleteOutput }
+      });
       return false;
     }
   }
@@ -122,6 +135,12 @@ export class FileService {
       // Check permission
       PermissionManager.requirePermission(PermissionLevel.WRITE);
       
+      // Validate input
+      if (!slug || !content) {
+        console.error('Invalid input: slug or content is missing');
+        return false;
+      }
+      
       const request: FileSaveRequest = { slug, content, operations };
       const result = await ApiClient.post<FileSaveResponse>('/api/save', request);
       const success = result && (result.success === true || result.slug === slug);
@@ -134,7 +153,18 @@ export class FileService {
       return success;
     } catch (error) {
       const appError = ErrorHandler.handleError(error);
-      console.error('Failed to save file:', appError);
+      logger.error('Failed to save file', {
+        module: 'FileService',
+        context: { error: appError, slug }
+      });
+      // Handle specific file system errors
+      if (appError.message.includes('disk') || appError.message.includes('space') || appError.message.includes('quota')) {
+        logger.error('Disk space error', {
+          module: 'FileService',
+          context: { error: appError, slug }
+        });
+        // Here you could show a user-friendly message about disk space
+      }
       return false;
     }
   }
@@ -153,7 +183,10 @@ export class FileService {
       return true;
     } catch (error) {
       const appError = ErrorHandler.handleError(error);
-      console.error('Failed to log training data:', appError);
+      logger.error('Failed to log training data', {
+        module: 'FileService',
+        context: { error: appError, data: typeof data === 'object' ? Object.keys(data) : data }
+      });
       return false;
     }
   }
@@ -174,7 +207,10 @@ export class FileService {
       return true;
     } catch (error) {
       const appError = ErrorHandler.handleError(error);
-      console.error('Failed to save export:', appError);
+      logger.error('Failed to save export', {
+        module: 'FileService',
+        context: { error: appError, data: typeof data === 'object' ? Object.keys(data) : data }
+      });
       return false;
     }
   }
@@ -187,6 +223,17 @@ export class FileService {
    */
   static async moveFile(oldSlug: string, newSlug: string): Promise<boolean> {
     try {
+      // Validate input
+      if (!oldSlug || !newSlug) {
+        console.error('Invalid input: oldSlug or newSlug is missing');
+        return false;
+      }
+      
+      if (oldSlug === newSlug) {
+        console.error('Old and new slug are the same');
+        return false;
+      }
+      
       // Check permissions (requires both write and delete)
       PermissionManager.requireAllPermissions([PermissionLevel.WRITE, PermissionLevel.DELETE]);
       
@@ -226,7 +273,11 @@ export class FileService {
         },
         async () => {
           // Rollback: Delete the newly created file
-          await this.deleteFile(newSlug, true);
+          try {
+            await this.deleteFile(newSlug, true);
+          } catch (rollbackError) {
+            console.warn('Failed to rollback file creation:', rollbackError);
+          }
           return true;
         },
         'Save file to new location'
@@ -244,7 +295,11 @@ export class FileService {
         async () => {
           // Rollback: Restore the old file
           if (fileContent) {
-            await this.saveFile(oldSlug, fileContent);
+            try {
+              await this.saveFile(oldSlug, fileContent);
+            } catch (rollbackError) {
+              console.warn('Failed to rollback file deletion:', rollbackError);
+            }
           }
           return true;
         },
@@ -263,7 +318,22 @@ export class FileService {
       return success;
     } catch (error) {
       const appError = ErrorHandler.handleError(error);
-      console.error('Failed to move file:', appError);
+      logger.error('Failed to move file', {
+        module: 'FileService',
+        context: { error: appError, oldSlug, newSlug }
+      });
+      // Handle specific file system errors
+      if (appError.message.includes('disk') || appError.message.includes('space') || appError.message.includes('quota')) {
+        logger.error('Disk space error during move', {
+          module: 'FileService',
+          context: { error: appError, oldSlug, newSlug }
+        });
+      } else if (appError.message.includes('permission') || appError.message.includes('access')) {
+        logger.error('Permission error during move', {
+          module: 'FileService',
+          context: { error: appError, oldSlug, newSlug }
+        });
+      }
       return false;
     }
   }
@@ -276,30 +346,46 @@ export class FileService {
    */
   static async updateFileType(slug: string, type: string): Promise<boolean> {
     try {
-      console.log(`[FileService] Updating file type for ${slug} to ${type}`);
+      logger.info(`Updating file type for ${slug} to ${type}`, {
+        module: 'FileService'
+      });
       
       // Check permission
       try {
         PermissionManager.requirePermission(PermissionLevel.WRITE);
-        console.log('[FileService] Permission check passed');
+        logger.debug('Permission check passed', {
+          module: 'FileService'
+        });
       } catch (permError) {
-        console.error('[FileService] Permission error:', permError);
+        logger.error('Permission error', {
+          module: 'FileService',
+          context: { error: permError, slug, type }
+        });
         return false;
       }
       
       // Get file content
       const content = await this.getFileBySlug(slug);
-      console.log(`[FileService] Got file content: ${content ? 'success' : 'failed'}`);
+      logger.debug(`Got file content: ${content ? 'success' : 'failed'}`, {
+        module: 'FileService',
+        context: { slug }
+      });
       
       if (!content) {
-        console.error(`File not found: ${slug}`);
+        logger.error(`File not found: ${slug}`, {
+          module: 'FileService',
+          context: { slug }
+        });
         return false;
       }
       
       // Update frontmatter
       try {
         const { data, content: body } = matter(content);
-        console.log('[FileService] Parsed frontmatter successfully');
+        logger.debug('Parsed frontmatter successfully', {
+          module: 'FileService',
+          context: { slug }
+        });
         
         const updatedData = {
           ...data,
@@ -307,26 +393,40 @@ export class FileService {
         };
         
         const updatedContent = matter.stringify(body, updatedData);
-        console.log('[FileService] Generated updated content');
+        logger.debug('Generated updated content', {
+          module: 'FileService',
+          context: { slug }
+        });
         
         // Save file
         const success = await this.saveFile(slug, updatedContent);
-        console.log(`[FileService] Save file result: ${success}`);
+        logger.debug(`Save file result: ${success}`, {
+          module: 'FileService',
+          context: { slug, success }
+        });
         
         if (success) {
           // Refresh cache
           mutate(QUERY_KEYS.FILES);
-          console.log('[FileService] Refreshed cache');
+          logger.debug('Refreshed cache', {
+            module: 'FileService'
+          });
         }
         
         return success;
       } catch (parseError) {
-        console.error('[FileService] Frontmatter parsing error:', parseError);
+        logger.error('Frontmatter parsing error', {
+          module: 'FileService',
+          context: { error: parseError, slug }
+        });
         return false;
       }
     } catch (error) {
       const appError = ErrorHandler.handleError(error);
-      console.error('Failed to update file type:', appError);
+      logger.error('Failed to update file type', {
+        module: 'FileService',
+        context: { error: appError, slug, type }
+      });
       return false;
     }
   }

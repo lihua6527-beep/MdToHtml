@@ -40,8 +40,7 @@ export default function EditorPage() {
   // Track last saved content for diff logging
   const [lastSavedContent, setLastSavedContent] = useState<string>('');
   
-  // Selection State for BottomToolbar
-  const [selectedBlockIndex, setSelectedBlockIndex] = useState<number | null>(null);
+
   
   // Tag Style from Frontmatter
   const tagStyle = useMemo<TagStyleType>(() => {
@@ -53,8 +52,8 @@ export default function EditorPage() {
       }
   }, [content]);
   
-  // Use useCHDSelection hook for derived state
-  const { activeSectionProps, activeCardProps, selectedSectionTitle } = useCHDSelection(content, selectedBlockIndex);
+  // Use useCHDSelection hook for derived state - now handles activeLine to block selection mapping
+  const { activeSectionProps, activeCardProps, selectedSectionTitle, selectedBlockIndex } = useCHDSelection(content, activeLine);
 
   const [activeCardProps_Legacy, setActiveCardProps_Legacy] = useState<any>(null); // Placeholder to avoid breaking other code if any
   
@@ -62,76 +61,6 @@ export default function EditorPage() {
 
   // Interaction Hook
   const { updateAttribute, updateContent, updateTitle, updateFrontmatter, moveCard, batchUpdateAttributes, addCard, deleteCard } = useMarkdownInteraction(content, setContent);
-  
-  useEffect(() => {
-      if (!content) return;
-      // We wrap this in a try-catch to avoid parsing errors blocking the UI
-      try {
-        const blocks = parseCHDBlocks(content);
-        
-        // Find block containing activeLine
-        const currentBlock = blocks.find(b => activeLine >= b.startLine && activeLine <= b.endLine);
-        
-        // [Architecture Fix: Inertia Selection]
-        // 1. If activeLine is inside the currently selected card, do nothing (preserve selection).
-        if (selectedBlockIndex !== null) {
-            const currentSelectedCard = blocks[selectedBlockIndex];
-            if (currentSelectedCard && activeLine >= currentSelectedCard.startLine && activeLine <= currentSelectedCard.endLine) {
-                return;
-            }
-        }
-        
-        // 2. If activeLine is inside the currently selected section HEADER, do nothing.
-        // But what if activeLine is in the "gap" after the header?
-        // We want to KEEP the section selected if we are in the gap.
-        // So we should only CHANGE selection if we hit a NEW block.
-        
-        if (currentBlock) {
-             // We hit a known block. Is it different from current selection?
-             
-             if (currentBlock.type === 'card' || currentBlock.type === 'code') {
-                 // Switch to Card Selection
-                 const idx = blocks.indexOf(currentBlock);
-                 if (idx !== selectedBlockIndex) {
-                    console.log('[Selection Update] Switching to Card:', idx);
-                    setSelectedBlockIndex(idx);
-                 }
-             } else if (currentBlock.type === 'section') {
-                 // Switch to Section Selection
-                 const idx = blocks.indexOf(currentBlock);
-                 // Note: activeSectionProps comes from hook now. 
-                 // We need to check if the section block index matches.
-                 if (idx !== activeSectionProps.blockIndex || selectedBlockIndex !== null) {
-                    console.log('[Selection Update] Switching to Section:', idx);
-                    setSelectedBlockIndex(null); // No card selected, but we need to signal section selection?
-                    // Wait, if selectedBlockIndex is null, useCHDSelection resets?
-                    // No, useCHDSelection takes selectedBlockIndex.
-                    // If selectedBlockIndex is null, it resets.
-                    // BUT EditorPage logic was: if section selected, selectedBlockIndex is NULL, but activeSectionProps has blockIndex.
-                    
-                    // My hook implementation relies on selectedBlockIndex pointing to the selected block.
-                    // If I select a section, selectedBlockIndex should be the SECTION's index.
-                    // But EditorPage previously set selectedBlockIndex = null when section is selected.
-                    
-                    // I need to change this behavior. 
-                    // Let's set selectedBlockIndex to the section index.
-                    setSelectedBlockIndex(idx);
-                 }
-             }
-        } else {
-            // activeLine is in a gap (no block).
-            // Do we clear selection?
-            // NO. This is the key fix. If we are in a gap, we KEEP the previous selection.
-            // This allows clicking "empty space" in a section without deselecting the section.
-            console.log('[Selection Update] In gap - preserving selection');
-        }
-      } catch (e) {
-           console.warn('Selection update failed', e);
-       }
-   }, [activeLine, content, selectedBlockIndex, activeSectionProps.blockIndex]);
-  
-  // Ensure state consistency when blockIndex changes
-  // This effect is no longer needed as useCHDSelection handles it
 
   const [isDragging, setIsDragging] = useState(false);
   // Export State
@@ -201,9 +130,7 @@ export default function EditorPage() {
           const sectionBlock = blocks[blockIndex];
           if (sectionBlock && sectionBlock.type === 'section') {
               console.log('[EditorPage] Toolbar Selection:', sectionBlock.title);
-              setSelectedBlockIndex(blockIndex);
-              
-              // Sync cursor
+              // 通过设置 activeLine 来更新选择，useCHDSelection 会自动处理
               setActiveLine(sectionBlock.startLine);
           }
       } catch (e) {
@@ -557,21 +484,6 @@ export default function EditorPage() {
                     console.log('[EditorPage] onCardClick received line:', line);
                     setActiveLine(line);
                     
-                    // Direct Selection Logic (Force selection update)
-                    try {
-                        const blocks = parseCHDBlocks(content);
-                        // Find block containing the clicked line
-                        const currentBlock = blocks.find(b => line >= b.startLine && line <= b.endLine);
-                        console.log('[EditorPage] Direct Selection - Found block:', currentBlock?.type, currentBlock?.id);
-
-                        if (currentBlock) {
-                            const idx = blocks.indexOf(currentBlock);
-                            setSelectedBlockIndex(idx);
-                        }
-                    } catch (e) {
-                        console.error('[EditorPage] Direct Selection Failed', e);
-                    }
-
                     // Also scroll editor to this line
                     if (editorRef.current) {
                       editorRef.current.scrollToLine(line);
@@ -581,18 +493,12 @@ export default function EditorPage() {
                   selectedBlockIndex={selectedBlockIndex}
                   activeSectionBlockIndex={activeSectionProps.blockIndex}
                   onSelectBlock={(index) => {
-                      setSelectedBlockIndex(index);
-                      // Optionally scroll to block
-                      // We need to map block index to line number if we want to scroll
+                      // 选择通过 activeLine 自动管理，此处无需操作
                   }}
                   onSelectSection={(blockIndex, title, layoutProps) => {
                       console.log('[EditorPage] Explicit Section Selection:', { blockIndex, title });
                       
-                      // Just update the selected block index.
-                      // useCHDSelection will handle parsing the props from content.
-                      setSelectedBlockIndex(blockIndex);
-
-                      // 4. Sync Editor Cursor (Optional, for context)
+                      // 4. Sync Editor Cursor
                       try {
                           const blocks = parseCHDBlocks(content);
                           const sectionBlock = blocks[blockIndex];
@@ -711,29 +617,14 @@ export default function EditorPage() {
          // Actions
          onCardAdd={() => {
              // Add card to current section
-             // We need to find the section index. 
-             // If a card is selected, use its parent section.
-             // If a section is selected, use it.
-             if (selectedBlockIndex !== null) {
-                 // Card selected -> find parent section
-                 // We need to traverse back from selectedBlockIndex
-                 // But CHDRenderer handles onCardAdd with section index.
-                 // Here we just trigger add to current section.
-                 // Since we don't have easy access to blocks here without parsing again,
-                 // let's rely on CHDRenderer's onCardAdd or pass a generic "add" that handles it.
-                 // Actually BottomToolbar calls onCardAdd without args.
-                 // We should probably pass the section index if we know it.
-                 if (activeSectionProps.blockIndex !== -1) {
-                     addCard(activeSectionProps.blockIndex);
-                 }
-             } else if (activeSectionProps.blockIndex !== -1) {
+             if (activeSectionProps.blockIndex !== -1) {
                  addCard(activeSectionProps.blockIndex);
              }
          }}
          onCardDelete={() => {
              if (selectedBlockIndex !== null) {
                  deleteCard(selectedBlockIndex);
-                 setSelectedBlockIndex(null);
+                 // 选择会通过 activeLine 自动更新
              }
          }}
     />

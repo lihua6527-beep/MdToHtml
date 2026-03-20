@@ -120,7 +120,7 @@ export function useHistory<T>(initialState: T, options: UseHistoryOptions = {}) 
   const canUndo = state.past.length > 0;
   const canRedo = state.future.length > 0;
 
-  // Load history on mount
+  // Load history on mount and cleanup
   useEffect(() => {
     if (!sessionId) return;
     
@@ -146,7 +146,13 @@ export function useHistory<T>(initialState: T, options: UseHistoryOptions = {}) 
 
     fetchHistory();
 
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+      // Clear any pending save timeout
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
   }, [sessionId]);
 
   return {

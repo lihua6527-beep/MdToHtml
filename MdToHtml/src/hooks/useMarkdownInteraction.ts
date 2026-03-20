@@ -139,11 +139,17 @@ export function useMarkdownInteraction(
     let hasFrontmatter = lines[0]?.trim() === '---';
     let fmEnd = -1;
 
+    // 保存现有的 type 字段值
+    let existingType: string | undefined;
     if (hasFrontmatter) {
         for (let i = 1; i < lines.length; i++) {
             if (lines[i].trim() === '---') {
                 fmEnd = i;
                 break;
+            }
+            const match = lines[i].trim().match(/^type:\s*(.*)$/);
+            if (match) {
+                existingType = match[1].trim();
             }
         }
         // If no end found, treat as no frontmatter (broken)
@@ -153,8 +159,15 @@ export function useMarkdownInteraction(
     if (!hasFrontmatter) {
         // Create Frontmatter
         const newFm = ['---'];
+        // 保留现有的 type 字段（如果有）
+        if (existingType) {
+            newFm.push(`type: ${existingType}`);
+        }
+        // 添加其他更新的字段
         Object.entries(updatesMap).forEach(([k, v]) => {
-            newFm.push(`${k}: ${v}`);
+            if (k !== 'type' || !existingType) { // 只有当没有现有 type 时才添加
+                newFm.push(`${k}: ${v}`);
+            }
         });
         newFm.push('---');
         newFm.push(''); // Empty line after
@@ -190,6 +203,11 @@ export function useMarkdownInteraction(
         
         // Now update or add new keys
         Object.entries(updatesMap).forEach(([key, val]) => {
+            // 跳过 type 字段，除非明确要更新它
+            if (key === 'type' && existingType && !updatesMap.hasOwnProperty('type')) {
+                return;
+            }
+            
             let found = false;
             for (let i = 0; i < cleanedFmLines.length; i++) {
                 const line = cleanedFmLines[i].trim();

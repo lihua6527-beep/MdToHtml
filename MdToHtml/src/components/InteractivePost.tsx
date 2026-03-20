@@ -336,7 +336,6 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                 // Section List for Fallback Selection
                 sections={sections}
                 onSelectSection={(idx) => setSelectedBlockIndex(idx)}
-                activeCardBlockIndex={activeCardProps.blockIndex}
             />
        )}
     </div>

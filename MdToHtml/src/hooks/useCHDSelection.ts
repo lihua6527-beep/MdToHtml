@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { parseCHDBlocks } from '@/lib/chdParser';
 import { parseAttributes } from '@/lib/attributeParser';
 import { CHDSectionProps, CHDCardProps, CHDSelectionState, CardStyle } from '@/types/chd';
@@ -22,35 +22,37 @@ const DEFAULT_CARD_PROPS: CHDCardProps = {
   blockIndex: -1
 };
 
-export function useCHDSelection(content: string, selectedBlockIndex: number | null): CHDSelectionState {
-  const [state, setState] = useState<CHDSelectionState>({
-    activeSectionProps: DEFAULT_SECTION_PROPS,
-    activeCardProps: DEFAULT_CARD_PROPS,
-    selectedSectionTitle: '',
-    parentSectionIndex: -1
-  });
+const DEFAULT_SELECTION_STATE: CHDSelectionState = {
+  activeSectionProps: DEFAULT_SECTION_PROPS,
+  activeCardProps: DEFAULT_CARD_PROPS,
+  selectedSectionTitle: '',
+  parentSectionIndex: -1,
+  selectedBlockIndex: null
+};
+
+export function useCHDSelection(content: string, activeLine: number | null): CHDSelectionState {
+  const [state, setState] = useState<CHDSelectionState>(DEFAULT_SELECTION_STATE);
 
   useEffect(() => {
-    if (!content || selectedBlockIndex === null) {
-      setState({
-        activeSectionProps: DEFAULT_SECTION_PROPS,
-        activeCardProps: DEFAULT_CARD_PROPS,
-        selectedSectionTitle: '',
-        parentSectionIndex: -1
-      });
+    if (!content || activeLine === null) {
+      setState(DEFAULT_SELECTION_STATE);
       return;
     }
 
     try {
       const blocks = parseCHDBlocks(content);
-      const currentBlock = blocks[selectedBlockIndex];
+      const currentBlock = blocks.find(b => activeLine >= b.startLine && activeLine <= b.endLine);
       
-      if (!currentBlock) return;
-
-      const lines = content.split('\n');
-
+      if (!currentBlock) {
+        // In gap - preserve current selection
+        return;
+      }
+      
+      const blockIndex = blocks.indexOf(currentBlock);
+      
       if (currentBlock.type === 'section') {
         // Section Selected
+        const lines = content.split('\n');
         const titleLine = lines[currentBlock.startLine];
         const { props, cleanText } = parseAttributes(titleLine.replace(/^#+\s+/, ''));
         
@@ -61,21 +63,23 @@ export function useCHDSelection(content: string, selectedBlockIndex: number | nu
             columns: parseInt(props.columns || '2'),
             titleSpacing: props['title-spacing'] || '2',
             showDivider: props['show-divider'] === 'true',
-            blockIndex: selectedBlockIndex,
+            blockIndex,
             titleAlign: (props['title-align'] as 'left' | 'center' | 'right') || 'left'
           },
           activeCardProps: DEFAULT_CARD_PROPS,
           selectedSectionTitle: cleanText || '无标题分区',
-          parentSectionIndex: -1
+          parentSectionIndex: -1,
+          selectedBlockIndex: blockIndex
         });
       } else if (currentBlock.type === 'card' || currentBlock.type === 'code') {
         // Card Selected
+        const lines = content.split('\n');
         const titleLine = lines[currentBlock.startLine];
         const { props } = parseAttributes(titleLine.replace(/^#+\s+/, ''));
         
         // Find Parent Section
         let parentSectionIndex = -1;
-        for (let i = selectedBlockIndex - 1; i >= 0; i--) {
+        for (let i = blockIndex - 1; i >= 0; i--) {
             if (blocks[i].type === 'section') {
                 parentSectionIndex = i;
                 break;
@@ -108,23 +112,19 @@ export function useCHDSelection(content: string, selectedBlockIndex: number | nu
             shape: (props.shape as CardShape) || 'rect',
             style: (props['card-style'] as CardStyle) || 'normal',
             badge: props.badge || '',
-            blockIndex: selectedBlockIndex
+            blockIndex
           },
           selectedSectionTitle: sectionTitleToUse,
-          parentSectionIndex: parentSectionIndex
+          parentSectionIndex: parentSectionIndex,
+          selectedBlockIndex: blockIndex
         });
       } else {
-        setState({
-          activeSectionProps: DEFAULT_SECTION_PROPS,
-          activeCardProps: DEFAULT_CARD_PROPS,
-          selectedSectionTitle: '',
-          parentSectionIndex: -1
-        });
+        setState(DEFAULT_SELECTION_STATE);
       }
     } catch (e) {
       console.warn('Selection parsing failed', e);
     }
-  }, [content, selectedBlockIndex]);
+  }, [content, activeLine]);
 
   return state;
 }

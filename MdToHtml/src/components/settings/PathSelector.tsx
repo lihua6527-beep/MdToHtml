@@ -82,8 +82,29 @@ export const PathSelector: React.FC<PathSelectorProps> = ({ initialPath, onSelec
     onSelect(selectedFolder || currentPath);
   };
 
+  const validateFolderName = (name: string): string | null => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      return '文件夹名称不能为空';
+    }
+    if (trimmed.length > 255) {
+      return '文件夹名称长度不能超过255个字符';
+    }
+    if (trimmed.includes('/') || trimmed.includes('\\') || trimmed.includes(':')) {
+      return '文件夹名称不能包含斜杠或冒号';
+    }
+    if (trimmed.match(/[<>"|?*]/)) {
+      return '文件夹名称不能包含特殊字符 < > " | ? *';
+    }
+    return null;
+  };
+
   const handleCreateFolder = async () => {
-    if (!newFolderName.trim()) return;
+    const validationError = validateFolderName(newFolderName);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
     try {
       const res = await fetch('/api/fs/list', {
@@ -100,12 +121,13 @@ export const PathSelector: React.FC<PathSelectorProps> = ({ initialPath, onSelec
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to create folder');
+        throw new Error(data.error || '创建文件夹失败');
       }
 
       // Refresh list and clear creation state
       setIsCreating(false);
       setNewFolderName('');
+      setError(null);
       fetchPath(currentPath);
     } catch (err: any) {
       setError(err.message);
