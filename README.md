@@ -69,18 +69,29 @@ start.bat
 npm run build
 ```
 
-生成结果将位于根目录的 `output/` 文件夹中。
+生成结果将位于 `MdToHtml/out/` 目录中。
 
 ## 📂 目录结构
 
 ```text
 MdToHtml/
-├── input/          # [用户] 放置 Markdown 源文件
-├── output/         # [用户] 生成的 HTML 结果 (请勿手动修改)
 ├── MdToHtml/       # [系统] 核心程序代码
+├── docs/           # [文档] 项目文档和开发记录
 ├── README.md       # [文档] 项目说明
 ├── start.bat       # [脚本] 一键启动
+├── build_static.bat # [脚本] 构建静态网站
 └── .cursorrules    # [配置] AI 助手规则
+```
+
+### 核心代码结构
+
+```text
+MdToHtml/MdToHtml/
+├── out/            # [构建] 生成的静态 HTML 结果
+├── src/            # [源码] 核心代码
+├── electron/       # [桌面] Electron 桌面端支持
+├── scripts/        # [脚本] 构建和部署脚本
+└── package.json    # [配置] 项目依赖和脚本
 ```
 
 ## 📖 技术架构

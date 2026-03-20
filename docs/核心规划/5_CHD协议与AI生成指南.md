@@ -1,7 +1,7 @@
-# CHD 协议 v2.0：面向 AI 的生成规范 (CHD Protocol for AI Generation)
+# CHD 协议 v2.1：面向 AI 的生成规范 (CHD Protocol for AI Generation)
 
-**版本**: v2.0
-**日期**: 2026-02-26
+**版本**: v2.1
+**日期**: 2026-03-06
 **状态**: **已生效 (Active)**
 **适用对象**: AI 助手 (LLMs), 内容创作者, 自动化脚本
 
@@ -38,6 +38,7 @@ category: "project"      # 选填，文档分类：project（项目）、paper�
 version: "1.0"           # 选填，默认 1.0
 status: "done"           # 选填，done/wip
 training_sample: true    # 选填，标识是否为高质量样本
+icon: "logo"            # 选填，文档左上角图标
 ---
 ```
 
@@ -67,21 +68,171 @@ AI 必须为每个 Section 指定布局属性。
 **严禁在 L1 (##) 下直接书写正文，所有内容必须包裹在 L2 (###) 卡片中。**
 
 ```markdown
-### 突破全网拓扑假设 {card-style="highlight"}
+### 突破全网拓扑假设 {card-style="highlight" icon="zap"}
 这里是卡片的正文内容...
 ```
 
-*   **`card-style` (样式)**:
+*   **`card-style` (样式)**: 
     *   `"normal"`: 标准卡片（默认）。适合一般性描述。
     *   `"highlight"`: 高亮卡片。适合核心观点、重要结论。
     *   `"quote"`: 引用卡片。适合名言、用户评价、设计理念。
-    *   `"code"`: **[用户专用]** 代码卡片。
-        *   **AI 禁止生成**: AI **严禁**直接生成此样式。
-        *   **原因**: 该样式具有特殊的视觉效果，仅由用户在后期编辑时根据审美偏好手动开启。
-        *   **AI 策略**: 对于代码块、配置文件或伪代码，AI 应始终将其放在 `normal` 或 `highlight` 卡片中。
-    *   **注**: `stat`, `warning`, `summary` 等样式在 v2.0 中已**精简**，请勿使用。所有内容请归类为上述 3 种允许的样式。
+    *   **注**: `stat`, `warning`, `summary`, `code` 等样式在 v2.0 中已**精简**，请勿使用。所有内容请归类为上述 3 种允许的样式。代码块应使用标准 Markdown 格式处理。
 
-### L2.1: 富文本支持 (Rich Text Support)
+*   **`icon` (图标)**:
+    *   **可选属性**：为卡片添加视觉图标，增强视觉表现力。
+    *   **允许的值**：请参考 `docs/技术规范与前端规范/卡片图标资产库.md` 中的图标列表。
+    *   **使用规则**：
+        *   **成套使用**：同一 `Section` 下的所有卡片，要么都使用图标，要么都不使用图标。
+        *   **相关性**：选择与卡片内容相关的图标。
+        *   **限制**：图标只能在标准矩形卡片中使用。
+        *   **命名规范**：请遵循 `docs/技术规范与前端规范/图标命名规范.md` 中的命名规则。
+    *   **AI 策略**：
+        *   可以为卡片添加图标以增强视觉效果。
+        *   确保在同一 Section 内保持图标使用的一致性。
+        *   只在需要突出显示的卡片中使用图标，避免过度使用。
+        *   当不确定图标名称时，使用通用的图标名称，系统会自动处理不存在的图标。
+
+### L2.2: 支持的图标列表 (Supported Icons)
+
+以下是 CHD 协议支持的所有图标列表，按分类组织：
+
+#### 基础图标 (Basic Icons)
+- **zap**: 创新、能量、快速、高效
+- **cpu**: 技术、性能、计算、架构
+- **chart**: 数据、分析、统计、趋势
+- **chart3**: 高级数据、复杂分析、多维度统计
+- **award**: 成就、奖项、荣誉、认可
+- **rocket**: 增长、启动、推进、突破
+- **clock**: 时间、计划、进度、截止日期
+- **alert**: 警告、注意、提示、安全
+- **check**: 成功、完成、验证、确认
+- **checksquare**: 任务完成、清单、确认
+- **network**: 连接、网络、关系、协作
+- **eye**: 观察、监控、查看、洞察
+- **tag**: 标签、分类、标记、关键词
+- **layers**: 层次、结构、组织、组件
+- **box**: 容器、包装、存储、内容
+- **globe**: 全球、国际化、地球、多元文化
+- **trending**: 趋势、增长、上升、进步
+- **book**: 知识、学习、文档、教育
+- **message**: 沟通、对话、消息、交流
+- **settings**: 设置、配置、选项、偏好
+- **user**: 用户、个人、账号、个人资料
+- **users**: 团队、用户群、社区、合作
+- **userplus**: 添加用户、邀请、注册、新成员
+- **shield**: 安全、保护、防御、隐私
+- **lightbulb**: 创意、想法、灵感、创新
+- **calendar**: 日期、计划、安排、日程
+- **dollar**: 财务、金钱、价值、投资
+- **target**: 目标、目的、焦点、方向
+- **star**: 星级、评分、优秀、突出
+- **heart**: 喜欢、爱、情感、关注
+- **bookmark**: 收藏、保存、标记、重要
+- **camera**: 图片、摄影、视觉、媒体
+- **cloud**: 云存储、云端、在线、备份
+- **database**: 数据、存储、数据库、信息
+- **download**: 下载、获取、保存、离线
+- **file**: 文件、文档、资料、内容
+- **filetext**: 文本文件、文档、文章、报告
+- **filecode**: 代码文件、编程、开发、脚本
+- **fileimage**: 图片文件、图像、视觉、设计
+- **filevideo**: 视频文件、影片、媒体、演示
+- **fileaudio**: 音频文件、音乐、声音、播客
+- **filespreadsheet**: 电子表格、数据、表格、计算
+- **filearchive**: 压缩文件、归档、存储、备份
+- **filter**: 筛选、过滤、分类、排序
+- **flag**: 标记、旗帜、国家、地区
+- **folder**: 文件夹、目录、组织、存储
+- **gift**: 礼物、奖励、优惠、惊喜
+- **github**: 代码托管、版本控制、开发、协作
+- **home**: 首页、主页、开始、返回
+- **image**: 图片、图像、视觉、设计
+- **key**: 密钥、权限、访问、安全
+- **link**: 链接、连接、关联、引用
+- **lock**: 锁定、安全、保护、隐私
+- **mail**: 邮件、通信、消息、联系
+- **map**: 地图、位置、导航、方向
+- **menu**: 菜单、选项、导航、列表
+- **moon**: 夜晚、暗色模式、睡眠、宁静
+- **music**: 音乐、音频、声音、娱乐
+- **pentool**: 编辑、设计、绘画、创作
+- **piechart**: 饼图、数据、比例、分布
+- **search**: 搜索、查找、探索、发现
+- **share2**: 分享、传播、合作、社交
+- **sun**: 白天、亮色模式、能量、活力
+- **upload**: 上传、提交、分享、同步
+- **video**: 视频、影片、媒体、演示
+- **wifi**: 网络、连接、无线、信号
+- **code**: 代码、编程、开发、脚本
+- **clipboard**: 剪贴板、复制、粘贴、内容
+- **gitbranch**: 分支、版本控制、开发、协作
+- **grid**: 网格、布局、组织、结构
+- **layout**: 布局、设计、安排、组织
+- **list**: 列表、项目、清单、组织
+- **monitor**: 显示器、屏幕、设备、显示
+- **package**: 包、软件、部署、分发
+- **server**: 服务器、后端、主机、服务
+- **smartphone**: 手机、移动设备、便携、通讯
+- **tablet**: 平板、设备、便携、显示
+- **terminal**: 终端、命令行、开发、系统
+- **chevronright**: 向右、前进、下一步、展开
+- **chevrondown**: 向下、展开、显示、下拉
+- **chevronup**: 向上、收起、隐藏、上拉
+- **chevronleft**: 向左、后退、上一步、收起
+
+#### 新增图标 (New Icons)
+- **signal**: 信号、网络、连接、通信
+- **refresh**: 刷新、更新、重试、循环
+- **timer**: 时间、定时器、倒计时、准时
+- **history**: 历史、记录、过去、回顾
+- **phone**: 手机、移动设备、通信、联系
+- **index**: 索引、搜索、查找、定位
+- **memory**: 内存、存储、缓存、数据
+- **tree**: 树、自然、环境、生态
+- **controller**: 控制器、控制、管理、指挥
+- **service**: 服务、服务层、后端、支持
+- **data**: 数据、信息、资料、内容
+- **spring**: 弹簧、弹性、Spring框架、复苏
+- **storage**: 存储、硬盘、保存、备份
+- **mobile**: 移动、手机、便携、无线
+- **expand**: 扩展、放大、增长、发展
+- **edge**: 边缘、边界、边缘计算、前沿
+
+#### 区块链相关图标 (Blockchain Icons)
+- **blockchain**: 区块链、分布式账本、加密货币、智能合约
+- **bitcoin**: 比特币、加密货币、数字资产、金融
+
+#### 机器学习相关图标 (Machine Learning Icons)
+- **brain**: 人工智能、机器学习、神经网络、认知
+- **ml**: 机器学习、数据科学、模型训练、预测
+
+#### 密码学相关图标 (Cryptography Icons)
+- **cryptography**: 密码学、加密、安全、隐私
+- **hash**: 哈希、加密、数据完整性、验证
+
+#### 视觉相关图标 (Vision Icons)
+- **vision**: 视觉、计算机视觉、图像识别、视觉处理
+- **camera**: 相机、摄影、图像捕获、视觉输入
+
+#### 测试相关图标 (Testing Icons)
+- **test**: 测试、验证、质量保证、自动化测试
+- **automation**: 自动化、脚本、流程、效率
+
+#### 微信小程序文档中使用的图标 (WeChat Mini Program Icons)
+- **tool**: 工具、构建、开发、调试
+- **pen-tool**: 编辑、设计、绘画、创作
+- **trending-up**: 趋势、增长、上升、进步
+- **bar-chart**: 柱状图、数据、分析、统计
+- **pie-chart**: 饼图、数据、比例、分布
+- **send**: 发送、提交、传输、通信
+- **alert-circle**: 警告、注意、提示、安全
+- **type**: 文本、字体、排版、命名
+- **message-square**: 消息、对话、交流、注释
+- **activity**: 活动、动态、数据、响应
+- **git-branch**: 分支、版本控制、开发、协作
+- **book-open**: 文档、指南、学习、参考
+
+### L2.3: 富文本支持 (Rich Text Support)
 CHD 协议全面支持以下富文本格式。
 **核心原则**: 为了保证内容的可编辑性与语义化，**必须优先使用标准文本格式normal**，严禁使用图片或硬编码 HTML。
 
@@ -142,14 +293,20 @@ You are an expert Information Architect and UI Designer. Your task is to restruc
         - 5+ cards -> `columns=3`.
     - **Color**: Use `section-color="chart-N"` for visual distinction.
 
-3.  **Card Styling (L2 Attributes)**:
-    - **Allowed Styles Only**: `normal`, `highlight`, `quote`. (**'code' style is BANNED for AI**)
+3.  **Card Styling (L2 Attributes)**: 
+    - **Allowed Styles Only**: `normal`, `highlight`, `quote`.
     - **Core Concepts/Stats/Math**: Use `{card-style="highlight"}`. **Math MUST use LaTeX**.
     - **Quotes/Feedback**: Use `{card-style="quote"}`.
-    - **Code/Config**: Use `{card-style="normal"}` (or `highlight`). **NEVER generate `{card-style="code"}`**. This style is reserved for manual user application.
+    - **Code/Config**: Use `{card-style="normal"}` (or `highlight`) with standard Markdown code blocks.
     - **General Text**: Use `{card-style="normal"}`.
     - **Consistency**: Maintain style consistency within a section.
     - **No Col-Span**: Do NOT use `col-span`. All cards must be equal width.
+    - **Icons**: 
+        - **Optional**: You may add icons to cards using `{icon="icon-name"}`.
+        - **Icon List**: Refer to the icon library for available icon names.
+        - **Consistency Rule**: If you use icons in a section, ALL cards in that section MUST have an icon. Do NOT mix cards with and without icons in the same section.
+        - **Relevance**: Choose icons that are relevant to the card content.
+        - **Moderation**: Use icons sparingly to avoid visual clutter.
 
 4.  **Content Refinement**:
     - **Summarize**: Do not paste long paragraphs. Break them into bullet points.
@@ -168,32 +325,32 @@ tags: ["AI", "Rendering", "Optimization"]
 
 ## Core Highlights {layout="grid" columns=4 section-color="chart-1"}
 
-### 10x Performance {card-style="highlight"}
+### 10x Performance {card-style="highlight" icon="zap"}
 Optimized rendering pipeline reduces latency by 90%.
 
-### Zero Config {card-style="highlight"}
+### Zero Config {card-style="highlight" icon="settings"}
 Fully automated setup with smart defaults. No manual tuning required.
 
-### 99.9% Uptime {card-style="highlight"}
+### 99.9% Uptime {card-style="highlight" icon="check"}
 Enterprise-grade reliability.
 
-### Math Ready {card-style="highlight"}
+### Math Ready {card-style="highlight" icon="cpu"}
 Supports LaTeX: $ E = mc^2 $.
 
 ## Architecture {layout="grid" columns=3}
 
-### Frontend Layer {card-style="normal"}
+### Frontend Layer {card-style="normal" icon="layers"}
 Built with React and Tailwind for maximum flexibility.
 
-### AI Core {card-style="normal"}
+### AI Core {card-style="normal" icon="cpu"}
 Powered by a custom transformer model optimized for structural understanding.
 
 ## User Feedback {layout="grid" columns=2}
 
-### "Game Changer" {card-style="quote"}
+### "Game Changer" {card-style="quote" icon="message"}
 This tool completely revolutionized our workflow.
 
-### "Must Have" {card-style="quote"}
+### "Must Have" {card-style="quote" icon="star"}
 I can't imagine working without it anymore.
 ```
 
@@ -215,7 +372,7 @@ I can't imagine working without it anymore.
 
 ### 4.3 如何处理技术架构 (Architecture)
 *   **不要**：用纯文本描述流程。
-*   **要**：使用 `normal` 样式卡片展示模块名称或伪代码（**勿用 `code` 样式**）。
+*   **要**：使用 `normal` 样式卡片展示模块名称或伪代码，使用标准 Markdown 代码块。
 *   **要**：使用 `columns=3` 的网格布局，按逻辑顺序排列。
 
 ### 4.4 视觉一致性 (Visual Consistency)
@@ -246,5 +403,5 @@ I can't imagine working without it anymore.
     *   **修正**: v2.0 已移除 `stat` 样式。请使用 `card-style="highlight"`，并直接在内容中加粗数字，如 `**95%** Accuracy`。
 *   **错误 3**: 整个文档只用了一种 `card-style="normal"`。
     *   **修正**: 根据语义，至少应用 3 种允许的样式（`normal`, `highlight`, `quote`）。
-*   **错误 4**: 公式使用了代码块包裹，如 `` `E=mc^2` `` 或使用了 `code` 样式卡片。
+*   **错误 4**: 公式使用了代码块包裹，如 `` `E=mc^2` ``。
     *   **修正**: 必须使用 LaTeX 语法 `$ E=mc^2 $`，并使用 `highlight` 或 `normal` 样式。
