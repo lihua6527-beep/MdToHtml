@@ -498,12 +498,31 @@ export default function EditorPage() {
                   onSelectSection={(blockIndex, title, layoutProps) => {
                       console.log('[EditorPage] Explicit Section Selection:', { blockIndex, title });
                       
-                      // 4. Sync Editor Cursor
+                      // 直接使用传递的blockIndex设置activeLine
+                      // 避免再次解析导致的blockIndex不一致问题
                       try {
                           const blocks = parseCHDBlocks(content);
-                          const sectionBlock = blocks[blockIndex];
-                          if (sectionBlock) {
-                               setActiveLine(sectionBlock.startLine);
+                          console.log('[EditorPage] Blocks parsed in onSelectSection:', blocks.length);
+                          blocks.forEach((block, idx) => {
+                              console.log('[EditorPage] Block', idx, ':', block.type, 'startLine:', block.startLine, 'title:', block.title);
+                          });
+                          
+                          if (blockIndex >= 0 && blockIndex < blocks.length) {
+                              const sectionBlock = blocks[blockIndex];
+                              if (sectionBlock && sectionBlock.type === 'section') {
+                                  console.log('[EditorPage] Setting activeLine to:', sectionBlock.startLine);
+                                  setActiveLine(sectionBlock.startLine);
+                              } else {
+                                  console.log('[EditorPage] Block at index', blockIndex, 'is not a section:', sectionBlock?.type);
+                                  // 尝试通过标题查找section
+                                  const sectionByTitle = blocks.find(b => b.type === 'section' && b.title.includes(title));
+                                  if (sectionByTitle) {
+                                      console.log('[EditorPage] Found section by title:', sectionByTitle.title, 'startLine:', sectionByTitle.startLine);
+                                      setActiveLine(sectionByTitle.startLine);
+                                  }
+                              }
+                          } else {
+                              console.log('[EditorPage] Block index', blockIndex, 'is out of range, total blocks:', blocks.length);
                           }
                       } catch (e) {
                           console.warn('Failed to sync cursor to section', e);
@@ -547,19 +566,58 @@ export default function EditorPage() {
          sectionLayout={activeSectionProps.layout}
          onSectionLayoutChange={(layout) => {
              if (activeSectionProps.blockIndex !== -1) {
+                 console.log('[EditorPage] Updating section layout:', { blockIndex: activeSectionProps.blockIndex, layout });
                  updateAttribute(activeSectionProps.blockIndex, 'layout', layout);
              }
          }}
          sectionColor={activeSectionProps.color}
          onSectionColorChange={(color) => {
              if (activeSectionProps.blockIndex !== -1) {
+                 console.log('[EditorPage] Updating section color:', { blockIndex: activeSectionProps.blockIndex, color });
                  updateAttribute(activeSectionProps.blockIndex, 'section-color', color);
              }
          }}
          sectionColumns={activeSectionProps.columns}
          onSectionColumnsChange={(cols) => {
              if (activeSectionProps.blockIndex !== -1) {
-                 updateAttribute(activeSectionProps.blockIndex, 'columns', cols.toString());
+                 try {
+                     const blocks = parseCHDBlocks(content);
+                     const updates: Array<{blockIndex: number, key: string, value: any}> = [];
+                     
+                     // 1. Update Section 'columns' prop
+                     updates.push({
+                         blockIndex: activeSectionProps.blockIndex,
+                         key: 'columns',
+                         value: String(cols)
+                     });
+                     
+                     // 2. Batch update ALL child cards to match the new column count
+                     // This enforces the layout on all cards, overriding any individual col-span settings
+                     const newSpan = Math.floor(12 / cols);
+                     
+                     // Find all cards in the current section
+                     let inCurrentSection = false;
+                     blocks.forEach((block, idx) => {
+                         if (block.type === 'section' && idx === activeSectionProps.blockIndex) {
+                             inCurrentSection = true;
+                         } else if (block.type === 'section' && inCurrentSection) {
+                             inCurrentSection = false;
+                         } else if (inCurrentSection && (block.type === 'card' || block.type === 'code')) {
+                             updates.push({
+                                 blockIndex: idx,
+                                 key: 'col-span',
+                                 value: String(newSpan)
+                             });
+                         }
+                     });
+                     
+                     if (updates.length > 0) {
+                         console.log('[Columns Update] Applying to section and', updates.length - 1, 'cards');
+                         batchUpdateAttributes(updates);
+                     }
+                 } catch (e) {
+                     console.error('Failed to update columns', e);
+                 }
              }
          }}
          sectionTitleSpacing={activeSectionProps.titleSpacing}

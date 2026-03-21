@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { parseCHDBlocks } from '@/lib/chdParser';
+import { parseCHDBlocks, CHDBlock } from '@/lib/chdParser';
 import { parseAttributes } from '@/lib/attributeParser';
 import { CHDSectionProps, CHDCardProps, CHDSelectionState, CardStyle } from '@/types/chd';
 import { CardShape } from '@/lib/shapes';
@@ -41,20 +41,42 @@ export function useCHDSelection(content: string, activeLine: number | null): CHD
 
     try {
       const blocks = parseCHDBlocks(content);
-      const currentBlock = blocks.find(b => activeLine >= b.startLine && activeLine <= b.endLine);
+      console.log('[useCHDSelection] Blocks parsed:', blocks.length);
+      blocks.forEach((block, idx) => {
+        console.log('[useCHDSelection] Block', idx, ':', block.type, 'startLine:', block.startLine, 'endLine:', block.endLine, 'title:', block.title);
+      });
       
+      // 找到包含activeLine的block
+      let currentBlock = blocks.find(b => activeLine >= b.startLine && activeLine <= b.endLine);
+      
+      // 如果没有找到，尝试找到最接近的section
       if (!currentBlock) {
-        // In gap - preserve current selection
-        return;
+        console.log('[useCHDSelection] No block found for activeLine:', activeLine);
+        // 找到最后一个startLine小于等于activeLine的section
+        const sections = blocks.filter(b => b.type === 'section');
+        const closestSection = sections.reduce<CHDBlock | null>((prev, current) => {
+          return (current.startLine <= activeLine && current.startLine > (prev?.startLine || -1)) ? current : prev;
+        }, null);
+        
+        if (closestSection) {
+          console.log('[useCHDSelection] Using closest section:', closestSection.title, 'startLine:', closestSection.startLine);
+          currentBlock = closestSection;
+        } else {
+          // 没有找到任何section，保留当前选择
+          return;
+        }
       }
       
       const blockIndex = blocks.indexOf(currentBlock);
+      console.log('[useCHDSelection] Active line:', activeLine, 'Block:', currentBlock.type, 'Block index:', blockIndex);
       
       if (currentBlock.type === 'section') {
         // Section Selected
         const lines = content.split('\n');
         const titleLine = lines[currentBlock.startLine];
         const { props, cleanText } = parseAttributes(titleLine.replace(/^#+\s+/, ''));
+        
+        console.log('[useCHDSelection] Section selected:', { blockIndex, title: cleanText, startLine: currentBlock.startLine });
         
         setState({
           activeSectionProps: {
@@ -114,7 +136,7 @@ export function useCHDSelection(content: string, activeLine: number | null): CHD
             badge: props.badge || '',
             blockIndex
           },
-          selectedSectionTitle: sectionTitleToUse,
+          selectedSectionTitle: '',
           parentSectionIndex: parentSectionIndex,
           selectedBlockIndex: blockIndex
         });

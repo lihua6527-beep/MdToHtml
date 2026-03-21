@@ -96,8 +96,11 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
     };
   }, []);
   
+  // Active line state for section selection
+  const [activeLine, setActiveLine] = useState<number | null>(null);
+  
   // Toolbar State - Replaced with useCHDSelection hook
-  const { activeSectionProps, activeCardProps, selectedSectionTitle } = useCHDSelection(content, selectedBlockIndex);
+  const { activeSectionProps, activeCardProps, selectedSectionTitle } = useCHDSelection(content, activeLine);
   
   // Extract Sections for BottomToolbar
   const sections = React.useMemo(() => {
@@ -203,7 +206,50 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
             markdown={content}  
             editMode={isEditing}
             selectedBlockIndex={selectedBlockIndex}
-            onSelectBlock={setSelectedBlockIndex}
+            onSelectBlock={(blockIndex) => {
+                setSelectedBlockIndex(blockIndex);
+                try {
+                    const blocks = parseCHDBlocks(content);
+                    if (blockIndex !== null && blockIndex >= 0 && blockIndex < blocks.length) {
+                        const block = blocks[blockIndex];
+                        if (block) {
+                            setActiveLine(block.startLine);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Failed to sync activeLine to block', e);
+                }
+            }}
+            onCardClick={(line) => {
+                setActiveLine(line);
+                try {
+                    const blocks = parseCHDBlocks(content);
+                    const cardBlock = blocks.find(block => {
+                        return (block.type === 'card' || block.type === 'code') && 
+                               block.startLine <= line && 
+                               block.endLine >= line;
+                    });
+                    if (cardBlock) {
+                        setSelectedBlockIndex(cardBlock.blockIndex);
+                    }
+                } catch (e) {
+                    console.warn('Failed to sync cursor to card', e);
+                }
+            }}
+            onSelectSection={(blockIndex, title, layoutProps) => {
+                try {
+                    const blocks = parseCHDBlocks(content);
+                    if (blockIndex >= 0 && blockIndex < blocks.length) {
+                        const sectionBlock = blocks[blockIndex];
+                        if (sectionBlock && sectionBlock.type === 'section') {
+                            setActiveLine(sectionBlock.startLine);
+                            setSelectedBlockIndex(blockIndex);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Failed to sync cursor to section', e);
+                }
+            }}
             onCardUpdate={(idx, attrs) => {
                 Object.entries(attrs).forEach(([key, value]) => {
                     updateAttribute(idx, key, value);

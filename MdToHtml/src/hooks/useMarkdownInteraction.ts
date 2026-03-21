@@ -288,38 +288,44 @@ export function useMarkdownInteraction(
 
   const updateAttribute = useCallback((blockIndex: number, key: string, value: any) => {
     logOperation('updateAttribute', blockIndex, key, value);
+    console.log('[updateAttribute] Updating block:', blockIndex, 'key:', key, 'value:', value);
     const blocks = parseCHDBlocks(markdown);
-    const block = blocks[blockIndex];
-    if (!block) return;
+    console.log('[updateAttribute] Total blocks:', blocks.length);
+    if (blockIndex >= 0 && blockIndex < blocks.length) {
+        const block = blocks[blockIndex];
+        console.log('[updateAttribute] Block found:', block.type, 'startLine:', block.startLine, 'title:', block.title);
+        if (block) {
+            const lines = markdown.split('\n');
+            const lineIndex = block.startLine;
+            let line = lines[lineIndex];
+            console.log('[updateAttribute] Updating line:', lineIndex, 'content:', line);
 
-    const lines = markdown.split('\n');
-    const lineIndex = block.startLine;
-    let line = lines[lineIndex];
+            // Use robust parser
+            const { cleanText: prefix, props: attrs } = parseAttributes(line.replace(/^(#+)\s+/, ''));
+            
+            // Update value
+            if (value === undefined || value === null || value === '') {
+                delete attrs[key];
+            } else {
+                attrs[key] = String(value);
+            }
 
-    // Use robust parser
-    const { cleanText: prefix, props: attrs } = parseAttributes(line.replace(/^(#+)\s+/, ''));
-    
-    // Update value
-    if (value === undefined || value === null || value === '') {
-        delete attrs[key];
-    } else {
-        attrs[key] = String(value);
+            // Reconstruct
+            const levelMatch = line.match(/^(#+)\s/);
+            const level = levelMatch ? levelMatch[1] : '###';
+            
+            // Check if we need to add attributes
+            const attrString = serializeAttributes(attrs);
+            
+            if (attrString) {
+                lines[lineIndex] = `${level} ${prefix} {${attrString}}`;
+            } else {
+                lines[lineIndex] = `${level} ${prefix}`;
+            }
+            
+            handleUpdate(lines.join('\n'));
+        }
     }
-
-    // Reconstruct
-    const levelMatch = line.match(/^(#+)\s/);
-    const level = levelMatch ? levelMatch[1] : '###';
-    
-    // Check if we need to add attributes
-    const attrString = serializeAttributes(attrs);
-    
-    if (attrString) {
-        lines[lineIndex] = `${level} ${prefix} {${attrString}}`;
-    } else {
-        lines[lineIndex] = `${level} ${prefix}`;
-    }
-    
-    handleUpdate(lines.join('\n'));
   }, [markdown, handleUpdate, logOperation]);
 
   const batchUpdateAttributes = useCallback((updates: Array<{blockIndex: number, key: string, value: any}>) => {

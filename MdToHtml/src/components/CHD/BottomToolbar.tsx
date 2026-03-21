@@ -131,15 +131,17 @@ export const BottomToolbar: React.FC<BottomToolbarProps> = ({
 
     // Auto-switch tab based on selection
     useEffect(() => {
-        // If a block is selected, switch to appropriate tab
-        if (selectedBlockIndex !== null) {
-            // Since we don't know if it's a card or section here,
-            // we'll let the parent component handle tab switching
-            // based on the block type
-        } 
         // If a section is selected (selectedSectionTitle is present), switch to layout tab
-        else if (selectedSectionTitle) {
+        if (selectedSectionTitle) {
             setActiveTab('layout');
+        }
+        // If a block is selected but no section title, switch to card tab
+        else if (selectedBlockIndex !== null) {
+            setActiveTab('card');
+        }
+        // Default to theme tab
+        else {
+            setActiveTab('theme');
         }
     }, [selectedBlockIndex, selectedSectionTitle]);
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { Plus, LayoutGrid, Columns, Settings, Type, Palette, Check } from 'lucide-react';
 import { getLayoutStrategy } from './LayoutStrategies';
@@ -61,6 +61,22 @@ export const Section: React.FC<SectionProps> = ({
   globalTitleSpacing,
   globalShowDivider
 }) => {
+  // Title editing state
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [tempTitle, setTempTitle] = useState(title);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  
+  // Update tempTitle when title prop changes
+  useEffect(() => {
+    setTempTitle(title);
+  }, [title]);
+  
+  // Focus input when editing starts
+  useEffect(() => {
+    if (isEditingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+    }
+  }, [isEditingTitle]);
   // [Strategy Pattern Implementation]
   // Determine layout strategy based on 'layout' prop
   const { strategy, isFallback } = getLayoutStrategy(layoutProps.layout || 'grid');
@@ -231,22 +247,20 @@ export const Section: React.FC<SectionProps> = ({
   return (
     <section 
       onClick={(e) => {
-        if (editMode && startLine !== undefined && (onCardClick || onSelectBlock) && !e.defaultPrevented) {
-             console.log('[Section Click Action] Triggering onSelectSection with index:', blockIndex);
-             // Priority 1: Use explicit block index selection (Architecture Fix)
-             if (blockIndex !== undefined) {
-                 if (onSelectBlock) {
-                     onSelectBlock(blockIndex);
-                 } else if (onSelectSection) {
-                     const cleanTitle = title.replace('## ', '').replace(/\{.*?\}/g, '').trim();
-                     onSelectSection(blockIndex, cleanTitle, layoutProps);
-                 } else if (onCardClick) {
-                     onCardClick(startLine);
-                 }
+        // 阻止事件冒泡，确保section点击不会被其他元素干扰
+        e.stopPropagation();
+        
+        if (editMode && blockIndex !== undefined && blockIndex !== -1 && (onSelectBlock || onSelectSection)) {
+             console.log('[Section Click Action] Triggering selection with index:', blockIndex, 'Title:', title);
+             // Priority 1: Use onSelectSection for better integration
+             if (onSelectSection) {
+                 const cleanTitle = title.replace('## ', '').replace(/\{.*?\}/g, '').trim();
+                 console.log('[Section Click Action] Calling onSelectSection with:', blockIndex, cleanTitle);
+                 onSelectSection(blockIndex, cleanTitle, layoutProps);
              } 
-             // Priority 2: Fallback to line-based selection (Legacy)
-             else if (onCardClick) {
-                 onCardClick(startLine);
+             // Priority 2: Fallback to explicit block index selection
+             else if (onSelectBlock) {
+                 onSelectBlock(blockIndex);
              }
           }
       }}
@@ -270,20 +284,61 @@ export const Section: React.FC<SectionProps> = ({
       )}
 
       <div className={clsx("flex flex-col gap-4 relative z-10 group mb-4")}>
-        {/* Transparent Clickable Overlay for Title Area - Kept for explicit title clicking if needed, but redundant? 
-            Actually, let's keep it simple. The section onClick handles everything. 
-            We just need to make sure this div doesn't block clicks. It bubbles.
-        */}
-        <div className={clsx("flex items-center gap-4 relative z-20 pointer-events-none", alignClass)}>
-            <h2 
-            className={clsx(
-                "text-2xl font-bold tracking-tight transition-colors duration-300",
-                !sectionColor && "text-text-primary"
+        {/* Section Title with Edit Functionality */}
+        <div className={clsx("flex items-center gap-4 relative z-20", alignClass)}>
+            {isSelected ? (
+                <form onSubmit={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (tempTitle !== title) {
+                        onTitleUpdate?.(blockIndex!, tempTitle.replace(/^#+\s*/, ''));
+                    }
+                    setIsEditingTitle(false);
+                }} onClick={e => e.stopPropagation()} className="w-full">
+                    <input
+                        ref={titleInputRef}
+                        value={tempTitle.replace(/^#+\s*/, '')}
+                        onChange={(e) => setTempTitle(e.target.value)}
+                        onBlur={() => {
+                            if (tempTitle !== title) {
+                                onTitleUpdate?.(blockIndex!, tempTitle.replace(/^#+\s*/, ''));
+                            }
+                            setIsEditingTitle(false);
+                        }}
+                        className={clsx(
+                            "w-full bg-bg-page border border-primary rounded px-2 py-1 font-bold text-lg focus:outline-none",
+                            titleAlign === 'center' ? "text-center" : "text-left",
+                            sectionColor ? { color: `hsl(var(--${sectionColor}))` } : undefined
+                        )}
+                        placeholder="Section Title"
+                        autoFocus
+                    />
+                </form>
+            ) : (
+                <h2 
+                onClick={(e) => {
+                    if (editMode) {
+                        // 先选择Section
+                        if (blockIndex !== undefined && onSelectSection) {
+                            const cleanTitle = title.replace('## ', '').replace(/\{.*?\}/g, '').trim();
+                            onSelectSection(blockIndex, cleanTitle, layoutProps);
+                        } else if (blockIndex !== undefined && onSelectBlock) {
+                            onSelectBlock(blockIndex);
+                        }
+                        // 然后进入编辑模式
+                        setIsEditingTitle(true);
+                    }
+                }}
+                className={clsx(
+                    "text-2xl font-bold tracking-tight transition-colors duration-300 cursor-pointer",
+                    !sectionColor && "text-text-primary",
+                    editMode && "hover:bg-primary/5 border border-transparent hover:border-primary/20 rounded px-1 -mx-1"
+                )}
+                style={sectionColor ? { color: `hsl(var(--${sectionColor}))` } : undefined}
+                >
+                {title.replace('## ', '').replace(/\{.*?\}/g, '').trim()}
+                </h2>
             )}
-            style={sectionColor ? { color: `hsl(var(--${sectionColor}))` } : undefined}
-            >
-            {title.replace('## ', '').replace(/\{.*?\}/g, '').trim()}
-            </h2>
         </div>
         
         {/* 图标使用一致性警告 */}

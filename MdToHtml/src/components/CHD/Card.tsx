@@ -358,6 +358,7 @@ export const Card: React.FC<CardProps> = ({
       if (editMode) {
           e.stopPropagation();
           onSelect?.();
+          onClick?.();
       } else {
           onClick?.();
       }
