@@ -1,3 +1,8 @@
+// Mock the posts library first
+jest.mock('@/lib/posts', () => ({
+  getPostSlugs: jest.fn(),
+  getPostBySlug: jest.fn(),
+}));
 
 // Mock components to avoid ESM issues with react-markdown
 jest.mock('@/components/CHD/CHDRenderer', () => ({
@@ -7,12 +12,10 @@ jest.mock('@/components/ThemeScope', () => ({
   ThemeScope: ({ children }: { children: React.ReactNode }) => children
 }));
 
-// Mock the posts library
-jest.mock('@/lib/posts', () => ({
-  getPostSlugs: jest.fn(),
-  getPostBySlug: jest.fn(),
-}));
+// Import React for type definitions
+import React from 'react';
 
+// Import generateStaticParams and posts after mocking
 import { generateStaticParams } from '../page';
 import * as posts from '@/lib/posts';
 

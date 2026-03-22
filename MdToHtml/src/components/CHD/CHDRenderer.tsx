@@ -129,7 +129,8 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
                     cardTitle = cleanText;
                     cardProps = props;
                     
-                    const contentBody = lines.slice(block.startLine + 1, block.endLine + 1).join('\n').trim();
+                    // Get content including code blocks
+                    const contentBody = lines.slice(block.startLine + 1, block.endLine + 1).join('\n');
                     // Decode HTML entities and clean content
                     const cleanBody = contentBody
                         .replace(/&gt;/g, '>')
@@ -138,7 +139,10 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
                         .replace(/&quot;/g, '"')
                         .replace(/&apos;/g, "'");
 
-                    cleanContent = cleanBody.replace(/\n\s*---\s*$/, ''); 
+                    // Clean content: remove unnecessary format symbols and ensure code blocks are properly preserved
+                    cleanContent = cleanBody
+                        .replace(/\n\s*---\s*$/, '')
+                        .trim();
                     
                     // [Protocol Resolution 2026-02-24]
                     // Enforce Section-Level Consistency: All cards in a section MUST inherit style/color from the section.

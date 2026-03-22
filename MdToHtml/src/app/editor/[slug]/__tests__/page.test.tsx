@@ -2,6 +2,25 @@ import Page, { generateStaticParams } from '../page';
 import { getPostSlugs, getPostBySlug } from '@/lib/posts';
 import { render, screen } from '@testing-library/react';
 
+// Mock useToast hook
+jest.mock('@/components/ui/use-toast', () => ({
+  useToast: () => ({
+    toast: jest.fn(),
+    dismiss: jest.fn(),
+    update: jest.fn(),
+  }),
+}));
+
+// Mock ConfigService
+jest.mock('@/services/ConfigService', () => ({
+  ConfigService: {
+    getAppInfo: jest.fn().mockResolvedValue({ config: { renderOptions: { titleSpacing: '2', showDivider: true } } }),
+  },
+}));
+
+// Mock fetch
+global.fetch = jest.fn();
+
 // Mock dependencies
 jest.mock('@/lib/posts');
 jest.mock('@/components/CHD/CHDRenderer', () => ({

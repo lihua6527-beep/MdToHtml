@@ -42,17 +42,23 @@ export function useMarkdownInteraction(
   onUpdate: (newMarkdown: string) => void
 ): MarkdownUpdater {
   const [operationLog, setOperationLog] = useState<OperationLogEntry[]>([]);
-  const [history, setHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [history, setHistory] = useState<string[]>([markdown]);
+  const [historyIndex, setHistoryIndex] = useState(0);
 
   const logOperation = useCallback((type: string, ...args: any[]) => {
     setOperationLog(prev => [...prev, { type, args, timestamp: Date.now() }]);
   }, []);
 
   const handleUpdate = useCallback((newMarkdown: string) => {
-    // Simple history tracking - improve later for robust undo/redo
+    // History tracking for undo functionality
+    setHistory(prev => {
+      // Add new state to history, truncating any future states
+      const newHistory = [...prev.slice(0, historyIndex + 1), newMarkdown];
+      setHistoryIndex(newHistory.length - 1);
+      return newHistory;
+    });
     onUpdate(newMarkdown);
-  }, [onUpdate]);
+  }, [onUpdate, historyIndex]);
 
   // Auto-sanitize card styles: Enforce strict style rules
   useEffect(() => {
@@ -94,9 +100,15 @@ export function useMarkdownInteraction(
   }, [markdown, handleUpdate]);
 
   const undo = useCallback(() => {
-    // Placeholder for undo logic
-    console.warn('Undo not fully implemented');
-  }, []);
+    if (historyIndex > 0) {
+      const previousIndex = historyIndex - 1;
+      const previousMarkdown = history[previousIndex];
+      if (previousMarkdown) {
+        setHistoryIndex(previousIndex);
+        onUpdate(previousMarkdown);
+      }
+    }
+  }, [history, historyIndex, onUpdate]);
 
   const canUndo = historyIndex > 0;
 

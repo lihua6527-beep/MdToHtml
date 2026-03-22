@@ -15,6 +15,7 @@ export function parseCHDBlocks(markdown: string): CHDBlock[] {
   let currentBlock: CHDBlock | null = null;
   let inFrontmatter = false;
   let inCodeBlock = false;
+  let inCard = false;
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
@@ -52,7 +53,11 @@ export function parseCHDBlocks(markdown: string): CHDBlock[] {
     if (trimmed.startsWith('```')) {
       if (inCodeBlock) {
         // End of code block
-        if (currentBlock) {
+        if (currentBlock && inCard) {
+          // If we're in a card, just extend the card's end line
+          currentBlock.endLine = i;
+        } else if (currentBlock) {
+          // Otherwise, treat as separate code block
           currentBlock.endLine = i - 1; // Exclude closing ```
           blocks.push(currentBlock);
           currentBlock = null;
@@ -60,18 +65,19 @@ export function parseCHDBlocks(markdown: string): CHDBlock[] {
         inCodeBlock = false;
       } else {
         // Start of code block
-        if (currentBlock) {
+        if (currentBlock && !inCard) {
+          // Only create new block if not in a card
           currentBlock.endLine = i - 1;
           blocks.push(currentBlock);
+          currentBlock = {
+            type: 'code',
+            startLine: i + 1, // Exclude opening ```
+            endLine: i, // Will be updated
+            title: trimmed.replace(/^```/, '').trim(), // Language
+            level: 2,
+            id: `code-${i}`
+          };
         }
-        currentBlock = {
-          type: 'code',
-          startLine: i + 1, // Exclude opening ```
-          endLine: i, // Will be updated
-          title: trimmed.replace(/^```/, '').trim(), // Language
-          level: 2,
-          id: `code-${i}`
-        };
         inCodeBlock = true;
       }
       continue;
@@ -89,6 +95,8 @@ export function parseCHDBlocks(markdown: string): CHDBlock[] {
       if (currentBlock) {
         currentBlock.endLine = i - 1;
         blocks.push(currentBlock);
+        currentBlock = null;
+        inCard = false;
       }
       currentBlock = {
         type: 'section',
@@ -104,6 +112,8 @@ export function parseCHDBlocks(markdown: string): CHDBlock[] {
        if (currentBlock) {
          currentBlock.endLine = i - 1;
          blocks.push(currentBlock);
+         currentBlock = null;
+         inCard = false;
        }
        currentBlock = {
          type: 'card',
@@ -113,6 +123,7 @@ export function parseCHDBlocks(markdown: string): CHDBlock[] {
          level: 2,
          id: `card-${i}`
        };
+       inCard = true;
     }
     // Content extension
     else {

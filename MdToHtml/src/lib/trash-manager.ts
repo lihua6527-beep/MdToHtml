@@ -27,14 +27,17 @@ class TrashManager {
         return PathManager.getRecyclePath();
     }
 
-    private ensureTrashDir() {
+    private ensureTrashDir(): boolean {
         if (!fs.existsSync(this.trashDir)) {
             try {
                 fs.mkdirSync(this.trashDir, { recursive: true });
+                return true;
             } catch (error) {
                 console.error(`[TrashManager] Failed to create trash directory: ${this.trashDir}`, error);
+                return false;
             }
         }
+        return true;
     }
 
     /**
@@ -47,7 +50,10 @@ class TrashManager {
         const errors: string[] = [];
         const inputDir = PathManager.getInputPath();
 
-        this.ensureTrashDir();
+        if (!this.ensureTrashDir()) {
+            errors.push(`Failed to create trash directory: ${this.trashDir}`);
+            return { success, failed: files.length, errors };
+        }
 
         files.forEach(file => {
             try {

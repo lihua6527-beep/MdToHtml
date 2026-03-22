@@ -221,7 +221,15 @@ export const Card: React.FC<CardProps> = ({
         settings: require('lucide-react').Settings,
         // 其他缺失的图标
         test: require('lucide-react').CheckSquare,
-        'hard-drive': HardDrive
+        'hard-drive': HardDrive,
+        // 进程通信与状态流转分析文档中使用的图标
+        share: require('lucide-react').Share2,
+        save: require('lucide-react').Save,
+        promise: require('lucide-react').GitMerge,
+        bell: require('lucide-react').Bell,
+        cycle: require('lucide-react').RefreshCw,
+        pipe: require('lucide-react').GitMerge,
+        queue: require('lucide-react').List
       };
 
       return iconMap[iconName] || null;

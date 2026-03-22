@@ -1,9 +1,10 @@
 # CHD 协议 v2.1：面向 AI 的生成规范 (CHD Protocol for AI Generation)
 
 **版本**: v2.1
-**日期**: 2026-03-06
+**日期**: 2026-03-22
 **状态**: **已生效 (Active)**
 **适用对象**: AI 助手 (LLMs), 内容创作者, 自动化脚本
+**向后兼容**: 支持 v1.5 及以上版本的 CHD 文档
 
 ---
 
@@ -76,7 +77,8 @@ AI 必须为每个 Section 指定布局属性。
     *   `"normal"`: 标准卡片（默认）。适合一般性描述。
     *   `"highlight"`: 高亮卡片。适合核心观点、重要结论。
     *   `"quote"`: 引用卡片。适合名言、用户评价、设计理念。
-    *   **注**: `stat`, `warning`, `summary`, `code` 等样式在 v2.0 中已**精简**，请勿使用。所有内容请归类为上述 3 种允许的样式。代码块应使用标准 Markdown 格式处理。
+    *   **兼容性说明**: 为保证向后兼容，系统仍支持识别 `stat`, `warning`, `summary`, `code` 等旧版样式，但会自动将其映射到对应的新版样式。
+    *   **注**: AI 生成时请优先使用上述 3 种推荐样式。代码块应使用标准 Markdown 格式处理。
 
 *   **`icon` (图标)**:
     *   **可选属性**：为卡片添加视觉图标，增强视觉表现力。
@@ -165,7 +167,7 @@ AI 必须为每个 Section 指定布局属性。
 - **wifi**: 网络、连接、无线、信号
 - **code**: 代码、编程、开发、脚本
 - **clipboard**: 剪贴板、复制、粘贴、内容
-- **gitbranch**: 分支、版本控制、开发、协作
+- **git-branch**: 分支、版本控制、开发、协作
 - **grid**: 网格、布局、组织、结构
 - **layout**: 布局、设计、安排、组织
 - **list**: 列表、项目、清单、组织
@@ -232,6 +234,23 @@ AI 必须为每个 Section 指定布局属性。
 - **git-branch**: 分支、版本控制、开发、协作
 - **book-open**: 文档、指南、学习、参考
 
+#### 进程通信与状态流转分析文档中使用的图标 (Process Communication Icons)
+- **share**: 分享、传播、合作、社交
+- **save**: 保存、存储、持久化、备份
+- **promise**: 承诺、异步、保证、契约
+- **bell**: 通知、提醒、警报、消息
+- **cycle**: 循环、周期、流程、轮转
+- **pipe**: 管道、通信、流、传输
+- **queue**: 队列、顺序、等待、处理
+
+#### 其他图标 (Other Icons)
+- **workflow**: 工作流、流程、步骤、顺序
+- **check-circle**: 成功、完成、验证、确认
+- **wrench**: 工具、维修、调整、设置
+- **puzzle**: 拼图、组件、集成、组合
+- **scan**: 扫描、搜索、检测、分析
+- **hard-drive**: 硬盘、存储、数据、设备
+
 ### L2.3: 富文本支持 (Rich Text Support)
 CHD 协议全面支持以下富文本格式。
 **核心原则**: 为了保证内容的可编辑性与语义化，**必须优先使用标准文本格式normal**，严禁使用图片或硬编码 HTML。
@@ -297,7 +316,7 @@ You are an expert Information Architect and UI Designer. Your task is to restruc
     - **Allowed Styles Only**: `normal`, `highlight`, `quote`.
     - **Core Concepts/Stats/Math**: Use `{card-style="highlight"}`. **Math MUST use LaTeX**.
     - **Quotes/Feedback**: Use `{card-style="quote"}`.
-    - **Code/Config**: Use `{card-style="normal"}` (or `highlight`) with standard Markdown code blocks.
+    - **Code/Config**: Use `{card-style="normal"}` (or `highlight`) with standard Markdown code blocks, and add language identifier (e.g., ```javascript).
     - **General Text**: Use `{card-style="normal"}`.
     - **Consistency**: Maintain style consistency within a section.
     - **No Col-Span**: Do NOT use `col-span`. All cards must be equal width.
@@ -374,6 +393,7 @@ I can't imagine working without it anymore.
 *   **不要**：用纯文本描述流程。
 *   **要**：使用 `normal` 样式卡片展示模块名称或伪代码，使用标准 Markdown 代码块。
 *   **要**：使用 `columns=3` 的网格布局，按逻辑顺序排列。
+*   **兼容性说明**：对于包含代码块的卡片，系统会将其作为卡片内容的一部分处理，确保旧版文档中的代码块能正确渲染。
 
 ### 4.4 视觉一致性 (Visual Consistency)
 *   **强制网格**: 严格遵守 `1-4 张 = N 列`，`5+ 张 = 3 列` 的规则。

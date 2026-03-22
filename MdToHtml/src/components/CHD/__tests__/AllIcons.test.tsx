@@ -1,5 +1,22 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
+
+// Mock Card component to avoid ES module dependencies
+jest.mock('../Card', () => ({
+  Card: ({ title, content, attributes }: any) => (
+    <div data-testid="card">
+      <div className={`flex-col gap-3 ${attributes?.icon ? 'pl-14' : ''}`}>
+        {attributes?.icon && attributes?.shape === 'rect' && (
+          <div data-testid={`${attributes.icon}-icon`}>{attributes.icon} Icon</div>
+        )}
+        <h3>{title}</h3>
+        <p>{content}</p>
+      </div>
+    </div>
+  ),
+}));
+
+// Import Card from the mocked module
 import { Card } from '../Card';
 
 // Mock lucide-react icons

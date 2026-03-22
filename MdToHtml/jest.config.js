@@ -13,7 +13,7 @@ const customJestConfig = {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(react-markdown|remark-gfm|remark-math|remark-breaks|rehype-katex)/)',
+    'node_modules/(?!(react-markdown|remark-gfm|remark-math|remark-breaks|rehype-katex|unified|remark-parse|remark-stringify|rehype-parse|rehype-stringify|mdast-util-from-markdown|mdast-util-to-markdown|micromark)/)',
   ],
 }
 

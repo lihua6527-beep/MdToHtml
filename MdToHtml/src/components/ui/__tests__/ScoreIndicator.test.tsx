@@ -100,7 +100,9 @@ describe('ScoreIndicator', () => {
     
     expect(screen.getByText('评分详情')).toBeInTheDocument();
     expect(screen.getByText('结构规范:')).toBeInTheDocument();
-    expect(screen.getByText('90')).toBeInTheDocument();
+    // 使用 getAllByText 来处理多个匹配元素
+    const elements = screen.getAllByText('90');
+    expect(elements.length).toBeGreaterThan(0);
   });
   
   test('renders AI optimization suggestion for low scores', () => {
