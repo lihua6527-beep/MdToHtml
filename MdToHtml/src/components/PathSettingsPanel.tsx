@@ -62,7 +62,7 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
   const fetchCHDProtocol = async () => {
     setProtocolLoading(true);
     try {
-      const response = await fetch('/api/app-info/chd-protocol');
+      const response = await fetch('/api/app/chd-protocol');
       if (!response.ok) throw new Error('Failed to fetch CHD protocol');
       const content = await response.text();
       setProtocolContent(content);
@@ -556,7 +556,7 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
                                 size="sm"
                                 onClick={async () => {
                                     try {
-                                        const response = await fetch('/api/app-info/chd-protocol');
+                                        const response = await fetch('/api/app/chd-protocol');
                                         if (!response.ok) throw new Error('Failed to fetch CHD protocol');
                                         const protocolContent = await response.text();
                                         await navigator.clipboard.writeText(protocolContent);

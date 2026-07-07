@@ -146,7 +146,41 @@ export const ICON_CONFIG: IconConfig[] = [
   { name: 'check-circle', component: 'CheckCircle', category: 'success', description: '成功、完成、验证、确认' },
   { name: 'wrench', component: 'Settings', category: 'tool', description: '工具、维修、调整、设置' },
   { name: 'puzzle', component: 'Layers', category: 'structure', description: '拼图、组件、集成、组合' },
-  { name: 'scan', component: 'Search', category: 'action', description: '扫描、搜索、检测、分析' }
+  { name: 'scan', component: 'Search', category: 'action', description: '扫描、搜索、检测、分析' },
+  // 补充Card.tsx中独有但icon-manager缺失的图标
+  { name: 'signal', component: 'WifiOff', category: 'status', description: '信号、连接状态' },
+  { name: 'refresh', component: 'RefreshCw', category: 'action', description: '刷新、同步、更新' },
+  { name: 'timer', component: 'Clock4', category: 'time', description: '定时器、计时、等待' },
+  { name: 'history', component: 'History', category: 'time', description: '历史、记录、回滚' },
+  { name: 'phone', component: 'Smartphone', category: 'device', description: '手机、移动设备' },
+  { name: 'index', component: 'Hash', category: 'data', description: '索引、目录、编号' },
+  { name: 'memory', component: 'Database', category: 'tech', description: '内存、存储、数据库' },
+  { name: 'tree', component: 'TreePine', category: 'structure', description: '树形结构、层级、分支' },
+  { name: 'controller', component: 'Cpu', category: 'tech', description: '控制器、处理器、芯片' },
+  { name: 'service', component: 'Server', category: 'tech', description: '服务、服务器、后端' },
+  { name: 'data', component: 'Database', category: 'data', description: '数据、数据库、存储' },
+  { name: 'spring', component: 'Leaf', category: 'growth', description: '弹性、增长、植物' },
+  { name: 'storage', component: 'HardDrive', category: 'tech', description: '存储、硬盘、持久化' },
+  { name: 'mobile', component: 'Smartphone', category: 'device', description: '移动端、手机应用' },
+  { name: 'expand', component: 'Maximize2', category: 'action', description: '展开、放大、扩展' },
+  { name: 'edge', component: 'Wifi', category: 'network', description: '边缘计算、网络连接' },
+  { name: 'tool', component: 'PenTool', category: 'tool', description: '工具、笔工具' },
+  { name: 'pen-tool', component: 'PenTool', category: 'tool', description: '笔工具、绘图' },
+  { name: 'trending-up', component: 'TrendingUp', category: 'data', description: '上升趋势、增长' },
+  { name: 'bar-chart', component: 'BarChart3', category: 'data', description: '柱状图、数据可视化' },
+  { name: 'pie-chart', component: 'PieChart', category: 'data', description: '饼图、数据占比' },
+  { name: 'send', component: 'Send', category: 'action', description: '发送、传输、提交' },
+  { name: 'alert-circle', component: 'AlertCircle', category: 'warning', description: '警告、提醒、注意' },
+  { name: 'type', component: 'Type', category: 'editor', description: '文字、排版、字体' },
+  { name: 'share', component: 'Share2', category: 'action', description: '分享、传播、分发' },
+  { name: 'save', component: 'Save', category: 'action', description: '保存、存储、持久化' },
+  { name: 'promise', component: 'GitMerge', category: 'development', description: '承诺、合并、异步' },
+  { name: 'bell', component: 'Bell', category: 'notification', description: '通知、提醒、消息' },
+  { name: 'cycle', component: 'RefreshCw', category: 'time', description: '循环、周期、迭代' },
+  { name: 'pipe', component: 'GitMerge', category: 'development', description: '管道、流、串联' },
+  { name: 'queue', component: 'List', category: 'structure', description: '队列、列表、顺序' },
+  { name: 'test', component: 'CheckSquare', category: 'success', description: '测试、验证、检查' },
+  { name: 'hard-drive', component: 'HardDrive', category: 'tech', description: '硬盘、存储设备' },
 ];
 
 // 图标映射表
@@ -177,7 +211,10 @@ export const getIconComponent = async (iconName: string): Promise<React.ElementT
   }
 };
 
-// 同步获取图标组件（用于SSR）
+// 同步获取图标组件（用于SSR和Card渲染）
+// 内部缓存已加载的图标组件
+const componentCache = new Map<string, React.ElementType>();
+
 export const getIconComponentSync = (iconName: string): React.ElementType | null => {
   try {
     const componentName = iconMap.get(iconName);
@@ -185,9 +222,19 @@ export const getIconComponentSync = (iconName: string): React.ElementType | null
       return null;
     }
 
-    // 尝试从全局lucide对象获取（需要在全局导入）
-    // 注意：这种方式需要在应用启动时导入所有可能的图标
-    // 这里使用一个简化的版本，实际项目中可能需要更复杂的处理
+    // 检查缓存
+    if (componentCache.has(iconName)) {
+      return componentCache.get(iconName) || null;
+    }
+
+    // 同步require lucide-react图标
+    const lucideModule = require('lucide-react');
+    const IconComponent = lucideModule[componentName];
+    
+    if (typeof IconComponent === 'function') {
+      componentCache.set(iconName, IconComponent);
+      return IconComponent;
+    }
     return null;
   } catch (error) {
     console.error(`Error loading icon ${iconName}:`, error);

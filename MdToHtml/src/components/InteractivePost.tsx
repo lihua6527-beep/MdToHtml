@@ -224,13 +224,13 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                 setActiveLine(line);
                 try {
                     const blocks = parseCHDBlocks(content);
-                    const cardBlock = blocks.find(block => {
+                    const cardBlockIndex = blocks.findIndex(block => {
                         return (block.type === 'card' || block.type === 'code') && 
                                block.startLine <= line && 
                                block.endLine >= line;
                     });
-                    if (cardBlock) {
-                        setSelectedBlockIndex(cardBlock.blockIndex);
+                    if (cardBlockIndex !== -1) {
+                        setSelectedBlockIndex(cardBlockIndex);
                     }
                 } catch (e) {
                     console.warn('Failed to sync cursor to card', e);
@@ -256,9 +256,9 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
                 });
             }}
             onBatchCardUpdate={batchUpdateAttributes}
-            onContentUpdate={(lineIndex, newContent) => updateContent(lineIndex, newContent)}
-            onTitleUpdate={(lineIndex, newTitle) => updateTitle(lineIndex, newTitle)}
-            onCardMove={(lineIndex, direction) => moveCard(lineIndex, direction)}
+            onContentUpdate={(blockIndex, newContent) => updateContent(blockIndex, newContent)}
+            onTitleUpdate={(blockIndex, newTitle) => updateTitle(blockIndex, newTitle)}
+            onCardMove={(blockIndex, direction) => moveCard(blockIndex, direction)}
             onCardDelete={deleteCard}
             onCardAdd={(sectionBlockIndex) => addCard(sectionBlockIndex)}
             tagStyle={(frontmatter['tag-style'] as TagStyleType) || 'glass'}

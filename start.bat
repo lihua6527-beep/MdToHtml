@@ -1,34 +1,34 @@
 @echo off
 cd /d "%~dp0"
-echo [INFO] Starting MdToHtml Local Environment...
+echo [INFO] MdToHtml Pro - Dev Server Launcher
+echo.
 
-:: Check for Node.js
+:: Check Node.js
 where node >nul 2>nul
 if %errorlevel% neq 0 (
-    echo [ERROR] Node.js is not installed. Please install Node.js LTS first.
+    echo [ERROR] Node.js not found. Install Node.js LTS from https://nodejs.org/
     pause
     exit /b 1
 )
+echo [OK] Node.js found
 
-:: Navigate to Core Directory
 cd MdToHtml
 
-:: Install dependencies if node_modules is missing
-if not exist "node_modules" (
+:: Check dependencies
+if not exist "node_modules\" (
     echo [INFO] Installing dependencies...
     call npm install
     if %errorlevel% neq 0 (
-        echo [ERROR] Failed to install dependencies.
+        echo [ERROR] npm install failed
         pause
         exit /b 1
     )
+    echo [OK] Dependencies installed
 )
 
-:: Start Development Server with Smart Port
-echo [INFO] Launching Editor...
-echo [INFO] The application will open in your default browser.
-:: usage: node scripts/setup-port.js
-:: This script will find a port, update .env.local, and spawn "npm run dev" with the correct PORT env var.
-call node scripts/setup-port.js
+:: Find available port and start dev server
+echo [INFO] Starting dev server...
+echo [INFO] Browser will open automatically when ready...
+echo.
 
-pause
+node -e "require('./scripts/setup-port.js')"

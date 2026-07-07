@@ -67,7 +67,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
   const fetchCHDProtocol = async () => {
     setProtocolLoading(true);
     try {
-      const response = await fetch('/api/app-info/chd-protocol');
+      const response = await fetch('/api/app/chd-protocol');
       if (!response.ok) throw new Error('Failed to fetch CHD protocol');
       const content = await response.text();
       setProtocolContent(content);
@@ -169,6 +169,25 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
       notifyPathsUpdated(); // Refresh document list
     } else {
       alert('保存输出配置失败');
+    }
+  };
+
+  const handleClearExportCache = async () => {
+    if (!confirm('确定要清除所有导出的网页和索引文件吗？此操作不可撤销。')) return;
+    
+    try {
+      const res = await fetch('/api/clear-export', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (!res.ok) throw new Error('清除失败');
+      
+      const result = await res.json();
+      alert(`成功清除 ${result.count} 个文件`);
+      notifyPathsUpdated(); // Refresh document list
+    } catch (err: any) {
+      alert(`清除失败: ${err.message}`);
     }
   };
 
@@ -488,28 +507,44 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
                           <label className="text-xs font-semibold text-text-secondary block mb-2">
                               输出配置
                           </label>
-                          <div className="flex items-center justify-between bg-bg-card p-3 rounded border border-border-soft">
-                              <div>
-                                  <div className="text-sm font-medium text-text-primary">同时生成 JSON 元信息文件</div>
-                                  <div className="text-xs text-text-muted mt-1">与 HTML 同名的 .json 文件，用于博客索引</div>
+                          <div className="bg-bg-card p-3 rounded border border-border-soft space-y-3">
+                              <div className="flex items-center justify-between">
+                                  <div>
+                                      <div className="text-sm font-medium text-text-primary">同时生成 JSON 元信息文件</div>
+                                      <div className="text-xs text-text-muted mt-1">与 HTML 同名的 .json 文件，用于博客索引</div>
+                                  </div>
+                                  <div className="flex gap-2">
+                                      <Button 
+                                          variant={(info.config.exportOptions?.emitJson ? 'outline' : 'default') as any}
+                                          size="sm"
+                                          onClick={() => handleToggleEmitJson(false)}
+                                          className="h-7 px-3 text-xs"
+                                      >
+                                          否
+                                      </Button>
+                                      <Button 
+                                          variant={(info.config.exportOptions?.emitJson ? 'default' : 'outline') as any}
+                                          size="sm"
+                                          onClick={() => handleToggleEmitJson(true)}
+                                          className="h-7 px-3 text-xs"
+                                      >
+                                          是
+                                      </Button>
+                                  </div>
                               </div>
-                              <div className="flex gap-2">
+                              <div className="pt-3 border-t border-border-soft">
+                                  <div className="text-sm font-medium text-text-primary mb-2">导出缓存管理</div>
                                   <Button 
-                                      variant={(info.config.exportOptions?.emitJson ? 'outline' : 'default') as any}
-                                      size="sm"
-                                      onClick={() => handleToggleEmitJson(false)}
-                                      className="h-7 px-3 text-xs"
+                                      variant="destructive" 
+                                      size="sm" 
+                                      onClick={handleClearExportCache}
+                                      className="w-full"
                                   >
-                                      否
+                                      一键清除导出缓存
                                   </Button>
-                                  <Button 
-                                      variant={(info.config.exportOptions?.emitJson ? 'default' : 'outline') as any}
-                                      size="sm"
-                                      onClick={() => handleToggleEmitJson(true)}
-                                      className="h-7 px-3 text-xs"
-                                  >
-                                      是
-                                  </Button>
+                                  <div className="text-xs text-text-muted mt-1">
+                                      清除输出目录中的所有网页和索引文件
+                                  </div>
                               </div>
                           </div>
                       </div>
@@ -612,7 +647,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
                                   size="sm"
                                   onClick={async () => {
                                       try {
-                                          const response = await fetch('/api/app-info/chd-protocol');
+                                          const response = await fetch('/api/app/chd-protocol');
                                           if (!response.ok) throw new Error('Failed to fetch CHD protocol');
                                           const protocolContent = await response.text();
                                           await navigator.clipboard.writeText(protocolContent);

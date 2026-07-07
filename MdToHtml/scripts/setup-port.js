@@ -4,7 +4,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 const START_PORT = 3000;
-const END_PORT = 9000;
+const END_PORT = 3100;
 const ENV_FILE = path.join(__dirname, '../.env.local');
 
 function checkPort(port) {
@@ -18,12 +18,13 @@ function checkPort(port) {
 }
 
 async function findAvailablePort() {
-    for (let port = START_PORT; port <= END_PORT; port++) {
-        if (await checkPort(port)) {
-            return port;
-        }
+    const ports = [];
+    for (let p = START_PORT; p <= END_PORT; p++) ports.push(p);
+    const results = await Promise.all(ports.map(p => checkPort(p)));
+    for (let i = 0; i < results.length; i++) {
+        if (results[i]) return ports[i];
     }
-    throw new Error('No available ports found');
+    throw new Error('No available ports found in range ' + START_PORT + '-' + END_PORT);
 }
 
 async function updateEnvFile(port) {
@@ -31,115 +32,98 @@ async function updateEnvFile(port) {
     if (fs.existsSync(ENV_FILE)) {
         content = fs.readFileSync(ENV_FILE, 'utf8');
     }
-
-    const portRegex = /^PORT=.*$/m;
-    const newPortEntry = `PORT=${port}`;
-
-    if (portRegex.test(content)) {
-        content = content.replace(portRegex, newPortEntry);
+    const newLine = `PORT=${port}`;
+    if (/^PORT=.*$/m.test(content)) {
+        content = content.replace(/^PORT=.*$/m, newLine);
     } else {
-        content = content ? `${content}\n${newPortEntry}` : newPortEntry;
+        content = content ? content + '\n' + newLine : newLine;
     }
-
     fs.writeFileSync(ENV_FILE, content);
-    console.log(`[Smart Port] Configuration updated: PORT=${port}`);
+    console.log('[Smart Port] PORT=' + port + ' written to .env.local');
 }
 
-function startNextServer(port) {
-    console.log(`[Smart Port] Starting Next.js server on port ${port}...`);
-    
-    // On Windows, using shell: true is often safer for npm
+function openBrowser(url) {
+    const { exec } = require('child_process');
+    const cmd = process.platform === 'win32'
+        ? 'start "" "' + url + '"'
+        : process.platform === 'darwin'
+            ? 'open "' + url + '"'
+            : 'xdg-open "' + url + '"';
+    exec(cmd, (err) => {
+        if (err) console.error('[Smart Port] Failed to open browser:', err.message);
+    });
+}
+
+// ----- Main -----
+(async () => {
+    let port;
+    try {
+        port = await findAvailablePort();
+        console.log('[Smart Port] Available port found: ' + port);
+    } catch (e) {
+        console.error('[Smart Port] ' + e.message);
+        process.exit(1);
+    }
+
+    await updateEnvFile(port);
+
+    console.log('[Smart Port] Starting Next.js dev server on port ' + port + '...');
+
     const server = spawn('npm', ['run', 'dev'], {
         stdio: 'inherit',
-        env: { ...process.env, PORT: port },
+        env: Object.assign({}, process.env, { PORT: String(port), BROWSER: 'none' }),
         cwd: path.join(__dirname, '..'),
         shell: true
     });
 
+    const url = 'http://localhost:' + port;
 
+    // Wait for Next.js to be ready by polling stdout
+    // We can't use wait-on reliably in all envs, so poll via HTTP
+    let started = false;
+    const maxWait = 60; // seconds
+    const pollInterval = 1000;
+
+    console.log('[Smart Port] Waiting for server to be ready on ' + url + '...');
+
+    for (let i = 0; i < maxWait; i++) {
+        await new Promise(r => setTimeout(r, pollInterval));
+        try {
+            const http = require('http');
+            await new Promise((resolve, reject) => {
+                const req = http.get(url + '/api/files', (res) => {
+                    if (res.statusCode === 200) {
+                        resolve(true);
+                    } else {
+                        reject(new Error('Status ' + res.statusCode));
+                    }
+                });
+                req.on('error', reject);
+                req.setTimeout(2000, () => { req.destroy(); reject(new Error('timeout')); });
+            });
+            started = true;
+            break;
+        } catch (e) {
+            // Server not ready yet, keep polling
+        }
+    }
+
+    if (started) {
+        console.log('[Smart Port] Server is ready!');
+        openBrowser(url);
+    } else {
+        console.log('[Smart Port] Server did not respond within ' + maxWait + 's, opening browser anyway...');
+        openBrowser(url);
+    }
+
+    // Block until Next.js child process exits (keeps the CMD window alive)
+    server.on('close', (code) => {
+        console.log('[Smart Port] Next.js exited with code ' + code);
+        process.exit(code || 0);
+    });
 
     server.on('error', (err) => {
-        console.error('[Smart Port] Failed to start server:', err);
+        console.error('[Smart Port] Failed to start Next.js:', err.message);
         process.exit(1);
     });
-
-    server.on('close', (code) => {
-        process.exit(code);
-    });
-}
-
-let browserOpened = false;
-
-function openBrowser(url) {
-    if (browserOpened) return;
-    browserOpened = true;
-
-    console.log(`[Smart Port] Server is ready at: ${url}`);
-    console.log(`[Smart Port] Opening ${url} in default browser...`);
-    
-    const { exec } = require('child_process');
-    let command;
-    
-    switch (process.platform) {
-        case 'win32':
-            command = `start "" "${url}"`;
-            break;
-        case 'darwin':
-            command = `open "${url}"`;
-            break;
-        case 'linux':
-            command = `xdg-open "${url}"`;
-            break;
-        default:
-            command = `start "${url}"`;
-    }
-
-    if (command) {
-        exec(command, (error) => {
-            if (error) {
-                console.error('[Smart Port] Failed to open browser:', error);
-            }
-        });
-    }
-}
-
-findAvailablePort()
-    .then(async (port) => {
-        await updateEnvFile(port);
-        
-        // Start the server
-        startNextServer(port);
-
-        // Wait for the server to be ready
-        const url = `http://localhost:${port}`;
-        
-        try {
-            // Try to use wait-on if available
-            const waitOn = require('wait-on');
-            const opts = {
-                resources: [`tcp:localhost:${port}`],
-                delay: 1000,
-                interval: 500,
-                timeout: 30000,
-            };
-            
-            console.log(`[Smart Port] Waiting for server to be ready on port ${port}...`);
-            await waitOn(opts);
-            
-            // Add a small extra delay to ensure HTTP is ready
-            setTimeout(() => openBrowser(url), 1000);
-            
-        } catch (err) {
-            if (err.code === 'MODULE_NOT_FOUND') {
-                console.log('[Smart Port] "wait-on" module not found, using fallback timer...');
-            } else {
-                console.warn('[Smart Port] wait-on check failed:', err.message);
-            }
-            // Fallback: wait 5 seconds then open
-            setTimeout(() => openBrowser(url), 5000);
-        }
-    })
-    .catch((err) => {
-        console.error('[Smart Port] Error:', err.message);
-        process.exit(1);
-    });
+})();

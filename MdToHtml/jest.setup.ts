@@ -2,8 +2,13 @@ import '@testing-library/jest-dom';
 
 // TextEncoder polyfill for Jest
 if (typeof TextEncoder === 'undefined') {
-  global.TextEncoder = require('util').TextEncoder;
-  global.TextDecoder = require('util').TextDecoder;
+  (global as any).TextEncoder = require('util').TextEncoder;
+  (global as any).TextDecoder = require('util').TextDecoder;
+}
+
+// 扩展 global 类型声明
+declare global {
+  var mockToast: (() => void) | undefined;
 }
 
 // Mock ToastProvider for testing

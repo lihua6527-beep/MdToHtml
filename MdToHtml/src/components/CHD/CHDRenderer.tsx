@@ -15,19 +15,19 @@ import { TagRenderer, TagStyleType } from './TagRenderer';
 export interface CHDRendererProps {
   markdown: string;
   activeLine?: number;
-  onCardClick?: (lineIndex: number) => void;
+  onCardClick?: (blockIndex: number) => void;
   onError?: (error: string) => void;
   editMode?: boolean;
   selectedBlockIndex?: number | null;
   activeSectionBlockIndex?: number; // Added for robust section selection
   onSelectBlock?: (index: number | null) => void;
   onSelectSection?: (index: number, title: string, layoutProps: Record<string, any>) => void; // Enhanced handler
-  onCardUpdate?: (lineIndex: number, newAttrs: Record<string, any>) => void;
+  onCardUpdate?: (blockIndex: number, newAttrs: Record<string, any>) => void;
   onBatchCardUpdate?: (updates: Array<{blockIndex: number, key: string, value: any}>) => void;
-  onContentUpdate?: (lineIndex: number, newContent: string) => void;
-  onTitleUpdate?: (lineIndex: number, newTitle: string) => void;
-  onCardMove?: (lineIndex: number, direction: 'left' | 'right' | 'up' | 'down') => void;
-  onCardDelete?: (lineIndex: number) => void;
+  onContentUpdate?: (blockIndex: number, newContent: string) => void;
+  onTitleUpdate?: (blockIndex: number, newTitle: string) => void;
+  onCardMove?: (blockIndex: number, direction: 'left' | 'right' | 'up' | 'down') => void;
+  onCardDelete?: (blockIndex: number) => void;
   onCardAdd?: (sectionBlockIndex: number) => void;
   tagStyle?: TagStyleType;
   globalTitleSpacing?: string;
