@@ -1,3 +1,18 @@
+/**
+ * MetadataCacheManager — 元数据缓存管理器
+ * 
+ * 职责：
+ * - 管理 input/ 目录下 .md 文件元数据缓存
+ * - 提供 O(1) 的 getAll() 查询
+ * - 后台异步扫描同步，不阻塞首次加载
+ * 
+ * 性能策略（2026-07-08 优化）：
+ * - 首次加载：直接从缓存返回，不扫描磁盘
+ * - 后台异步：首次返回后 setTimeout 触发异步扫描
+ * - 扫描发现变化则更新缓存，下次请求生效
+ * - 无变化则静默更新缓存时间戳
+ */
+
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
@@ -11,11 +26,11 @@ export class MetadataCacheManager {
   private cache: MetadataCache;
   private entryMap: Map<string, CacheEntry>;
   private currentBaseDir: string;
+  private pendingScan: boolean = false;
 
   private constructor() {
     this.currentBaseDir = PathManager.getInputPath();
     
-    // Initialize cache structure
     const config = PathManager.getAppConfig();
     const limit = config.capacityLimit || DEFAULT_CAPACITY;
 
@@ -27,9 +42,13 @@ export class MetadataCacheManager {
     };
     this.entryMap = new Map();
 
+    // 第一阶段：仅加载缓存，不扫描磁盘
     this.loadCache();
-    // Perform initial scan
-    this.scanAndSync();
+    
+    // 第二阶段：500ms 后后台扫描（不阻塞首屏渲染）
+    setTimeout(() => {
+      this.scanAndSync();
+    }, 500);
   }
 
   public static getInstance(): MetadataCacheManager {
@@ -40,7 +59,7 @@ export class MetadataCacheManager {
   }
 
   public reload() {
-    this.scanAndSync();
+    this.scanAndSync(true);
   }
 
   private get baseDir(): string {
@@ -51,9 +70,6 @@ export class MetadataCacheManager {
       return path.join(this.baseDir, CACHE_FILE_NAME);
   }
 
-  /**
-   * Load cache from disk
-   */
   private loadCache() {
     try {
       if (fs.existsSync(this.cachePath)) {
@@ -62,88 +78,76 @@ export class MetadataCacheManager {
         
         if (data.version === CACHE_VERSION) {
           this.cache = data;
-          // Rebuild map for O(1) access
           this.entryMap.clear();
           data.entries.forEach(entry => {
             this.entryMap.set(entry.path, entry);
           });
-        } else {
-          console.log('[CacheManager] Version mismatch or invalid cache, resetting.');
+          return;
         }
-      } else {
-          // Reset if no cache file found (e.g. new directory)
-          this.entryMap.clear();
-          this.cache.entries = [];
       }
+      // 无缓存或版本不匹配
+      this.entryMap.clear();
+      this.cache.entries = [];
     } catch (e) {
-      console.warn('[CacheManager] Failed to load cache:', e);
-      // Reset on error
       this.entryMap.clear();
       this.cache.entries = [];
     }
   }
 
-  /**
-   * Save cache to disk
-   */
   private saveCache() {
     try {
       this.cache.lastUpdated = Date.now();
-      // Ensure entries matches the map (sorted by mtime desc)
       this.cache.entries = Array.from(this.entryMap.values())
         .sort((a, b) => b.mtime - a.mtime);
-      
       fs.writeFileSync(this.cachePath, JSON.stringify(this.cache, null, 2), 'utf8');
     } catch (e) {
-      console.error('[CacheManager] Failed to save cache:', e);
+      console.error('[CacheManager] 保存缓存失败:', e);
     }
   }
 
   /**
-   * Core logic: Scan directory, update cache, and handle capacity
+   * 扫描目录并同步缓存
+   * 非阻塞：不直接调用，由 getAll() 触发后台调度
    */
-  public scanAndSync() {
+  public scanAndSync(force: boolean = false) {
+    if (this.pendingScan && !force) return;
+    this.pendingScan = true;
+
     try {
-      // Check if path changed
       const newBaseDir = this.baseDir;
-      if (newBaseDir !== this.currentBaseDir) {
-          console.log(`[CacheManager] Base directory changed from ${this.currentBaseDir} to ${newBaseDir}. Reloading cache.`);
+      if (!force && newBaseDir !== this.currentBaseDir) {
           this.currentBaseDir = newBaseDir;
           this.loadCache();
       }
+      this.currentBaseDir = newBaseDir;
 
-      // Ensure base directory exists
       if (!fs.existsSync(this.baseDir)) {
         fs.mkdirSync(this.baseDir, { recursive: true });
+        this.pendingScan = false;
         return;
       }
 
-      // 1. Scan directory
       const files = fs.readdirSync(this.baseDir);
       const mdFiles = files.filter(f => 
         MARKDOWN_EXT_RE.test(f) && 
-        !f.startsWith('.') && // Ignore hidden files like .metadata_cache.json
+        !f.startsWith('.') &&
         f !== CACHE_FILE_NAME
       );
-
-      console.log(`[CacheManager] Scanning ${mdFiles.length} files in ${this.baseDir}`);
 
       const currentFilesSet = new Set(mdFiles);
       let hasChanges = false;
 
-      // 2. Update entries based on file system
       for (const file of mdFiles) {
         const fullPath = path.join(this.baseDir, file);
         try {
           const stats = fs.statSync(fullPath);
           const cached = this.entryMap.get(file);
 
-          // If not cached or modified, read file content
-          if (!cached || Math.abs(cached.mtime - stats.mtimeMs) > 100) { // 100ms tolerance
+          if (!cached || Math.abs(cached.mtime - stats.mtimeMs) > 100) {
             const content = fs.readFileSync(fullPath, 'utf8');
             const { data, excerpt } = matter(content, { excerpt: true });
             
-            const newEntry: CacheEntry = {
+            this.entryMap.set(file, {
               path: file,
               slug: file.replace(MARKDOWN_EXT_RE, ''),
               mtime: stats.mtimeMs,
@@ -153,182 +157,126 @@ export class MetadataCacheManager {
               tags: data.tags,
               type: data.type,
               excerpt: excerpt || undefined,
-            };
-            
-            this.entryMap.set(file, newEntry);
+            });
             hasChanges = true;
-            console.log(`[CacheManager] Synced entry: ${file}`);
           }
         } catch (e) {
-          console.warn(`[CacheManager] Failed to process file ${file}:`, e);
+          console.warn(`[CacheManager] 处理文件失败 ${file}:`, e);
         }
       }
 
-      // 3. Remove entries that no longer exist in FS
-      const keys = Array.from(this.entryMap.keys());
-      for (const key of keys) {
+      // 移除已删除的文件
+      for (const key of Array.from(this.entryMap.keys())) {
         if (!currentFilesSet.has(key)) {
           this.entryMap.delete(key);
           hasChanges = true;
-          console.log(`[CacheManager] Removed stale entry: ${key}`);
         }
       }
 
-      // 4. Sort and Capacity Check
-      // Get current limit from config (reload if needed)
+      // 容量检查
       const config = PathManager.getAppConfig();
       const currentLimit = config.capacityLimit || DEFAULT_CAPACITY;
-      this.cache.capacity_limit = currentLimit; // Update cache internal state
+      this.cache.capacity_limit = currentLimit;
 
-      const sortedEntries = Array.from(this.entryMap.values())
-        .sort((a, b) => b.mtime - a.mtime);
-      
-      if (sortedEntries.length > currentLimit) {
-        // Identify overflow files
-        const overflow = sortedEntries.slice(currentLimit);
-        const keep = sortedEntries.slice(0, currentLimit);
+      const sorted = Array.from(this.entryMap.values()).sort((a, b) => b.mtime - a.mtime);
+      if (sorted.length > currentLimit) {
+        const overflow = sorted.slice(currentLimit);
+        TrashManager.moveToTrash(overflow.map(e => e.path));
         
-        console.log(`[CacheManager] Capacity exceeded (${sortedEntries.length} > ${currentLimit}). Moving ${overflow.length} files to trash.`);
-        
-        // Move overflow to trash via TrashManager
-        const overflowPaths = overflow.map(e => e.path); // Relative paths
-        TrashManager.moveToTrash(overflowPaths);
-        
-        // Update map to only keep valid entries
         this.entryMap.clear();
-        keep.forEach(e => this.entryMap.set(e.path, e));
+        sorted.slice(0, currentLimit).forEach(e => this.entryMap.set(e.path, e));
         hasChanges = true;
       }
 
       if (hasChanges) {
         this.saveCache();
+        console.log('[CacheManager] 缓存已更新（后台扫描发现变化）');
+      } else {
+        // 无变化：仅更新时间戳
+        this.cache.lastUpdated = Date.now();
       }
     } catch (e) {
-      console.error('[CacheManager] Scan failed:', e);
+      console.error('[CacheManager] 扫描失败:', e);
+    } finally {
+      this.pendingScan = false;
     }
   }
 
   /**
-   * Public API: Get all cached posts
-   * Returns O(1) memory reference (sorted)
+   * 获取所有缓存条目
+   * 策略：先返回缓存（毫秒级），后台异步触发扫描
    */
   public getAll(): CacheEntry[] {
-    if (this.baseDir !== this.currentBaseDir) {
+    // 立即返回已有缓存
+    const result = Array.from(this.entryMap.values()).sort((a, b) => b.mtime - a.mtime);
+    
+    // 后台异步触发扫描
+    if (!this.pendingScan) {
+      setTimeout(() => {
         this.scanAndSync();
+      }, 100);
     }
-    // Return sorted list
-    return Array.from(this.entryMap.values()).sort((a, b) => b.mtime - a.mtime);
+    
+    return result;
   }
-  
-  /**
-   * Public API: Get capacity limit
-   */
+
   public getCapacityLimit(): number {
-      const config = PathManager.getAppConfig();
-      return config.capacityLimit || DEFAULT_CAPACITY;
+    return PathManager.getAppConfig().capacityLimit || DEFAULT_CAPACITY;
   }
 
-  /**
-   * Public API: Get single post content (reads from disk)
-   * This is a helper that uses the cache to locate, but reads content on demand.
-   */
-  public getPost(slug: string): { slug: string, content: string, metadata?: CacheEntry } | null {
-    if (this.baseDir !== this.currentBaseDir) {
-        this.scanAndSync();
-    }
+  public getPost(slug: string): { slug: string; content: string; metadata?: CacheEntry } | null {
     const candidates = MARKDOWN_EXT_RE.test(slug) ? [slug] : [`${slug}.md`, `${slug}.markdown`];
-    const filename =
-      candidates.find(c => this.entryMap.has(c)) ||
-      candidates.find(c => fs.existsSync(path.join(this.baseDir, c))) ||
-      candidates[0];
-
+    const filename = candidates.find(c => this.entryMap.has(c)) || candidates[0];
     const entry = this.entryMap.get(filename);
-    
-    // If found in cache, we trust it exists (mostly).
-    // If not in cache, we might still check disk just in case (e.g. newly added but not scanned yet?)
-    // But for performance, we rely on cache. If not in cache, force a quick check or return null.
-    // Let's force a check if not in cache, to be safe.
-    
     const fullPath = path.join(this.baseDir, filename);
     if (!fs.existsSync(fullPath)) return null;
 
-    const content = fs.readFileSync(fullPath, 'utf8');
     return {
       slug: filename.replace(MARKDOWN_EXT_RE, ''),
-      content,
-      metadata: entry
+      content: fs.readFileSync(fullPath, 'utf8'),
+      metadata: entry,
     };
   }
 
-  /**
-   * Public API: Update or Create a post
-   * Updates cache immediately.
-   */
   public update(slug: string, content: string): void {
-    if (this.baseDir !== this.currentBaseDir) {
-        this.scanAndSync();
-    }
-    // Clean slug
     const safeSlug = slug.replace(/[^a-zA-Z0-9\-\u4e00-\u9fa5\s_.\(\)]/g, '');
     const filename = safeSlug.endsWith('.md') ? safeSlug : `${safeSlug}.md`;
     const fullPath = path.join(this.baseDir, filename);
-
-    // Write file
     fs.writeFileSync(fullPath, content, 'utf8');
-    console.log(`[CacheManager] File written: ${fullPath}`);
 
-    // Update Cache
     const stats = fs.statSync(fullPath);
     const { data, excerpt } = matter(content, { excerpt: true });
     
-    const entry: CacheEntry = {
-              path: filename,
-              slug: safeSlug.replace(/\.md$/i, ''),
-              mtime: stats.mtimeMs,
-              birthtime: stats.birthtimeMs,
-              status: data.status,
-              title: data.title || safeSlug.replace(/\.md$/i, ''),
-              tags: data.tags,
-              type: data.type,
-              excerpt: excerpt || undefined
-    };
-
-    this.entryMap.set(filename, entry);
+    this.entryMap.set(filename, {
+      path: filename,
+      slug: safeSlug.replace(/\.md$/i, ''),
+      mtime: stats.mtimeMs,
+      birthtime: stats.birthtimeMs,
+      status: data.status,
+      title: data.title || safeSlug.replace(/\.md$/i, ''),
+      tags: data.tags,
+      type: data.type,
+      excerpt: excerpt || undefined,
+    });
     
-    // Check capacity (optional here, or wait for next scan? Better to check now to keep cache clean)
-    // But sorting every time might be heavy? 500 items is fine.
-    // Let's trigger scanAndSync to handle capacity properly
-    this.scanAndSync(); 
+    this.saveCache();
+    setTimeout(() => this.scanAndSync(), 200);
   }
 
-  /**
-   * Public API: Delete a post
-   */
   public delete(slug: string): void {
-     if (this.baseDir !== this.currentBaseDir) {
-         this.scanAndSync();
-     }
-     console.log(`[CacheManager] Deleting slug: ${slug}`);
-     const candidates = MARKDOWN_EXT_RE.test(slug) ? [slug] : [`${slug}.md`, `${slug}.markdown`];
-     const filename = candidates.find(c => this.entryMap.has(c)) ||
-        candidates.find(c => fs.existsSync(path.join(this.baseDir, c))) ||
-        candidates[0];
-     const fullPath = path.join(this.baseDir, filename);
-     
-     if (fs.existsSync(fullPath)) {
-        // Move to trash using TrashManager with absolute path
-        console.log(`[CacheManager] Moving file to trash: ${fullPath}`);
-        const result = TrashManager.moveToTrash([fullPath]);
-        console.log(`[CacheManager] Trash move result:`, result);
-        
-        if (result.failed > 0) {
-            console.error(`[CacheManager] Failed to move file to trash:`, result.errors);
-            throw new Error(`Failed to move file to trash: ${result.errors.join(', ')}`);
-        }
-     }
-     
-     this.entryMap.delete(filename);
-     this.saveCache();
+    const candidates = MARKDOWN_EXT_RE.test(slug) ? [slug] : [`${slug}.md`, `${slug}.markdown`];
+    const filename = candidates.find(c => this.entryMap.has(c)) || candidates[0];
+    const fullPath = path.join(this.baseDir, filename);
+    
+    if (fs.existsSync(fullPath)) {
+      const result = TrashManager.moveToTrash([fullPath]);
+      if (result.failed > 0) {
+        throw new Error(`移动到回收站失败: ${result.errors.join(', ')}`);
+      }
+    }
+    
+    this.entryMap.delete(filename);
+    this.saveCache();
   }
 }
 

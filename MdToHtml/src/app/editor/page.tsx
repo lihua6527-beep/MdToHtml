@@ -167,7 +167,7 @@ export default function EditorPage() {
     if (files && files.length > 0) {
         const file = files[0];
         if (!file.name.endsWith('.md') && !file.name.endsWith('.markdown')) {
-            alert('请拖入 Markdown (.md) 文件');
+            alert('编辑器仅支持 Markdown (.md) 文件。如需使用其他格式（如 .docx），请使用首页的 AI 转换功能。');
             return;
         }
 

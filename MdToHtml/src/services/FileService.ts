@@ -142,8 +142,10 @@ export class FileService {
       }
       
       const request: FileSaveRequest = { slug, content, operations };
-      const result = await ApiClient.post<FileSaveResponse>('/api/save', request);
-      const success = result && (result.success === true || result.slug === slug);
+      const result = await ApiClient.post<any>('/api/save', request);
+      // ApiClient 已自动解包：API返回 { success: true, data: { slug } } → result = { slug }
+      // 只要 result 非空即表示保存成功
+      const success = result !== null && result !== undefined;
 
       if (success) {
         mutate(QUERY_KEYS.FILES);

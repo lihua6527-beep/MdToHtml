@@ -9,7 +9,15 @@ export default function PreviewPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load content from localStorage
+    // 尝试从 AI 预览专用 key 读取（纯文本，非JSON）
+    const aiContent = localStorage.getItem('ai_preview_content');
+    if (aiContent) {
+      setContent(aiContent);
+      setLoading(false);
+      return;
+    }
+
+    // 尝试从编辑器自动保存读取（JSON格式）
     const savedContent = loadFromStorage('chd_md_content', '');
     setContent(savedContent);
     setLoading(false);
@@ -62,8 +70,8 @@ export default function PreviewPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-[1200px] mx-auto p-8">
-        <div className="bg-white shadow-sm border border-gray-200 min-h-[calc(100vh-4rem)]">
+      <div className="max-w-[1400px] mx-auto p-4">
+        <div className="bg-white shadow-sm border border-gray-200 min-h-[calc(100vh-2rem)]">
           <CHDRenderer markdown={content} />
         </div>
       </div>

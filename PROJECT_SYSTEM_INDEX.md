@@ -1,6 +1,6 @@
 # MdToHtml Pro — 系统架构完整索引 (System Index)
 
-> **生成日期**: 2026-07-07
+> **生成日期**: 2026-07-08 (已更新)
 > **用途**: 为 AI 助手（如 sailiNG、Claude、Copilot）提供完整的项目概览，支持语义化导航与上下文理解。
 > **系统版本**: v1.0.0 | **技术栈**: Next.js 14 + TypeScript + Tailwind CSS
 
@@ -24,9 +24,9 @@ Markdown 文件 (*.md)
 
 | 维度 | 现状 | 扩展目标 |
 |------|------|----------|
-| 输入层 | 手动编写 CHD 格式 Markdown | AI 自动识别任意文本 → CHD Markdown |
-| 处理层 | 本地解析 + 渲染 | 本地解析 + 渲染 + AI 辅助 |
-| 输出层 | 静态 HTML 导出 | 静态 HTML 导出 + 多格式支持 |
+| 输入层 | ✅ 手动编写 + AI 自动识别双模式 | 多模态输入 |
+| 处理层 | ✅ 本地解析 + 渲染 + AI 生成 | AI 辅助编辑、实时建议 |
+| 输出层 | ✅ 静态 HTML 导出 + 浏览器原生下载 | 多格式导出（PDF/Markdown） |
 
 ---
 
@@ -101,6 +101,7 @@ MdToHmtl/                          # 项目根目录
 | `/preview` | `src/app/preview/page.tsx` | `'use client'` | 独立预览页（从 localStorage 读取 `chd_md_content`） |
 | `/tag-showcase` | `src/app/tag-showcase/page.tsx` | `'use client'` | 标签风格展示页（5 种风格：Glassmorphism/Tech/Gradient/Outline/3D Pop） |
 | `/test` | `src/app/test/page.tsx` | `'use client'` | 系统验证仪表盘（5 个单元测试 + 500 项压力测试） |
+| `/ai-input` | `src/app/ai-input/page.tsx` | `'use client'` | AI 智能转换独立页（开发调试用，正式入口在首页右侧） |
 
 ---
 
@@ -451,17 +452,62 @@ cheerio, jsdom, cross-env, ts-node
 
 ---
 
-## 十五、扩展点 (Extension Points)
+## 十五、AI 服务层 (2026-07-08 新增)
 
-该架构预留了以下扩展接入点：
+### AI 组件（4 个）
 
-| 扩展点 | 位置 | 说明 |
-|--------|------|------|
-| AI 输入页面 | — | 需新建路由 `/ai-input` |
-| AI 服务层 | `services/` | 需新建 `services/ai/` 子目录 |
-| CHDRenderer | 已有 Props 扩展 | `markdown` prop 可接受 AI 生成内容 |
-| HtmlBundler | `lib/export/` | 已有完整 HTML 导出能力 |
-| 类型系统 | `types/` | 可扩展 AI 相关类型 |
+```
+src/components/AI/
+├── AIArea.tsx           # AI 主容器：顶部状态栏 + 输入面板 + 结果列表 + 退出弹窗
+├── AIInputPanel.tsx     # 输入面板：文件拖拽/上传（.txt/.md/.docx）/ URL导入
+├── AITempFileList.tsx   # 生成结果列表：多版本并列 + 5个操作按钮 + 文件大小
+└── AISaveDialog.tsx     # 退出确认弹窗（保存/不保存/取消）
+```
+
+### AI 服务层（4 个）
+
+```
+src/services/ai/
+├── PromptEngine.ts      # Prompt 模板引擎（硬编码 Prompt A/B，约400行）
+├── AIService.ts         # AI 服务核心（调用 API、退避重试、错误处理）
+├── TempFileManager.ts   # 临时文件管理器（sessionStorage、自动命名）
+└── /api/ai/generate/route.ts  # DeepSeek V4 API 代理
+
+src/app/api/ai/
+└── generate/route.ts    # POST /api/ai/generate - 调用 DeepSeek API
+```
+
+### AI 配置
+
+集成在 `SettingsPanel.tsx` 中作为 `settingsType='ai'` 面板，含：
+- DEEPSEEK_API_KEY 状态显示
+- Flash / Pro 模型选择
+- 连接测试按钮
+
+### 支持的文件格式
+
+| 格式 | 解析方式 | 依赖 |
+|------|----------|------|
+| `.txt` / `.md` | 原生 `file.text()` | 无 |
+| `.docx` | `mammoth.extractRawText()` 提取纯文本 | `mammoth` |
+| `.pdf` | 暂不支持（推荐转 .docx） | — |
+
+---
+
+## 十六、扩展点 (Extension Points)
+
+该架构已实现的功能及未来扩展方向：
+
+| 功能 | 状态 | 位置 |
+|------|------|------|
+| AI 输入页面 | ✅ 已集成到首页右侧 | `HomeClient.tsx` + `AIArea.tsx` |
+| AI 服务层 | ✅ 已实现 | `services/ai/` + `/api/ai/generate` |
+| AI 配置面板 | ✅ 已集成 | `SettingsPanel.tsx` |
+| CHDRenderer | ✅ 已有 Props 扩展 | `markdown` prop 可接受 AI 生成内容 |
+| HtmlBundler | ✅ 已有完整 HTML 导出能力 | `lib/export/` |
+| 类型系统 | ✅ 已扩展 AI 相关类型 | `types/model-interface.ts` |
+| 多格式导出 | 🔜 未来 | PDF / DOCX 导出 |
+| AI 实时建议 | 🔜 未来 | 编辑器内 AI 辅助 |
 
 ---
 

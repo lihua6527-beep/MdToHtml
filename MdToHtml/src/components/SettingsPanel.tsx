@@ -22,7 +22,7 @@ interface PathInfo {
 interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  settingsType: 'file' | 'render' | 'protocol';
+  settingsType: 'file' | 'render' | 'protocol' | 'ai';
 }
 
 type PathKey = 'input' | 'output' | 'data' | 'trash' | 'chdProtocol';
@@ -287,11 +287,42 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
     );
   };
 
+  const [aiApiKey, setAiApiKey] = useState('');
+  const [aiDefaultModel, setAiDefaultModel] = useState<'deepseek-chat' | 'deepseek-reasoner'>('deepseek-chat');
+  const [aiConnected, setAiConnected] = useState<boolean | null>(null);
+  const [aiTesting, setAiTesting] = useState(false);
+
+  const handleAiTestConnection = async () => {
+    setAiTesting(true);
+    try {
+      const res = await fetch('/api/ai/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: 'Hello',
+          model: aiDefaultModel,
+          systemPrompt: 'You are a helpful assistant.',
+        }),
+      });
+      setAiConnected(res.ok);
+    } catch {
+      setAiConnected(false);
+    } finally {
+      setAiTesting(false);
+    }
+  };
+
+  const handleAiSaveConfig = () => {
+    // 当前阶段只做提示，真实写入 .env.local 需要服务端支持
+    alert('AI 配置写入功能将在后续版本中完善。\n\n当前请直接在 .env.local 文件中设置 DEEPSEEK_API_KEY。');
+  };
+
   const getPanelTitle = () => {
     switch (settingsType) {
       case 'file': return '文件设置';
       case 'render': return '渲染配置';
       case 'protocol': return '协议配置';
+      case 'ai': return 'AI 服务配置';
       default: return '设置';
     }
   };
@@ -301,6 +332,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
       case 'file': return <FileJson className="w-5 h-5" />;
       case 'render': return <Code className="w-5 h-5" />;
       case 'protocol': return <FileText className="w-5 h-5" />;
+      case 'ai': return <Settings className="w-5 h-5" />;
       default: return <Settings className="w-5 h-5" />;
     }
   };
@@ -625,6 +657,102 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
                         }
                       </div>
                     </div>
+                  </div>
+                </div>
+              )}
+
+              {/* AI 服务配置面板 */}
+              {settingsType === 'ai' && (
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-text-primary uppercase tracking-wider flex items-center gap-2">
+                    <Settings className="w-4 h-4" /> AI 服务配置
+                  </h3>
+                  <div className="bg-bg-page rounded-lg p-4 border border-border-soft space-y-4">
+                    {/* API Key */}
+                    <div>
+                      <label className="text-xs font-semibold text-text-secondary block mb-2">
+                        DEEPSEEK_API_KEY
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="password"
+                          value={aiApiKey}
+                          onChange={(e) => setAiApiKey(e.target.value)}
+                          placeholder="已配置（不可在此修改）"
+                          className="flex-1 px-3 py-2 text-xs border border-border-soft rounded-md bg-bg-card text-text-muted"
+                          disabled
+                        />
+                        <Button variant="secondary" size="sm" onClick={handleAiTestConnection} disabled={aiTesting} className="shrink-0 h-8 text-xs px-3">
+                          {aiTesting ? '测试中...' : '测试连接'}
+                        </Button>
+                      </div>
+                      <p className="text-[10px] text-text-muted mt-1">
+                        请在项目根目录的 .env.local 文件中设置
+                      </p>
+                    </div>
+
+                    {/* 默认模型 */}
+                    <div>
+                      <label className="text-xs font-semibold text-text-secondary block mb-2">
+                        默认模型
+                      </label>
+                      <div className="flex gap-2">
+                        <Button
+                          variant={aiDefaultModel === 'deepseek-chat' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setAiDefaultModel('deepseek-chat')}
+                          className="h-8 text-xs"
+                        >
+                          DeepSeek Flash ⚡
+                        </Button>
+                        <Button
+                          variant={aiDefaultModel === 'deepseek-reasoner' ? 'default' : 'outline'}
+                          size="sm"
+                          onClick={() => setAiDefaultModel('deepseek-reasoner')}
+                          className="h-8 text-xs"
+                        >
+                          DeepSeek Pro 🧠
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* 生成参数（只读） */}
+                    <div className="pt-4 border-t border-border-soft">
+                      <label className="text-xs font-semibold text-text-secondary block mb-2">
+                        生成参数（固定配置）
+                      </label>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-bg-card p-3 rounded border border-border-soft text-center">
+                          <div className="text-sm font-bold text-text-primary">0.3</div>
+                          <div className="text-[10px] text-text-muted">Temperature</div>
+                        </div>
+                        <div className="bg-bg-card p-3 rounded border border-border-soft text-center">
+                          <div className="text-sm font-bold text-text-primary">4096</div>
+                          <div className="text-[10px] text-text-muted">Max Tokens</div>
+                        </div>
+                        <div className="bg-bg-card p-3 rounded border border-border-soft text-center">
+                          <div className="text-sm font-bold text-text-primary">CHD v2.1</div>
+                          <div className="text-[10px] text-text-muted">输出格式</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 连接状态 */}
+                    <div className="pt-4 border-t border-border-soft">
+                      <div className="flex items-center justify-between bg-bg-card p-3 rounded border border-border-soft">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-2 h-2 rounded-full ${aiConnected === true ? 'bg-green-500' : aiConnected === false ? 'bg-red-400' : 'bg-gray-300'}`}></div>
+                          <span className="text-sm font-medium text-text-primary">
+                            {aiConnected === true ? '已连接 (DeepSeek API)' : aiConnected === false ? '连接失败' : '未测试'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 保存按钮 */}
+                    <Button variant="default" className="w-full" onClick={handleAiSaveConfig}>
+                      保存配置
+                    </Button>
                   </div>
                 </div>
               )}
