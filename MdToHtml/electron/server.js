@@ -147,7 +147,7 @@ app.post('/api/save', (req, res) => {
 // POST /api/save-export
 app.post('/api/save-export', (req, res) => {
   try {
-    const { filename, content } = req.body;
+    const { filename, content, metadata } = req.body;
     if (!filename || !content) {
         return res.status(400).json({ error: 'Filename and content are required' });
     }
@@ -157,12 +157,36 @@ app.post('/api/save-export', (req, res) => {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
-    let safeFilename = filename.replace(/[\\/:\*\?"<>|]/g, '_');
+    // Create category subdirectories
+    const categories = ['documents', 'projects', 'articles', 'others'];
+    categories.forEach(category => {
+      const categoryDir = path.join(outputDir, category);
+      if (!fs.existsSync(categoryDir)) {
+        fs.mkdirSync(categoryDir, { recursive: true });
+        console.log(`[Export] Created category directory: ${categoryDir}`);
+      }
+    });
+
+    let safeFilename = filename.replace(/[\\/:\*\?"<>\|]/g, '_');
     if (!safeFilename.endsWith('.html')) {
       safeFilename += '.html';
     }
 
-    const filePath = path.join(outputDir, safeFilename);
+    // Determine category based on metadata type
+    let category = 'others';
+    if (metadata) {
+      const type = metadata.type || metadata.category;
+      if (type === 'document' || type === 'doc') {
+        category = 'documents';
+      } else if (type === 'project' || type === 'proj') {
+        category = 'projects';
+      } else if (type === 'article' || type === 'blog' || type === 'post') {
+        category = 'articles';
+      }
+    }
+
+    const categoryDir = path.join(outputDir, category);
+    const filePath = path.join(categoryDir, safeFilename);
     
     // Use writeFile for non-blocking operation
     fs.writeFile(filePath, content, 'utf8', (err) => {
@@ -171,11 +195,117 @@ app.post('/api/save-export', (req, res) => {
         return res.status(500).json({ error: 'Failed to save file' });
       }
       console.log(`[Export] Saved file to: ${filePath}`);
+
+      // Generate JSON metadata file if emitJson is enabled
+      try {
+        const appConfig = PathManager.getAppConfig();
+        const emitJson = !!appConfig.exportOptions?.emitJson;
+        if (emitJson) {
+          const baseName = path.basename(safeFilename, '.html');
+          
+          let meta;
+          if (metadata) {
+              // Use provided metadata
+              meta = {
+                  id: baseName,
+                  type: metadata.type || 'project',
+                  title: metadata.title || baseName,
+                  brief: metadata.brief || '',
+                  date: metadata.date || new Date().toISOString().slice(0, 10),
+                  tags: metadata.tags || [],
+                  chdVersion: '2.4',
+                  htmlFile: `${category}/${safeFilename}`,
+                  ...metadata // Allow overrides
+              };
+          } else {
+              // Fallback to extraction
+              let title = baseName;
+              const titleMatch = content.match(/<title>([\s\S]*?)<\/title>/i);
+              if (titleMatch && titleMatch[1]) {
+              title = titleMatch[1].trim();
+              }
+              let bodyInner = content;
+              const bodyMatch = content.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+              if (bodyMatch && bodyMatch[1]) {
+              bodyInner = bodyMatch[1];
+              }
+              let plain = bodyInner
+              .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+              .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+              .replace(/<[^>]+>/g, ' ')
+              .replace(/&nbsp;/g, ' ')
+              .replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/\s+/g, ' ')
+              .trim();
+              const brief = plain.slice(0, 100);
+              meta = {
+              id: baseName,
+              type: 'project',
+              title,
+              brief,
+              date: new Date().toISOString().slice(0, 10),
+              tags: [] as string[],
+              chdVersion: '2.4',
+              htmlFile: `${category}/${safeFilename}`
+              };
+          }
+
+          const jsonPath = path.join(categoryDir, `${baseName}.json`);
+          fs.writeFileSync(jsonPath, JSON.stringify(meta, null, 2), 'utf8');
+          console.log(`[Export] Saved metadata to: ${jsonPath}`);
+        }
+      } catch (metaErr) {
+        console.warn('[Export] Failed to emit JSON metadata:', metaErr);
+      }
+
       res.json({ success: true, path: filePath });
     });
   } catch (error) {
     console.error('Error saving export file:', error);
     res.status(500).json({ error: 'Failed to save file' });
+  }
+});
+
+// POST /api/clear-export
+app.post('/api/clear-export', (req, res) => {
+  try {
+    const outputDir = PathManager.getOutputPath();
+    if (!fs.existsSync(outputDir)) {
+      return res.json({ count: 0 });
+    }
+
+    let count = 0;
+    
+    // Recursive function to delete files in directory and subdirectories
+    function deleteExportFiles(dir) {
+      const files = fs.readdirSync(dir);
+      
+      for (const file of files) {
+        const filePath = path.join(dir, file);
+        const stats = fs.statSync(filePath);
+        
+        if (stats.isDirectory()) {
+          // Recursively process subdirectory
+          deleteExportFiles(filePath);
+        } else if (file.endsWith('.html') || file.endsWith('.json')) {
+          // Delete HTML and JSON files
+          fs.unlinkSync(filePath);
+          count++;
+          console.log(`[Clear Export] Deleted: ${filePath}`);
+        }
+      }
+    }
+
+    // Start deleting from output directory
+    deleteExportFiles(outputDir);
+
+    console.log(`[Clear Export] Total deleted: ${count} files`);
+    res.json({ count });
+  } catch (error) {
+    console.error('Error clearing export files:', error);
+    res.status(500).json({ error: 'Failed to clear export files' });
   }
 });
 

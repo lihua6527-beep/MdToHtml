@@ -23,13 +23,37 @@ export async function POST(request: NextRequest) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
+    // Create category subdirectories
+    const categories = ['documents', 'projects', 'articles', 'others'];
+    categories.forEach(category => {
+      const categoryDir = path.join(outputDir, category);
+      if (!fs.existsSync(categoryDir)) {
+        fs.mkdirSync(categoryDir, { recursive: true });
+        console.log(`[Export] Created category directory: ${categoryDir}`);
+      }
+    });
+
     // 处理文件名：确保以 .html 结尾，且没有非法字符
-    let safeFilename = filename.replace(/[\\/:\*\?"<>|]/g, '_');
+    let safeFilename = filename.replace(/[\/:\*\?"<>|]/g, '_');
     if (!safeFilename.endsWith('.html')) {
       safeFilename += '.html';
     }
 
-    const filePath = path.join(outputDir, safeFilename);
+    // Determine category based on metadata type
+    let category = 'others';
+    if (metadata) {
+      const type = metadata.type || metadata.category;
+      if (type === 'document' || type === 'doc') {
+        category = 'documents';
+      } else if (type === 'project' || type === 'proj') {
+        category = 'projects';
+      } else if (type === 'article' || type === 'blog' || type === 'post') {
+        category = 'articles';
+      }
+    }
+
+    const categoryDir = path.join(outputDir, category);
+    const filePath = path.join(categoryDir, safeFilename);
     fs.writeFileSync(filePath, content, 'utf8');
 
     console.log(`[Export] Saved file to: ${filePath}`);
@@ -51,7 +75,7 @@ export async function POST(request: NextRequest) {
                 date: metadata.date || new Date().toISOString().slice(0, 10),
                 tags: metadata.tags || [],
                 chdVersion: '2.4',
-                htmlFile: safeFilename,
+                htmlFile: `${category}/${safeFilename}`,
                 ...metadata // Allow overrides
             };
         } else {
@@ -85,11 +109,11 @@ export async function POST(request: NextRequest) {
             date: new Date().toISOString().slice(0, 10),
             tags: [] as string[],
             chdVersion: '2.4',
-            htmlFile: safeFilename
+            htmlFile: `${category}/${safeFilename}`
             };
         }
 
-        const jsonPath = path.join(outputDir, `${baseName}.json`);
+        const jsonPath = path.join(categoryDir, `${baseName}.json`);
         fs.writeFileSync(jsonPath, JSON.stringify(meta, null, 2), 'utf8');
         console.log(`[Export] Saved metadata to: ${jsonPath}`);
       }
