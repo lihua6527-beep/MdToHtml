@@ -3,11 +3,15 @@
  * 
  * AI 生成 API Route
  * - 接收前端请求，代理调用 DeepSeek V4 API
- * - API Key 从服务端环境变量读取，不暴露到前端
+ * - API Key 从 ApiKeyManager 获取（支持惰性覆盖热加载）
+ * - 不暴露到前端
  * - 支持 Flash (deepseek-chat) 和 Pro (deepseek-reasoner) 两种模型
+ *
+ * @see plans/AI配置面板计划/AI配置面板完整实施方案_20260709.md
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { ApiKeyManager } from '@/lib/env-hot-loader';
 
 const DEEPSEEK_ENDPOINT = 'https://api.deepseek.com/v1/chat/completions';
 const VALID_MODELS = ['deepseek-chat', 'deepseek-reasoner'];
@@ -30,13 +34,13 @@ export async function POST(request: NextRequest) {
 
     const selectedModel = VALID_MODELS.includes(model) ? model : 'deepseek-chat';
 
-    // 3. 读取环境变量（仅服务端可用）
-    const apiKey = process.env.DEEPSEEK_API_KEY;
+    // 3. 从 ApiKeyManager 获取 Key（支持惰性覆盖热加载）
+    const apiKey = ApiKeyManager.get();
     if (!apiKey) {
       return NextResponse.json(
         {
           error: 'DEEPSEEK_API_KEY 未配置',
-          detail: '请在 .env.local 文件中设置 DEEPSEEK_API_KEY=sk-your-key',
+          detail: '请在设置页面配置 DeepSeek API Key，或在 .env.local 中设置 DEEPSEEK_API_KEY=sk-your-key',
         },
         { status: 500 }
       );

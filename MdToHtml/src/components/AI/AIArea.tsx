@@ -191,8 +191,8 @@ export const AIArea: React.FC<AIAreaProps> = ({ onClose, onOpenSettings }) => {
             <span className="w-1.5 h-1.5 bg-green-500 rounded-full inline-block" />
             <span className="text-[10px] text-green-600 hidden sm:inline">已连接</span>
           </span>
-          {onOpenSettings && <button onClick={onOpenSettings} className="text-text-muted hover:text-text-primary text-sm px-1" title="AI 设置">⚙️</button>}
           {onClose && <button onClick={handleExit} className="text-text-muted hover:text-text-primary text-sm px-1" title="关闭">✕</button>}
+          {onClose && <button onClick={onClose} className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-indigo-600 bg-indigo-50 rounded-md hover:bg-indigo-100 transition-colors" title="经典模式 - 拖拽上传 Markdown">📄 经典模式</button>}
         </div>
       </div>
 

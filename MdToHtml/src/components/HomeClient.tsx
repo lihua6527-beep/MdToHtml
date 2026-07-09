@@ -21,8 +21,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsType, setSettingsType] = useState<SettingsType>('file');
-  const [activeMode, setActiveMode] = useState<'welcome' | 'ai'>('welcome');
-  const [aiSettingsOpen, setAiSettingsOpen] = useState(false);
+  const [activeMode, setActiveMode] = useState<'welcome' | 'ai'>('ai');
 
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
@@ -114,11 +113,6 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
           {activeMode === 'ai' ? (
             <AIArea 
               onClose={() => setActiveMode('welcome')}
-              onOpenSettings={() => {
-                setSettingsType('ai');
-                setAiSettingsOpen(true);
-                setShowSettings(true);
-              }}
             />
           ) : (
             <>

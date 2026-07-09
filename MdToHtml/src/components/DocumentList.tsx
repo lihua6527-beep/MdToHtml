@@ -22,7 +22,7 @@ import SettingsMenu from '@/components/ui/SettingsMenu';
 
 interface DocumentListProps {
   initialPosts: FileItem[];
-  onOpenSettings?: (type: 'file' | 'render' | 'protocol') => void;
+  onOpenSettings?: (type: 'file' | 'render' | 'protocol' | 'ai') => void;
   className?: string;
 }
 

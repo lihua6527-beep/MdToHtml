@@ -39,12 +39,6 @@ interface UseDocumentStateReturn {
   isExporting: boolean;
   setIsExporting: (isExporting: boolean) => void;
   
-  // Document type state
-  documentType: string;
-  showTypeDropdown: boolean;
-  setShowTypeDropdown: (show: boolean) => void;
-  handleTypeChange: (newType: string) => void;
-  
   // Status state
   docStatus: string | null;
   isStatusUpdating: boolean;
@@ -106,9 +100,6 @@ export const useDocumentState = ({
   const [docStatus, setDocStatus] = useState<string | null>(initialStatus || null);
   const [isStatusUpdating, setIsStatusUpdating] = useState(false);
   
-  // Document type state
-  const [showTypeDropdown, setShowTypeDropdown] = useState(false);
-  
   // Refs
   const triggerSaveRef = useRef<((content: string) => void) | null>(null);
   const isSavingRef = useRef(false);
@@ -148,19 +139,12 @@ export const useDocumentState = ({
   const effectiveHistoryCount = historyCount + operationLog.length;
   const { scoreResult, showScoreDetails, setShowScoreDetails } = useScoring(content, effectiveHistoryCount);
   
-  // Get document type from frontmatter
-  const documentType = useRef('project');
-  
   // Parse frontmatter with error handling
   useEffect(() => {
     try {
       // First, try to parse normally
       const { data } = matter(content);
       frontmatter.current = data || {};
-      // 只有当 frontmatter 中存在 type 字段时才更新，否则保持之前的类型
-      if (frontmatter.current.type) {
-        documentType.current = frontmatter.current.type;
-      }
     } catch (e) {
       console.warn('Frontmatter parsing failed, attempting to clean up duplicate keys', e);
       // If parsing fails due to duplicate keys, clean up the content
@@ -204,14 +188,9 @@ export const useDocumentState = ({
         const cleanedContent = [...frontmatterLines, ...contentLines].join('\n');
         const { data } = matter(cleanedContent);
         frontmatter.current = data || {};
-        // 只有当 frontmatter 中存在 type 字段时才更新，否则保持之前的类型
-        if (frontmatter.current.type) {
-          documentType.current = frontmatter.current.type;
-        }
       } catch (e2) {
         console.warn('Failed to clean up frontmatter', e2);
         frontmatter.current = {};
-        // 解析失败时保持之前的文档类型，而不是重置为 'project'
       }
     }
   }, [content]);
@@ -222,18 +201,6 @@ export const useDocumentState = ({
       setSelectedBlockIndex(null);
     }
   }, [isEditing]);
-  
-  // Click outside to close type dropdown
-  useEffect(() => {
-    const handleClickOutside = () => {
-      setShowTypeDropdown(false);
-    };
-
-    if (showTypeDropdown) {
-      window.addEventListener('click', handleClickOutside);
-      return () => window.removeEventListener('click', handleClickOutside);
-    }
-  }, [showTypeDropdown]);
   
   // Debounced save function
   const debouncedSave = useCallback(async (
@@ -336,16 +303,6 @@ export const useDocumentState = ({
     // Note: triggerDebouncedSave is handled by handleContentUpdate wrapper passed to useMarkdownInteraction
   }, [isStatusUpdating, updateFrontmatter]);
   
-  const handleTypeChange = useCallback((newType: string) => {
-    // 1. 立即更新UI状态（乐观更新）
-    updateFrontmatter({
-      type: newType
-    });
-    
-    // 2. 关闭下拉菜单
-    setShowTypeDropdown(false);
-  }, [updateFrontmatter]);
-  
   const handleBack = useCallback(() => {
     if (isSavingRef.current) {
       // Wait for save to complete
@@ -384,12 +341,6 @@ export const useDocumentState = ({
     // Export state
     isExporting,
     setIsExporting,
-    
-    // Document type state
-    documentType: documentType.current,
-    showTypeDropdown,
-    setShowTypeDropdown,
-    handleTypeChange,
     
     // Status state
     docStatus,

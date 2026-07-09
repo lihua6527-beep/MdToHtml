@@ -155,7 +155,6 @@ export class MetadataCacheManager {
               status: data.status,
               title: data.title || file.replace(MARKDOWN_EXT_RE, ''),
               tags: data.tags,
-              type: data.category || data.type,
               excerpt: excerpt || undefined,
             });
             hasChanges = true;
@@ -255,7 +254,6 @@ export class MetadataCacheManager {
       status: data.status,
       title: data.title || safeSlug.replace(/\.md$/i, ''),
       tags: data.tags,
-      type: data.type,
       excerpt: excerpt || undefined,
     });
     

@@ -129,7 +129,6 @@ export function getAllPosts(): FileItem[] {
     status: entry.status,
     title: entry.title,
     tags: entry.tags,
-    type: entry.type,
     excerpt: entry.excerpt
   }));
 }

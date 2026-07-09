@@ -329,7 +329,6 @@ export default function EditorPage() {
                                 content: htmlContent,
                                 metadata: {
                                     id: title,
-                                    type: frontmatter.type || 'project',
                                     title: frontmatter.title || title,
                                     brief: frontmatter.brief || '',
                                     date: frontmatter.date ? new Date(frontmatter.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),

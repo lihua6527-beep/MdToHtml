@@ -54,6 +54,23 @@ function openBrowser(url) {
     });
 }
 
+/**
+ * HTTP GET 请求，返回状态码
+ */
+function httpGet(url, timeoutMs = 5000) {
+    return new Promise((resolve, reject) => {
+        const http = require('http');
+        const req = http.get(url, (res) => {
+            // 读取所有数据以释放连接
+            let data = '';
+            res.on('data', (chunk) => { data += chunk; });
+            res.on('end', () => resolve(res.statusCode));
+        });
+        req.on('error', reject);
+        req.setTimeout(timeoutMs, () => { req.destroy(); reject(new Error('timeout')); });
+    });
+}
+
 // ----- Main -----
 (async () => {
     let port;
@@ -78,41 +95,46 @@ function openBrowser(url) {
 
     const url = 'http://localhost:' + port;
 
-    // Wait for Next.js to be ready by polling stdout
-    // We can't use wait-on reliably in all envs, so poll via HTTP
-    let started = false;
+    // 第一步：等待服务器就绪（检测 api/files 路由）
+    let serverReady = false;
     const maxWait = 60; // seconds
-    const pollInterval = 1000;
 
     console.log('[Smart Port] Waiting for server to be ready on ' + url + '...');
 
     for (let i = 0; i < maxWait; i++) {
-        await new Promise(r => setTimeout(r, pollInterval));
+        await new Promise(r => setTimeout(r, 1000));
         try {
-            const http = require('http');
-            await new Promise((resolve, reject) => {
-                const req = http.get(url + '/api/files', (res) => {
-                    if (res.statusCode === 200) {
-                        resolve(true);
-                    } else {
-                        reject(new Error('Status ' + res.statusCode));
-                    }
-                });
-                req.on('error', reject);
-                req.setTimeout(2000, () => { req.destroy(); reject(new Error('timeout')); });
-            });
-            started = true;
-            break;
+            const status = await httpGet(url + '/api/files', 2000);
+            if (status === 200) {
+                serverReady = true;
+                break;
+            }
         } catch (e) {
             // Server not ready yet, keep polling
         }
     }
 
-    if (started) {
-        console.log('[Smart Port] Server is ready!');
+    if (!serverReady) {
+        console.log('[Smart Port] Server did not respond within ' + maxWait + 's, opening browser anyway...');
         openBrowser(url);
     } else {
-        console.log('[Smart Port] Server did not respond within ' + maxWait + 's, opening browser anyway...');
+        console.log('[Smart Port] Server is ready!');
+
+        // 第二步：预热主页（重要！next dev 是惰性编译的，首次请求 / 需要 1s 编译）
+        // 先请求主页并等待返回，这样后续浏览器打开时主页已被编译好
+        console.log('[Smart Port] Pre-warming homepage to trigger compilation...');
+        const startTime = Date.now();
+        try {
+            const status = await httpGet(url, 30000); // 主页可能首次编译需要更长时间
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            console.log('[Smart Port] Homepage compiled in ' + elapsed + 's (status: ' + status + ')');
+        } catch (e) {
+            console.log('[Smart Port] Homepage pre-warm warning: ' + e.message + ' (opening browser anyway)');
+        }
+
+        // 第三步：打开浏览器
+        // 此时主页已被编译，浏览器一打开就能立刻流式输出 HTML
+        console.log('[Smart Port] Opening browser...');
         openBrowser(url);
     }
 

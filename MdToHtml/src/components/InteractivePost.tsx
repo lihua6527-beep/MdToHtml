@@ -48,10 +48,6 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
     handleSave,
     isExporting,
     setIsExporting,
-    documentType,
-    showTypeDropdown,
-    setShowTypeDropdown,
-    handleTypeChange,
     docStatus,
     isStatusUpdating,
     handleStatusChange,
@@ -139,22 +135,6 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isEditing, undo, redo]);
   
-  // Type to color mapping for document type display
-  const typeColors: Record<string, string> = {
-    project: 'bg-blue-100 text-blue-700',
-    paper: 'bg-green-100 text-green-700',
-    knowledge: 'bg-purple-100 text-purple-700',
-    other: 'bg-gray-100 text-gray-700'
-  };
-  
-  // Type to label mapping
-  const typeLabels: Record<string, string> = {
-    project: '项目',
-    paper: '论文',
-    knowledge: '知识',
-    other: '其他'
-  };
-  
   // Ref for isSaving state (needed for NavigationHeader)
   const isSavingRef = useRef(false);
   useEffect(() => {
@@ -167,10 +147,6 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
        <NavigationHeader
          decodedSlug={decodedSlug}
          theme={theme}
-         documentType={documentType}
-         showTypeDropdown={showTypeDropdown}
-         setShowTypeDropdown={setShowTypeDropdown}
-         handleTypeChange={handleTypeChange}
          docStatus={docStatus}
          isStatusUpdating={isStatusUpdating}
          handleStatusChange={handleStatusChange}
@@ -265,10 +241,6 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
             globalTitleSpacing={String(frontmatter['title-spacing'] || globalConfig?.renderOptions?.titleSpacing || '2')}
             globalShowDivider={(frontmatter['show-divider'] === true || frontmatter['show-divider'] === 'true') || globalConfig?.renderOptions?.showDivider || true}
           />
-          {/* Document Type Label in Bottom Right */}
-          <div className={`absolute bottom-4 right-4 px-3 py-1 rounded-full text-xs font-medium ${typeColors[documentType] || typeColors.project} shadow-md`}>
-            {typeLabels[documentType] || typeLabels.project}
-          </div>
        </div>
 
        {/* Bottom Toolbar */}

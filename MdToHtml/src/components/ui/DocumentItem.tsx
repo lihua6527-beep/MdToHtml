@@ -23,44 +23,6 @@ const DocumentItem: React.FC<DocumentItemProps> = ({
   onDragStart,
   onContextMenu
 }) => {
-  // Type normalization: map various input forms to canonical keys
-  const normalizeType = (rawType: string | undefined): string => {
-    if (!rawType) return 'project';
-    const lower = rawType.toLowerCase().trim();
-    // Direct key match
-    if (['project', 'paper', 'knowledge', 'other'].includes(lower)) return lower;
-    // Chinese value mapping
-    const zhMap: Record<string, string> = {
-      '论文': 'paper',
-      '项目': 'project',
-      '工程': 'project',
-      '知识': 'knowledge',
-      '其他': 'other',
-      '其它': 'other',
-      '通用': 'other',
-    };
-    return zhMap[lower] || 'project';
-  };
-
-  // Type to label mapping (display text)
-  const typeLabels: Record<string, string> = {
-    project: '项目',
-    paper: '论文',
-    knowledge: '知识',
-    other: '其他'
-  };
-
-  // Type to color mapping
-  const typeColors: Record<string, string> = {
-    project: 'bg-blue-100 text-blue-700',
-    paper: 'bg-green-100 text-green-700',
-    knowledge: 'bg-purple-100 text-purple-700',
-    other: 'bg-gray-100 text-gray-700'
-  };
-
-  // Get and normalize document type
-  const type = normalizeType(post.type);
-
   if (isSelectionMode) {
     return (
       <div 
@@ -76,10 +38,6 @@ const DocumentItem: React.FC<DocumentItemProps> = ({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            {/* Document Type Label */}
-            <div className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${typeColors[type] || typeColors.project}`}>
-              {typeLabels[type] || typeLabels.project}
-            </div>
             <div className={clsx("truncate font-medium", isSelected ? "text-primary" : "text-text-primary")}>{post.slug}</div>
             {/* Status Icons */}
             {(post.status === 'pending' || post.status === 'incomplete') && (
@@ -113,11 +71,6 @@ const DocumentItem: React.FC<DocumentItemProps> = ({
         href={`/editor/${post.slug}`}
         className="flex-1 flex items-start gap-3 min-w-0 text-sm text-text-primary/80 hover:text-text-primary transition-colors"
       >
-        {/* Document Type Label */}
-        <div className={`px-2 py-1 rounded-full text-xs font-medium ${typeColors[type] || typeColors.project} shrink-0 mt-0.5`}>
-          {typeLabels[type] || typeLabels.project}
-        </div>
-        
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
             <div className="truncate font-medium flex-1 pr-6">{post.slug}</div>

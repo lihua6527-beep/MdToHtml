@@ -11,12 +11,6 @@ interface NavigationHeaderProps {
   decodedSlug: string;
   theme: ThemeId;
   
-  // Document type
-  documentType: string;
-  showTypeDropdown: boolean;
-  setShowTypeDropdown: (show: boolean) => void;
-  handleTypeChange: (newType: string) => void;
-  
   // Status
   docStatus: string | null;
   isStatusUpdating: boolean;
@@ -49,10 +43,6 @@ interface NavigationHeaderProps {
 const NavigationHeader: React.FC<NavigationHeaderProps> = ({
   decodedSlug,
   theme,
-  documentType,
-  showTypeDropdown,
-  setShowTypeDropdown,
-  handleTypeChange,
   docStatus,
   isStatusUpdating,
   handleStatusChange,
@@ -70,22 +60,6 @@ const NavigationHeader: React.FC<NavigationHeaderProps> = ({
   handleBack,
   isSavingRef
 }) => {
-  // Type to label mapping
-  const typeLabels: Record<string, string> = {
-    project: '项目',
-    paper: '论文',
-    knowledge: '知识',
-    other: '其他'
-  };
-
-  // Type to color mapping
-  const typeColors: Record<string, string> = {
-    project: 'bg-blue-100 text-blue-700',
-    paper: 'bg-green-100 text-green-700',
-    knowledge: 'bg-purple-100 text-purple-700',
-    other: 'bg-gray-100 text-gray-700'
-  };
-
   return (
     <div className="sticky top-0 z-50 h-14 bg-bg-card/80 backdrop-blur-md border-b border-border-soft flex items-center px-4 justify-between shadow-sm print:hidden">
       <div className="flex items-center gap-4">
@@ -99,42 +73,6 @@ const NavigationHeader: React.FC<NavigationHeaderProps> = ({
         >
           <ArrowLeft size={20} />
         </Button>
-
-        {/* Document Type Label with Dropdown */}
-        <div className="relative z-50">
-          <button 
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowTypeDropdown(!showTypeDropdown);
-            }}
-            className={`px-3 py-1 rounded-full text-xs font-medium ${typeColors[documentType] || typeColors.project} transition-all hover:shadow-md flex items-center gap-1`}
-            title="点击修改文档类型"
-          >
-            {typeLabels[documentType] || typeLabels.project}
-            <span className={`ml-1 transition-transform ${showTypeDropdown ? 'rotate-180' : ''}`}>▼</span>
-          </button>
-          {showTypeDropdown && (
-            <div className="absolute top-full left-0 mt-2 w-32 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-1 z-500 animate-in fade-in slide-in-from-top-2">
-              {Object.entries(typeLabels).map(([type, label]) => (
-                <button
-                  key={type}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleTypeChange(type);
-                  }}
-                  className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors flex items-center gap-2 ${
-                    documentType === type 
-                      ? `bg-primary/10 text-primary ${typeColors[type] || typeColors.project}` 
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-text-primary'
-                  }`}
-                >
-                  <div className={`w-2 h-2 rounded-full ${typeColors[type] || typeColors.project}`} />
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
 
         {/* Score Indicator */}
         <ScoreIndicator

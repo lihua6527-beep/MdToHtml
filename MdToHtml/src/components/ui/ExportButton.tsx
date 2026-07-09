@@ -41,13 +41,11 @@ const ExportButton: React.FC<ExportButtonProps> = ({
           content: htmlContent,
           metadata: {
             id: title,
-            type: meta.type || meta.category || 'project',
             title: meta.title || title,
             subtitle: meta.subtitle,
             brief: meta.brief || '',
             date: meta.date || new Date().toISOString().slice(0, 10),
             tags: meta.tags || [],
-            category: meta.category,
             chdVersion: '2.4',
             htmlFile: `${title}.html`,
             ...meta

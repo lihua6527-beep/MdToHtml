@@ -35,7 +35,6 @@ CHD 采用严格的**三级刚性结构**。AI 生成时必须严格遵守此层
 title: "文档主标题"       # 必填，通常为论文/项目名称
 subtitle: "副标题或口号"  # 必填，一句话概括核心价值
 tags: ["关键词1", "关键词2"] # 必填，3-5个核心关键词
-category: "project"      # 选填，文档分类：project（项目）、paper（论文）、knowledge（知识理解/知识分享）、other（其他）
 version: "1.0"           # 选填，默认 1.0
 status: "done"           # 选填，done/wip
 training_sample: true    # 选填，标识是否为高质量样本
