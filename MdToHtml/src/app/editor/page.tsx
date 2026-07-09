@@ -17,6 +17,7 @@ import { CHDRenderer } from '@/components/CHD/CHDRenderer';
 import { ThemeScope } from '@/components/ThemeScope';
 import { useMarkdownInteraction } from '@/hooks/useMarkdownInteraction';
 import { HtmlBundler } from '@/lib/export/HtmlBundler';
+import { ApiClient } from '@/services/core/ApiClient';
 import { BottomToolbar } from '@/components/CHD/BottomToolbar';
 import { AVAILABLE_THEMES } from '@/lib/themes';
 import { parseAttributes } from '@/lib/attributeParser';
@@ -369,11 +370,27 @@ export default function EditorPage() {
                 variant="ghost" 
                 size="sm" 
                 className="gap-2 text-text-primary hover:bg-primary/10 hover:text-primary"
-                onClick={() => {
+                onClick={async () => {
                     const slug = currentFilename.replace(/\.md$/i, '') || 'my-document';
-                    window.open(`/${slug}`, '_blank');
+                    try {
+                        // 先保存到临时文件，确保预览用的最新内容
+                        const result = await ApiClient.post<any>('/api/save-temp', { 
+                            slug,
+                            content
+                        });
+                        if (result && result.fileName) {
+                            window.open(`/preview/__temp__${result.fileName}`, '_blank');
+                        } else {
+                            // 回退：直接打开 slug 预览（适合已保存的文件）
+                            window.open(`/preview/${slug}`, '_blank');
+                        }
+                    } catch (e) {
+                        // 出错时尝试直接打开
+                        console.error('预览失败:', e);
+                        window.open(`/preview/${slug}`, '_blank');
+                    }
                 }}
-                title="在新窗口预览 (需先保存)"
+                title="在新窗口预览当前内容"
              >
                 <ExternalLink className="w-4 h-4" />
                 <span className="hidden sm:inline">新窗口预览</span>

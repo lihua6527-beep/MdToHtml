@@ -155,7 +155,7 @@ export class MetadataCacheManager {
               status: data.status,
               title: data.title || file.replace(MARKDOWN_EXT_RE, ''),
               tags: data.tags,
-              type: data.type,
+              type: data.category || data.type,
               excerpt: excerpt || undefined,
             });
             hasChanges = true;

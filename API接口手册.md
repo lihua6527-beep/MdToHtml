@@ -1,6 +1,6 @@
 # MdToHtml Pro API 接口手册
 
-> 自动生成于 2026-07-07 | 基于 `MdToHtml/src/app/api` 目录分析
+> 最后更新于 2026-07-09 | 基于 `MdToHtml/src/app/api` 目录分析
 
 ---
 
@@ -29,6 +29,9 @@
 | 19 | `/api/trash/restore` | POST | 动态 | ❌ (文件操作) |
 | 20 | `/api/trash/stats` | GET | 静态 | ✅ |
 | 21 | `/api/upload` | POST | 动态 | ❌ (文件上传) |
+| 22 | `/api/save-temp` | POST | 动态 | ❌ (临时文件写入) |
+| 23 | `/api/load-temp` | POST | 动态 | ❌ (临时文件读取) |
+| 24 | `/api/confirm-save` | POST | 动态 | ❌ (临时文件转正) |
 
 > **注意**：标记为"动态"的接口在纯静态导出模式下不可用，需在 Next.js 服务端环境下运行。
 
@@ -380,6 +383,86 @@ HTTP 状态码通常为 400（参数错误）或 500（服务器错误）。
 - `/api/app/chd-protocol`: 返回 `text/markdown`（非 JSON）
 - `/api/export`: 返回 `text/html`（非 JSON）
 - `/api/trash/delete`: `success` 是数字（非布尔值）
+
+---
+
+---
+
+## 22. POST /api/save-temp
+
+保存内容到临时目录（用于预览）。
+
+- **方法**: POST
+- **Body**:
+```json
+{
+  "slug": "文件标识（不含后缀）",
+  "content": "Markdown 内容"
+}
+```
+- **响应格式**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": "temp-1234567890",
+    "fileName": "my-doc_temp_1234567890.md",
+    "slug": "my-doc",
+    "createdAt": 1234567890
+  }
+}
+```
+- **错误响应**: `{ "success": false, "error": "Slug 和 content 是必填项" }` (400)
+- **用途**: 前端在打开预览页前，将内容保存到服务端 `temp/` 目录，返回 `fileName` 用于构造预览 URL `/preview/__temp__{fileName}`
+
+---
+
+## 23. POST /api/load-temp
+
+根据 fileName 加载临时文件内容。
+
+- **方法**: POST
+- **Body**: `{ "fileName": "my-doc_temp_1234567890.md" }`
+- **响应格式**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": "temp-1234567890",
+    "slug": "my-doc",
+    "fileName": "my-doc_temp_1234567890.md",
+    "content": "... Markdown 内容 ...",
+    "createdAt": 1234567890
+  }
+}
+```
+- **错误响应**: `{ "success": false, "error": "临时文件不存在" }` (404)
+- **用途**: 预览页加载时调用，获取临时文件内容进行渲染
+
+---
+
+## 24. POST /api/confirm-save
+
+将临时文件"转正"为正式文件（写入 input/ 目录），支持重命名。
+
+- **方法**: POST
+- **Body**:
+```json
+{
+  "id": "temp-1234567890",
+  "slug": "custom-filename（可选，不传则使用原始 slug）"
+}
+```
+- **响应格式**:
+```json
+{
+  "success": true,
+  "data": { "slug": "custom-filename" }
+}
+```
+- **错误响应**: `{ "success": false, "error": "临时文件不存在" }` (400)
+- **用途**: 预览页中点击"保存为正式文档"后调用。将 `temp/` 目录下的临时文件内容写入 `input/` 目录，并删除临时文件。
+- **内部逻辑**: 使用 `MetadataCacheManager.update()` 写入，自动更新缓存和文件列表
 
 ---
 

@@ -4,6 +4,7 @@
  * 职责：
  * - 提供两组完整的 System Prompt（Prompt A 默认稳定版、Prompt B 备选学术版）
  * - Prompt 文本硬编码在此文件中，不依赖外部文件
+ * - 注：图标增强功能已暂缓（2026-07-09），保留代码但不对外暴露
  * 
  * Prompt A 来源: CHD_System_Prompt_A_默认稳定版_20260707.md
  * Prompt B 来源: CHD_System_Prompt_B_备选学术版_20260707.md
@@ -21,7 +22,7 @@ export class PromptEngine {
     return variant === 'default' ? this.getPromptA() : this.getPromptB();
   }
 
-  /** Prompt A — 默认稳定版 */
+  /** Prompt A — 默认稳定版（纯文字，不含图标内容） */
   private static getPromptA(): string {
     return `你是一位资深的信息架构师兼 UI 设计师。你的任务是将用户提供的任意文档内容转化为符合 CHD 协议（Card-based Hierarchical Document）v2.1 规范的 Markdown 文档。
 
@@ -86,7 +87,7 @@ category: "分类"  （可选，默认 "通用"）
 ### L2：Card（卡片单元）
 
 格式：
-### 卡片标题 {card-style="normal|highlight|quote" icon="图标名" card-color="chart-N" badge="徽章文本" shape="rectangle|cut-corner|arrow|floating|rounded" col-span="N" row-span="N"}
+### 卡片标题 {card-style="normal|highlight|quote" card-color="chart-N" badge="徽章文本" shape="rectangle|cut-corner|arrow|floating|rounded" col-span="N" row-span="N"}
 
 卡片内容使用标准 Markdown 语法，支持：
 - 段落文本
@@ -97,7 +98,6 @@ category: "分类"  （可选，默认 "通用"）
 
 属性说明：
 - card-style（必填）："normal"（标准卡片）、"highlight"（高亮卡片，用于核心观点）、"quote"（引用卡片）。仅允许这三种样式
-- icon（推荐填写）：图标名称，如 "book"、"star"、"brain"、"chart"、"lightbulb"、"code" 等
 - card-color（可选）："chart-1" 到 "chart-5"
 - badge（可选）：卡片右上角徽章文字
 - shape（可选）：卡片形态，默认 "rectangle"
@@ -141,7 +141,6 @@ def hello():
 7. ☐ 卡片样式是否仅使用了 normal/highlight/quote？
 8. ☐ 数学公式是否正确使用了 $ 包裹？
 9. ☐ Section 的 columns 值是否遵循智能列数规则（1-4 → N, 5+ → 3）？
-10. ☐ 图标名称是否存在（如 book、star、brain、chart、code、lightbulb、zap、award、layers、box、globe、tag）？
 
 ## 输出要求
 
@@ -159,7 +158,7 @@ def hello():
 以下是用户提供的文档内容，请将其转化为 CHD 格式的 Markdown：`;
   }
 
-  /** Prompt B — 备选学术版 */
+  /** Prompt B — 备选学术版（纯文字，不含图标内容） */
   private static getPromptB(): string {
     return `你是一位资深的信息架构师兼学术文档设计师。你的任务是将用户提供的任意文档内容转化为符合 CHD 协议（Card-based Hierarchical Document）v2.1 规范的 Markdown 文档。
 
@@ -224,30 +223,15 @@ category: "分类"  （可选，默认 "通用"）
 ### L2：Card（卡片单元）
 
 格式：
-### 卡片标题 {card-style="normal|highlight|quote" icon="图标名" card-color="chart-N" badge="徽章文本" shape="rectangle|cut-corner|arrow|floating|rounded" col-span="N" row-span="N"}
+### 卡片标题 {card-style="normal|highlight|quote" card-color="chart-N" badge="徽章文本" shape="rectangle|cut-corner|arrow|floating|rounded" col-span="N" row-span="N"}
 
 **卡片样式偏好（学术风格）**：
 - **highlight**：用于核心观点、重要结论、关键数据（推荐多用）
 - **quote**：用于他人引文、理论依据、参考文献（推荐多用）
 - **normal**：用于一般性描述内容
 
-图标推荐（学术场景）：
-- "book" → 文献/书籍引用
-- "brain" → 思维方式/方法论
-- "chart" → 数据/统计/图表
-- "lightbulb" → 创新点/洞见
-- "code" → 代码/算法
-- "award" → 成果/奖项
-- "layers" → 层次结构/框架
-- "box" → 工具/基础设施
-- "globe" → 应用场景/影响力
-- "tag" → 分类/标签
-- "star" → 重点推荐
-- "zap" → 效率/性能提升
-
 属性说明：
 - card-style（必填）："normal"、"highlight"、"quote" 仅允许这三种
-- icon（推荐填写）：使用上述学术推荐图标
 - card-color（可选）："chart-1" 到 "chart-5"
 - badge（可选）：推荐使用 "核心"、"创新"、"引文"、"关键"、"方法" 等学术性徽章
 - shape（可选）：建议 "rectangle"（矩形）或 "rounded"（圆角），保持学术沉稳
@@ -291,10 +275,9 @@ def hello():
 7. ☐ 卡片样式是否仅使用了 normal/highlight/quote？
 8. ☐ 数学公式是否正确使用了 $ 包裹？
 9. ☐ Section 的 columns 值是否遵循学术风格列数规则（1-2→N, 3-4→2, 5+→3）？
-10. ☐ 图标名称是否使用了推荐列表中的值？
-11. ☐ 【学术附加】是否每个 Card 都有 2-3 句以上的完整描述？
-12. ☐ 【学术附加】Section 配色是否避免使用了 chart-2（粉红）？
-13. ☐ 【学术附加】是否在适当位置使用了 highlight/quote 而非全部 normal？
+10. ☐ 【学术附加】是否每个 Card 都有 2-3 句以上的完整描述？
+11. ☐ 【学术附加】Section 配色是否避免使用了 chart-2（粉红）？
+12. ☐ 【学术附加】是否在适当位置使用了 highlight/quote 而非全部 normal？
 
 ## 输出要求
 

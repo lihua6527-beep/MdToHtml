@@ -9,6 +9,7 @@ import { useTheme } from '@/components/ThemeProvider';
 import { Cpu, Zap, TrendingUp, Award, Layers, Box, Globe, Tag } from 'lucide-react';
 import { clsx } from 'clsx';
 import { TagRenderer, TagStyleType } from './TagRenderer';
+import { autoFixIcons } from '@/services/ai/IconAutoFixService';
 
 // --- Types ---
 
@@ -223,6 +224,46 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
                 }
             });
         });
+
+        // === [v2.0] 图标自动修正引擎 ===
+        // 在解析完成后、渲染之前，自动修正 AI 图标错误
+        // 使用 try/catch 包裹，异常时不阻断渲染
+        try {
+            const iconSections = result.map((section: any) => ({
+                sectionTitle: section.title,
+                cards: section.cards.map((card: any) => ({
+                    blockIndex: card.blockIndex,
+                    iconName: card.props.icon || null,
+                    isValid: false,
+                }))
+            }));
+            
+            const { fixedSections, fixLog, totalFixes } = autoFixIcons(iconSections);
+            
+            // 开发模式下输出修正日志
+            if (totalFixes > 0 && process.env.NODE_ENV === 'development') {
+                console.warn(`[IconAutoFix] ${totalFixes} 个图标被自动修正:`, fixLog);
+            }
+            
+            // 将修正后的图标名写回 sections
+            fixedSections.forEach((fixedSection: any, sectionIdx: number) => {
+                if (sectionIdx < result.length) {
+                    fixedSection.cards.forEach((fixedCard: any, cardIdx: number) => {
+                        if (cardIdx < result[sectionIdx].cards.length) {
+                            if (fixedCard.iconName) {
+                                result[sectionIdx].cards[cardIdx].props.icon = fixedCard.iconName;
+                            } else {
+                                delete result[sectionIdx].cards[cardIdx].props.icon;
+                            }
+                        }
+                    });
+                }
+            });
+        } catch (e) {
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('[IconAutoFix] 图标修正引擎异常，使用原始数据:', e);
+            }
+        }
 
         return { sections: result, frontmatter: fm, error: null, blockMap: blockIndices };
     } catch (e: any) {

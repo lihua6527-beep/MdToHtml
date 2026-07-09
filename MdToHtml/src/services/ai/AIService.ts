@@ -30,7 +30,7 @@ export interface AIResult {
 export class AIService {
   private static readonly API_ENDPOINT = '/api/ai/generate';
   private static readonly MAX_RETRIES = 3;
-  private static readonly RETRY_DELAYS = [1000, 2000, 4000]; // 退避间隔
+  private static readonly RETRY_DELAYS = [1000, 2000, 4000];
 
   /**
    * 生成 CHD Markdown
@@ -71,11 +71,9 @@ export class AIService {
         };
       } catch (error: any) {
         lastError = error;
-        // 如果是 AbortError（用户取消），不重试
         if (error.name === 'AbortError') {
           return { markdown: '', error: '已取消' };
         }
-        // 最后一次尝试不等待
         if (attempt < this.MAX_RETRIES - 1) {
           await new Promise(r => setTimeout(r, this.RETRY_DELAYS[attempt]));
         }
@@ -96,7 +94,6 @@ export class AIService {
     previousResult: string;
     config: AIServiceConfig;
   }): Promise<AIResult> {
-    // 切换 Prompt 变体重新生成
     const newConfig: AIServiceConfig = {
       ...options.config,
       promptVariant: options.config.promptVariant === 'default' ? 'alternative' : 'default',

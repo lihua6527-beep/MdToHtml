@@ -23,7 +23,26 @@ const DocumentItem: React.FC<DocumentItemProps> = ({
   onDragStart,
   onContextMenu
 }) => {
-  // Type to label mapping
+  // Type normalization: map various input forms to canonical keys
+  const normalizeType = (rawType: string | undefined): string => {
+    if (!rawType) return 'project';
+    const lower = rawType.toLowerCase().trim();
+    // Direct key match
+    if (['project', 'paper', 'knowledge', 'other'].includes(lower)) return lower;
+    // Chinese value mapping
+    const zhMap: Record<string, string> = {
+      '论文': 'paper',
+      '项目': 'project',
+      '工程': 'project',
+      '知识': 'knowledge',
+      '其他': 'other',
+      '其它': 'other',
+      '通用': 'other',
+    };
+    return zhMap[lower] || 'project';
+  };
+
+  // Type to label mapping (display text)
   const typeLabels: Record<string, string> = {
     project: '项目',
     paper: '论文',
@@ -39,8 +58,8 @@ const DocumentItem: React.FC<DocumentItemProps> = ({
     other: 'bg-gray-100 text-gray-700'
   };
 
-  // Get document type
-  const type = post.type || 'project';
+  // Get and normalize document type
+  const type = normalizeType(post.type);
 
   if (isSelectionMode) {
     return (

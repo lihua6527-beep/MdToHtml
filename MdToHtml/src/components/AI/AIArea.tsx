@@ -9,6 +9,7 @@ import { AIService } from '@/services/ai/AIService';
 import { TempFileManager } from '@/services/ai/TempFileManager';
 import { HtmlBundler } from '@/lib/export/HtmlBundler';
 import { FileService } from '@/services/FileService';
+import { ApiClient } from '@/services/core/ApiClient';
 import { DEFAULT_THEME } from '@/lib/themes';
 import type { TempFileItem } from '@/services/ai/TempFileManager';
 
@@ -54,12 +55,34 @@ export const AIArea: React.FC<AIAreaProps> = ({ onClose, onOpenSettings }) => {
     setCurrentPrompt(prev => prev === 'default' ? 'alternative' : 'default');
   }, []);
 
-  /** 🔗 预览：存入 localStorage + 新窗口打开 */
-  const handleOpenPreview = useCallback((fileId: string) => {
+  /** 🔗 预览：通过服务端临时文件系统传递内容 */
+  const handleOpenPreview = useCallback(async (fileId: string) => {
     const file = TempFileManager.getTemp(fileId);
-    if (!file) return;
-    localStorage.setItem('ai_preview_content', file.content);
-    window.open(`/preview?file=${encodeURIComponent(file.fileName)}`, '_blank');
+    if (!file || !file.content?.trim()) return;
+    
+    try {
+      // 先保存到服务端临时目录
+      const result = await ApiClient.post<any>('/api/save-temp', { 
+        slug: file.fileName.replace(/\.md$/i, ''),
+        content: file.content 
+      });
+      
+      if (result && result.fileName) {
+        // 打开新预览页面，通过 URL 参数传递文件名
+        window.open(`/preview/__temp__${result.fileName}`, '_blank');
+      } else {
+        // 回退到旧方式
+        localStorage.setItem('ai_preview_content', file.content);
+        localStorage.setItem('ai_preview_filename', file.fileName);
+        window.open(`/preview`, '_blank');
+      }
+    } catch (e) {
+      console.error('预览保存失败，回退到 localStorage 方式:', e);
+      // 回退到旧方式
+      localStorage.setItem('ai_preview_content', file.content);
+      localStorage.setItem('ai_preview_filename', file.fileName);
+      window.open(`/preview`, '_blank');
+    }
   }, []);
 
   /** ⬇️ 下载：真实调用 HtmlBundler + FileService.saveExport + 浏览器下载 */
@@ -69,7 +92,6 @@ export const AIArea: React.FC<AIAreaProps> = ({ onClose, onOpenSettings }) => {
     const title = file.sourceFileName || 'AI生成文档';
     try {
       const blob = await HtmlBundler.bundle(file.content, title, DEFAULT_THEME);
-      // 保存到 output 目录
       const htmlContent = await blob.text();
       await FileService.saveExport({
         filename: file.fileName.replace('.md', '.html'),
@@ -84,7 +106,6 @@ export const AIArea: React.FC<AIAreaProps> = ({ onClose, onOpenSettings }) => {
           htmlFile: `${file.fileName.replace('.md', '.html')}`,
         },
       });
-      // 浏览器下载
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -105,46 +126,35 @@ export const AIArea: React.FC<AIAreaProps> = ({ onClose, onOpenSettings }) => {
     setSelectedFileId(prev => prev === fileId ? null : prev);
   }, [refreshFiles]);
 
-  /** 💾 保存单个文件到左侧文档列表（持久化，先弹窗重命名） */
+  /** 💾 保存到左侧文档列表 — 保存后不删除临时文件，仅标记已保存 */
   const handleSaveOne = useCallback(async (fileId: string) => {
     const file = TempFileManager.getTemp(fileId);
     if (!file || !file.content?.trim()) return;
-    // 弹窗让用户自定义文件名（默认用 AI 生成的文件名去后缀）
     const defaultName = file.fileName.replace(/\.md$/i, '').replace(/_标准化.*$/, '');
     const newName = prompt('保存到左侧文档列表，请输入文件名（不含后缀）:', defaultName);
-    if (!newName) return; // 用户取消
+    if (!newName) return;
     try {
       const success = await FileService.saveFile(newName, file.content);
       if (success) {
         mutate('/api/files');
-        TempFileManager.deleteTemp(fileId);
-        refreshFiles();
-        setSelectedFileId(prev => prev === fileId ? null : prev);
+        // 不再删除临时文件，仅保留在列表中
       }
     } catch (error: any) {
       console.error('保存失败:', error);
     }
-  }, [refreshFiles]);
+  }, []);
 
+  /** 保存所有 — 只保存不删除 */
   const handleSaveAll = useCallback(async () => {
     const items = TempFileManager.listTemps();
-    let saved = 0;
     for (const item of items) {
       try {
         const slug = item.fileName.replace(/\.md$/i, '');
-        const success = await FileService.saveFile(slug, item.content);
-        if (success) {
-          TempFileManager.deleteTemp(item.id);
-          saved++;
-        }
+        await FileService.saveFile(slug, item.content);
       } catch {}
     }
-    if (saved > 0) {
-      mutate('/api/files');
-      refreshFiles();
-      setSelectedFileId(null);
-    }
-  }, [refreshFiles]);
+    mutate('/api/files');
+  }, []);
 
   const handleClearAll = useCallback(() => {
     TempFileManager.clearAll();
@@ -230,8 +240,19 @@ export const AIArea: React.FC<AIAreaProps> = ({ onClose, onOpenSettings }) => {
         open={showExitDialog}
         unsavedCount={tempFiles.length}
         unsavedFileNames={tempFiles.map(f => f.fileName)}
-        onSave={async () => { await TempFileManager.confirmSaveAll(); setShowExitDialog(false); if (onClose) onClose(); }}
-        onDiscard={() => { TempFileManager.clearAll(); setShowExitDialog(false); if (onClose) onClose(); }}
+        onSave={async () => {
+          // 退出时保存所有：保存到 posts 并标记为已保存，但保留临时文件
+          const items = TempFileManager.listTemps();
+          for (const item of items) {
+            try {
+              await FileService.saveFile(item.fileName.replace(/\.md$/i, ''), item.content);
+            } catch {}
+          }
+          mutate('/api/files');
+          setShowExitDialog(false);
+          if (onClose) onClose();
+        }}
+        onDiscard={() => { setShowExitDialog(false); if (onClose) onClose(); }}
         onCancel={() => setShowExitDialog(false)}
       />
     </div>
