@@ -1,0 +1,303 @@
+# 技术栈与算法详情 (Tech Stack & Algorithms)
+
+> **基于 2026-07-10 全量代码审计更新 | 合并自原 `docs/技术规范与前端规范/`**
+
+---
+
+## 1. 架构约束 (Architecture Constraints)
+
+- **OS**: 仅支持 **Windows 10/11**。
+- **Runtime**: Node.js (LTS Version, v18.17.0+)。
+- **核心原则**: 本地离线、静态导出、无外部数据库依赖。
+
+---
+
+## 2. 技术栈 (Tech Stack)
+
+| 层 | 技术 | 版本 |
+|:---|:-----|:-----|
+| 框架 | Next.js 14 (App Router) | 14.1.0 |
+| UI 核心 | React 18 + TypeScript | ^18 |
+| 样式 | Tailwind CSS + shadcn/ui | 最新 |
+| 编辑器 | CodeMirror 6 (@uiw/react-codemirror) | ^4.25.4 |
+| Markdown 渲染 | react-markdown + remark-gfm + remark-math + rehype-katex | 最新 |
+| 数学公式 | KaTeX | ^0.16.28 |
+| 图标 | ~~lucide-react~~（图标系统已归档，不再使用） | — |
+| 数据获取 | SWR | ^2.4.0 |
+| 桌面端 | Electron + electron-builder (NSIS) | 最新 |
+| 文件解析 | gray-matter (frontmatter)、mammoth (.docx) | 最新 |
+| 测试 | Jest + React Testing Library + Cheerio | 最新 |
+
+### 核心库文件位置
+
+- 解析引擎: `src/lib/chdParser.ts`、`src/lib/attributeParser.ts`
+- 渲染引擎: `src/components/CHD/CHDRenderer.tsx` → Section.tsx → Card.tsx
+- 导出模块: `src/lib/export/HtmlBundler.tsx`、`src/lib/export/CssExtractor.ts`
+- 缓存管理: `src/lib/cache-manager.ts` (Top 500 策略 + 异步扫描)
+- AI 服务: `src/services/ai/AIService.ts`、`src/services/ai/PromptEngine.ts`
+- ~~图标系统: `src/lib/icon-system/`（已归档注释，不再使用）~~ 
+
+---
+
+## 3. 核心算法 (Core Algorithms)
+
+### 3.1 CHD 文档解析
+
+```
+Markdown 文本
+    ↓ parseCHDBlocks() — 行级扫描 → [CHDBlock]
+        ├── L0: YAML Frontmatter (title, subtitle, tags, ...)
+        ├── L1: ## Section {layout, columns, section-color}
+        └── L2: ### Card {card-style, icon, badge}
+    ↓ gray-matter 提取 frontmatter
+    ↓ parseAttributes() 提取 {key="val"} 属性
+    ↓ CHDRenderer 组装渲染树
+```
+
+### 3.2 智能列数 (Smart Columns)
+
+在 `Section.tsx` 中实现：
+- 1-4 张卡片 → 列数 = 卡片数量
+- 5+ 张卡片 → 强制 3 列（自动换行）
+- Gallery 布局强制 3 列
+- Stat-row 布局强制 4 列
+
+### 3.3 属性渲染清洗
+
+`Section.tsx` 中的兜底过滤：
+```typescript
+title.replace(/\{.*?\}/g, '')
+```
+确保即使解析层面遗漏，UI 层面也能过滤掉配置代码，防止元数据泄漏到最终界面。
+
+### 3.4 幽灵卡片过滤 (Ghost Card Filtering)
+
+在 `CHDRenderer.tsx` 中：
+- 预清洗：移除仅含 `---`、空格或换行符的内容块
+- 严格匹配：只有以 `###` 开头的节点才被视为有效卡片
+- 尾部修剪：自动去除卡片内容末尾的 `---` 分隔符
+
+### 3.5 图表颜色命名 (Chart Colors)
+
+5 种图表配色应用于卡片颜色的 `chart-N` 属性：
+- `chart-1` ~ `chart-5`，每个主题各自定义了 5 组色值（详见第 11 节风格颜色体系）
+
+---
+
+## 4. 自动保存机制 (Auto-Save)
+
+- **文件**: `src/hooks/useAutoSave.ts`
+- **逻辑**: 500ms 防抖 → localStorage 写入
+- **编辑页保存**: `InteractivePost.tsx` 中 5 秒防抖 → 静默保存 (无弹窗)
+
+---
+
+## 5. 缓存策略 (Cache Strategy)
+
+- **容量**: Top 500 篇文档 (`DEFAULT_CAPACITY = 500`)
+- **结构**: 单层内存缓存 + `.metadata_cache.json` 持久化
+- **加载**: 启动时 `getAll()` O(1) 返回
+- **同步**: 后台异步 `scanAndSync()` 遍历 `posts/` 目录
+- **回收站**: `.trash/` 目录，超出容量时自动清理最旧文件
+
+---
+
+## 6. 图标系统 (Icon System) — 已归档
+
+> **当前状态**: 已归档注释，不再使用。
+
+图标系统（`src/lib/icon-system/` 三层架构）已被归档：
+- `icon-config.ts` — 定义 137 个图标配置（含别名映射到规范名）
+- `icon-manager.ts` — 运行时注册表（114 个可解析图标）
+- `icon-renderer.ts` — 渲染层
+
+代码源文件中仍保留注释引用，但该功能不再维护。`icon="xxx"` 属性在 CHD 协议中不再生效。
+
+---
+
+## 7. AI 服务层
+
+- **模型**: DeepSeek API (Flash / Pro 双模型)
+- **Prompt**: 默认版（通用输出）/ 学术版（论文导向），在 `PromptEngine.ts` 中硬编码
+- **文件格式**: `.txt` / `.md` / `.docx` (mammoth 解析)
+- **调用流**: AIInputPanel → AIService.generate() → POST /api/ai/generate → DeepSeek API
+- **结果**: 预览 (HtmlBundler) / 下载 / 保存到 `posts/`
+
+---
+
+## 8. 文件管理系统
+
+- **存储目录**: `MdToHtml/posts/`
+- **回收站目录**: `MdToHtml/.trash/`（自动清理旧文件）
+- **元数据缓存**: `MdToHtml/.metadata_cache.json`
+- **配置**: `config.json`、`path.config.json`（通过 ConfigManager/PathManager 管理）
+- **排序**: 导入时间 / 修改时间 / 访问时间
+- **收藏/置顶**: localStorage 持久化
+
+---
+
+## 9. 测试策略 (Testing)
+
+- **单元测试框架**: Jest + React Testing Library
+- **单元测试位置**: `src/lib/__tests__/` (7 个文件)
+  - chdParser、posts、data-collector、env-hot-loader、icon-config/manager/renderer
+- **组件测试**: `src/components/__tests__/` 及组件同级 `__tests__/` 目录
+- **Python 测试**: `tests/unit/`、`tests/integration/`
+- 运行: `npm test` / `npm run test:watch`
+
+---
+
+## 10. 设计原则 (Design Principles)
+
+系统采用 **CSS 变量 + Tailwind CSS** 的双层架构：
+- **语义化变量**: 在 `globals.css` 中定义 `--primary`, `--bg-page` 等语义变量。
+- **Tailwind 映射**: 在 `tailwind.config.js` 中将变量映射为工具类 (e.g., `bg-primary` → `var(--primary)`)。
+- **运行时切换**: 通过 `ThemeProvider` 修改根元素 `data-theme` 属性实现毫秒级切换。
+
+### 颜色变量定义 (Design Tokens)
+
+| 变量名 | Tailwind 类 | 语义说明 |
+| :--- | :--- | :--- |
+| `--primary` | `bg-primary`, `text-primary` | **主色**: 品牌核心色，用于按钮、高亮标题、关键状态 |
+| `--secondary` | `bg-secondary` | **次色**: 辅助背景色，常用于卡片装饰、次级按钮 |
+| `--accent` | `bg-accent` | **强调色**: 极淡的装饰色，用于 hover 态或微弱背景 |
+| `--bg-page` | `bg-bg-page` | **页面背景**: 整个应用的底层背景色 |
+| `--bg-card` | `bg-bg-card` | **卡片背景**: 内容容器背景，通常为纯白 |
+| `--text-primary` | `text-text-primary` | **主要文本**: 标题、正文核心内容 |
+| `--text-secondary` | `text-text-secondary` | **次要文本**: 说明文字、元数据 |
+| `--text-muted` | `text-text-muted` | **弱化文本**: 占位符、非关键信息 |
+| `--border` | `border-border` | **边框**: 分割线、卡片边框（shadcn 标准） |
+| `--ring` | `ring-ring` | **聚焦环**: 输入框聚焦或选中态的光晕颜色 |
+
+---
+
+## 11. 风格颜色体系 (Theme Color Palette)
+
+系统内置 **5 套精选主题**，以 `src/lib/themes.ts` 中的定义为唯一数据源。
+
+### 11.1 Ocean Professional (海洋专业版)
+> **风格**: 现代商务 · 皇家蓝 | **适用**: SaaS、企业后台、金融科技
+
+| 角色 | 代码 | 说明 |
+|:----|:-----|:-----|
+| 主色 | `hsl(222, 100%, 59%)` ≈ `#2C6CFF` | 品牌核心色 |
+| 次色 | `hsl(210, 100%, 96%)` ≈ `#E2EFFF` | 辅助背景色 |
+| 强调色 | `hsl(210, 83%, 97%)` ≈ `#F3F8FE` | hover 态、微弱背景 |
+| 页面背景 | `hsl(220, 100%, 97%)` ≈ `#F0F5FF` | 应用底层背景 |
+| 卡片背景 | `hsl(0, 0%, 100%)` = `#FFFFFF` | 内容容器 |
+| 主要文本 | `hsl(221, 52%, 8%)` ≈ `#0A1120` | 标题、正文 |
+| 次要文本 | `hsl(218, 17%, 35%)` ≈ `#4A5568` | 说明、元数据 |
+| 弱化文本 | `hsl(216, 12%, 84%)` ≈ `#CBD5E0` | 占位符、非关键 |
+| 边框 | `hsl(0, 0%, 91%)` ≈ `#E9E9E9` | 分割线、卡片边框 |
+| 聚焦环 | `hsl(214, 82%, 85%)` ≈ `#B7D4F8` | 输入聚焦光晕 |
+
+**图表色**:
+| 标签 | 色值 | 名称 |
+|:-----|:-----|:-----|
+| chart-1 | `#81B7FF` | 矢车菊蓝 |
+| chart-2 | `#4080FF` | 道奇蓝 |
+| chart-3 | `#66DBB1` | 薄荷绿 |
+| chart-4 | `#83D5FD` | 浅天蓝 |
+| chart-5 | `#74A0FF` | 长春花蓝 |
+
+### 11.2 Mint Fresh (薄荷清新版)
+> **风格**: 清新自然 · 薄荷绿 | **适用**: 医疗健康、环保、运动健身
+
+| 角色 | 代码 | 说明 |
+|:----|:-----|:-----|
+| 主色 | `hsl(177, 50%, 61%)` ≈ `#6BD0CC` | 品牌核心色 |
+| 页面背景 | `hsl(156, 73%, 97%)` ≈ `#F0FDFA` | 应用底层背景 |
+| 卡片背景 | `hsl(0, 0%, 100%)` = `#FFFFFF` | 内容容器 |
+| 主要文本 | `hsl(170, 59%, 19%)` ≈ `#134E4A` | 标题、正文 |
+
+**图表色**:
+| 标签 | 色值 | 名称 |
+|:-----|:-----|:-----|
+| chart-1 | `#98E5C3` | 海沫绿 |
+| chart-2 | `#6BD0CC` | 绿松石 |
+| chart-3 | `#FAC84D` | 琥珀金 |
+| chart-4 | `#5FC9F1` | 天蓝 |
+| chart-5 | `#83DC99` | 春绿 |
+
+### 11.3 Lavender Dream (薰衣草梦境版)
+> **风格**: 优雅梦幻 · 紫罗兰 | **适用**: 美妆时尚、艺术设计
+
+| 角色 | 代码 | 说明 |
+|:----|:-----|:-----|
+| 主色 | `hsl(257, 37%, 51%)` ≈ `#6C53B3` | 品牌核心色 |
+| 次色 | `hsl(255, 25%, 94%)` ≈ `#F2F1F9` | 辅助背景色 |
+| 强调色 | `hsl(258, 25%, 96%)` ≈ `#F3F1F9` | hover 态、微弱背景 |
+| 页面背景 | `hsl(260, 30%, 98%)` ≈ `#FAF9FC` | 应用底层背景 |
+| 卡片背景 | `hsl(0, 0%, 100%)` = `#FFFFFF` | 内容容器 |
+| 主要文本 | `hsl(0, 0%, 11%)` ≈ `#1C1C1C` | 标题、正文 |
+
+**图表色**:
+| 标签 | 色值 | 名称 |
+|:-----|:-----|:-----|
+| chart-1 | `#9CAAF2` | 长春花蓝 |
+| chart-2 | `#C081E4` | 兰花紫 |
+| chart-3 | `#BD79F2` | 紫丁香 |
+| chart-4 | `#F29898` | 淡珊瑚 |
+| chart-5 | `#8FBDF6` | 天蓝 |
+
+### 11.4 Earth Organic (大地有机版)
+> **风格**: 温暖有机 · 翡翠绿 | **适用**: 有机食品、生活方式
+
+| 角色 | 代码 | 说明 |
+|:----|:-----|:-----|
+| 主色 | `hsl(152, 52%, 51%)` ≈ `#41C187` | 品牌核心色 |
+| 次色 | `hsl(100, 67%, 91%)` ≈ `#E7F9E3` | 辅助背景色 |
+| 强调色 | `hsl(100, 40%, 96%)` ≈ `#F3FBF3` | hover 态、微弱背景 |
+| 页面背景 | `hsl(40, 38%, 96%)` ≈ `#F6F3EB` | 应用底层背景 |
+| 卡片背景 | `hsl(0, 0%, 100%)` = `#FBFBFB` | 内容容器 |
+| 主要文本 | `hsl(148, 81%, 8%)` ≈ `#04260E` | 标题、正文 |
+
+**图表色**:
+| 标签 | 色值 | 名称 |
+|:-----|:-----|:-----|
+| chart-1 | `#C9C095` | 沙金 |
+| chart-2 | `#CAA980` | 驼色 |
+| chart-3 | `#D4754C` | 赤陶 |
+| chart-4 | `#AA5B5B` | 玫瑰褐 |
+| chart-5 | `#CFB075` | 芥末金 |
+
+### 11.5 Caramel Vintage (焦糖复古版)
+> **风格**: 复古优雅 · 焦糖棕 | **适用**: 咖啡烘焙、手工文创
+
+| 角色 | 代码 | 说明 |
+|:----|:-----|:-----|
+| 主色 | `hsl(28, 42%, 37%)` ≈ `#855D36` | 品牌核心色 |
+| 次色 | `hsl(34, 33%, 93%)` ≈ `#F4EFE9` | 辅助背景色 |
+| 强调色 | `hsl(35, 35%, 92%)` ≈ `#F1ECE4` | hover 态、微弱背景 |
+| 页面背景 | `hsl(40, 56%, 98%)` ≈ `#FDFBF6` | 应用底层背景 |
+| 卡片背景 | `hsl(0, 0%, 98%)` ≈ `#FAFAFA` | 内容容器 |
+| 主要文本 | `hsl(30, 40%, 18%)` ≈ `#492D11` | 标题、正文 |
+
+**图表色**:
+| 标签 | 色值 | 名称 |
+|:-----|:-----|:-----|
+| chart-1 | `#FFB59F` | 蜜桃粉 |
+| chart-2 | `#FFD657` | 金黄 |
+| chart-3 | `#84E08C` | 薄荷绿 |
+| chart-4 | `#FFD657` | 金黄 |
+| chart-5 | `#CFA5FC` | 淡紫 |
+
+---
+
+## 12. 开发指南 (Dev Guide)
+
+### 如何使用颜色
+在 React 组件中，直接使用 Tailwind 的语义化类名：
+
+```tsx
+// ❌ 错误：硬编码颜色
+<div className="bg-[#2C6CFF] text-white">...</div>
+
+// ✅ 正确：使用语义变量
+<div className="bg-primary text-primary-foreground">...</div>
+```
+
+### 如何添加新主题
+1. 在 `src/lib/themes.ts` 中添加 `ThemeId` 和配置项。
+2. 在 `src/app/globals.css` 中添加 `[data-theme="new-theme"]` 选择器。
+3. 定义对应的 CSS 变量值。

@@ -10,27 +10,8 @@ const app = express();
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: false, limit: '50mb' })); // extended: false for faster parsing
 
-// Static files (Next.js export)
-const staticDir = path.join(__dirname, '../out');
-
-// Only serve static files if directory exists
-if (fs.existsSync(staticDir)) {
-  console.log('[Express] Serving static files from:', staticDir);
-  // Optimize static file serving with enhanced settings
-  app.use(express.static(staticDir, {
-    extensions: ['html'],
-    maxAge: '7d', // Longer cache for production
-    etag: true,
-    cacheControl: true,
-    setHeaders: (res, path) => {
-      if (path.endsWith('.js') || path.endsWith('.css')) {
-        res.setHeader('Cache-Control', 'public, max-age=604800');
-      }
-    }
-  }));
-} else {
-  console.warn('[Express] Static directory not found, skipping static file serving');
-}
+// 注意：Electron 模式下静态文件由 Next.js dev/production server 提供，
+// 不再依赖静态导出产物（out/ 目录）
 
 // API Routes - optimized for performance
 
@@ -309,22 +290,8 @@ app.post('/api/clear-export', (req, res) => {
   }
 });
 
-// Fallback to index.html for SPA routing - optimized
-app.use((req, res, next) => {
-  if (req.method === 'GET' && req.accepts('html')) {
-    // Skip static files and API routes
-    if (req.path.startsWith('/api/') || req.path.includes('.')) {
-      return next();
-    }
-    
-    // Directly serve index.html for SPA routing
-    const indexHtmlPath = path.join(staticDir, 'index.html');
-    if (fs.existsSync(indexHtmlPath)) {
-      return res.sendFile(indexHtmlPath);
-    }
-  }
-  next();
-});
+// Electron 模式下不提供静态文件服务，
+// 页面由 Next.js dev/production server 托管
 
 // Optimized server startup with pre-loading
 let getPortModule = null;

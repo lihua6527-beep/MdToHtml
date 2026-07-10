@@ -1,108 +1,132 @@
-# MdToHtml (Windows Local Edition)
+# MdToHtml Pro — 本地 Markdown 文档工程系统
 
-**MdToHtml** 是一个 **Windows 本地专属** 的 Markdown 转静态 HTML 工具。
+> **系统版本**: v1.0.0 | **技术栈**: Next.js 14 + TypeScript + Tailwind CSS + CodeMirror 6
 
 > ⚠️ **核心定位声明**:
->
-> * **Windows Only**: 仅支持 Windows 10/11 环境，不支持 Linux/macOS。
-> * **Local Only**: 所有数据处理在本地完成，无云端依赖，无后端服务。
-> * **No Concurrency**: 采用稳定顺序处理，不支持并发转换。
+> - **Windows Only**: 仅支持 Windows 10/11 环境，不支持 Linux/macOS。
+> - **Local Only**: 所有数据处理在本地完成，无云端依赖，无后端服务。
+> - **No Concurrency**: 采用稳定顺序处理，不支持并发转换。
 
 ---
 
-## 🚀 核心功能 (Features)
+## 核心功能 (Features)
 
-* **本地转换**: 一键将 `input/` 目录下的 `.md` 文件转换为 `output/` 中的静态 HTML 网页。
-* **CHD 范式**: 内置 CHD (Canonical HTML Deck) 渲染引擎，自动将 Markdown 转换为智能网格布局。
-* **所见即所得**: 提供本地双栏编辑器 (Editor)，支持双向同步滚动与实时预览。
-* **云端部署就绪**: 虽然转换在本地进行，但生成的 `output/` 产物是标准的静态网页，可直接部署至 GitHub Pages 或 Vercel。
+- **CHD 渲染引擎**: 将符合 CHD 协议（Card-based Hierarchical Document）的 Markdown 文档解析并渲染为卡片式网格布局的静态 HTML，支持 `normal`、`highlight`、`quote`、`code` 四种卡片样式。
+- **双栏编辑器**: 基于 CodeMirror 6 的 Markdown 源码编辑器 + CHD 实时预览，支持双向同步滚动。
+- **AI 辅助生成**: 内置 DeepSeek API 集成，支持将 `.txt` / `.md` / `.docx` 文件智能转换为 CHD 格式 Markdown。
+- **文档全生命周期管理**: 文件导入/保存/删除/回收站/排序/收藏/置顶。
+- **HTML 静态导出**: 通过 HtmlBundler 将编辑结果导出为独立 HTML 静态网页。
+- **缓存加速**: Top 500 缓存策略 + 异步后台扫描，首页 O(1) 加载。
 
-## 🌟 核心理念 (Core Philosophy)
+---
 
-> **系统本质上是在回答一个问题： 当AI能生成无限内容时，如何确保输出的品质与一致性？**
->
-> 答案是： **协议化输入、自动化评分、可视化调优、多态化输出**。
->
-> 这不仅是工具创新，更是 **内容生产流程的范式转移**。
+## 快速开始 (Quick Start)
 
-### 🎯 核心定位：面向知识工作者的"AI排版师"
+### 环境要求
 
-> **AI时代，内容生产变得容易，但内容品质控制和多场景适配变得困难。**
-> 现有工具要么完全放弃控制（AI黑箱生成），要么要求用户承担全部责任（传统编辑器）。
-> **DocMind 在自动化与可控性之间找到了黄金平衡点。**
+- **操作系统**: Windows 10 或 Windows 11
+- **运行时**: Node.js (v18.17.0+ LTS)
 
-它理解你的内容结构，自动设计最佳视觉呈现，让你专注于思考，而非调CSS。
-
-### 🚀 知识飞轮 (Knowledge Flywheel)
-
-MdToHtml 让你从"网页开发者"回归"知识创作者"——**写作即发布，思考即资产，风格即品牌**。
-
-你已经验证了这个飞轮：
-> **优质协议 → 低摩擦生产 → 高频输出 → 品质积累 → 影响力增长 → 更多输入动机**
-
-这不仅是工具的胜利，更是知识工作范式的进化。
-
-## 🛠️ 快速开始 (Quick Start)
-
-### 1. 环境要求
-
-* **操作系统**: Windows 10 或 Windows 11
-* **运行时**: Node.js (v18.17.0+ LTS)
-
-### 2. 安装与启动
-
-只需点击根目录下的启动脚本：
+### 安装与启动
 
 ```bash
-# 1. 首次使用安装依赖
+# 1. 安装依赖
 npm install
 
-# 2. 启动本地编辑器 (自动打开浏览器)
+# 2. 启动开发服务器（自动打开浏览器）
 start.bat
 ```
 
-### 3. 生成网页
-
-当您完成文档编辑后，运行构建命令生成最终 HTML：
+### 生产构建
 
 ```bash
 npm run build
+npm start
 ```
 
-生成结果将位于 `MdToHtml/out/` 目录中。
-
-## 📂 目录结构
-
-```text
-MdToHtml/
-├── MdToHtml/       # [系统] 核心程序代码
-├── docs/           # [文档] 项目文档和开发记录
-├── README.md       # [文档] 项目说明
-├── start.bat       # [脚本] 一键启动
-├── build_static.bat # [脚本] 构建静态网站
-└── .cursorrules    # [配置] AI 助手规则
+或者使用一键部署脚本：
+```bash
+build_static.bat
 ```
 
-### 核心代码结构
-
-```text
-MdToHtml/MdToHtml/
-├── out/            # [构建] 生成的静态 HTML 结果
-├── src/            # [源码] 核心代码
-├── electron/       # [桌面] Electron 桌面端支持
-├── scripts/        # [脚本] 构建和部署脚本
-└── package.json    # [配置] 项目依赖和脚本
-```
-
-## 📖 技术架构
-
-本项目基于 **Next.js 14 (SSG)** 构建，裁剪了所有服务端动态特性，仅保留静态生成能力。
-
-* **前端**: React 18 + Tailwind CSS + Shadcn UI
-* **编辑器**: CodeMirror 6
-* **构建工具**: Windows Batch + PowerShell
-* **数据流**: File System (Input) -> AST Parsing -> React Rendering -> Static HTML (Output)
+构建产物位于 `MdToHtml/.next/` 目录，运行时需要 Node.js 环境。
 
 ---
 
-*严谨构建，极致本地体验。*
+## 目录结构
+
+```
+MdToHmtl/                          # 项目根目录
+├── MdToHtml/                      # 核心程序（Next.js 应用）
+│   ├── src/                       # 源码
+│   │   ├── app/                   # 页面 + API 路由
+│   │   ├── components/            # React 组件（CHD/AI/Editor/UI）
+│   │   ├── hooks/                 # 自定义 Hooks（12 个）
+│   │   ├── services/              # 服务层（AI/Core/业务）
+│   │   ├── lib/                   # 工具库（导出/图标系统/缓存/校验）
+│   │   └── types/                 # 类型定义
+│   ├── posts/                     # 文档存储
+│   ├── electron/                  # Electron 桌面端支持
+│   ├── scripts/                   # 构建/运维脚本
+│   └── tests/                     # 测试
+├── docs/                          # 项目文档
+│   ├── 开发记录/                  # 每日开发日志
+│   ├── 核心规划/                  # 核心规划文档
+│   ├── 技术规范与前端规范/        # 技术规范
+│   ├── 错误经验/                  # 错误总结
+│   └── 归档/                      # 已归档的旧文档
+├── plans/                         # 当前开发计划
+├── PROJECT_SYSTEM_INDEX.md        # 系统架构索引（AI 助手用）
+├── PROJECT_DEEP_UNDERSTANDING_GUIDE.md # 深度理解指南
+├── API接口手册.md                 # API 接口文档
+├── CHD协议.md                     # CHD 协议规范
+├── start.bat                      # 一键启动
+└── build_static.bat               # 静态构建
+```
+
+---
+
+## 技术架构
+
+| 层 | 技术 |
+|:---|:-----|
+| 框架 | Next.js 14 (App Router) |
+| UI | React 18 + TypeScript + Tailwind CSS |
+| 编辑器 | CodeMirror 6（@uiw/react-codemirror） |
+| Markdown 渲染 | react-markdown + remark-gfm + remark-math + rehype-katex |
+| 状态管理 | React Hooks + SWR |
+| AI 集成 | DeepSeek API（services/ai/AIService.ts） |
+| 图表 | lucide-react |
+| 桌面 | Electron（electron/） |
+| 数据流 | 本地文件系统 → AST 解析 → React 渲染 → 静态 HTML 导出 |
+
+---
+
+## CHD 协议 (Card-based Hierarchical Document)
+
+CHD 是三层刚性结构的 Markdown 扩展协议：
+
+```
+L0: YAML Frontmatter（文档元信息）
+L1: ## Section {layout="grid"}（章节容器，自动智能列数）
+L2: ### Card {card-style="normal|highlight|quote|code"}（卡片单元，4 种样式）
+```
+
+支持的富文本：LaTeX 数学公式、GFM 表格、代码块。
+
+详细规范见 `CHD协议.md`。
+
+---
+
+## AI 功能
+
+- 支持格式：`.txt` / `.md` / `.docx`
+- 双 Prompt 模板：默认版（通用） / 学术版（论文导向）
+- Flash / Pro 双模型选择
+- 生成结果支持预览/下载/保存/对比
+
+---
+
+## 许可
+
+MIT License

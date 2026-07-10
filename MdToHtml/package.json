@@ -11,14 +11,12 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "cross-env NEXT_EXPORT=true next build && node scripts/post-build.js",
-    "build:next": "cross-env NEXT_EXPORT=true next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:ci": "jest --ci --coverage",
-    "test:e2e": "node scripts/verify-static-build.js",
     "dev:electron": "concurrently \"cross-env NEXT_PUBLIC_IS_ELECTRON=true next dev\" \"wait-on tcp:3000 && electron .\"",
     "build:electron": "cross-env ELECTRON_BUILDER_BINARIES_MIRROR=https://github.com/electron-userland/electron-builder-binaries/releases/download/ electron-builder --dir --win portable",
     "preview:electron": "npm run build:electron-pre && cross-env FORCE_SERVE=true electron ."

@@ -12,20 +12,9 @@ import { twMerge } from 'tailwind-merge';
 import {
   Maximize2, Palette, MoreHorizontal, LayoutGrid, ArrowLeft, ArrowRight,
   ArrowUp, ArrowDown, Edit, Check, Trash2, Minus, Plus, AlignLeft, AlignCenter,
-  AlignRight, AlertCircle, AlertTriangle, Activity, Award, BarChart2, BarChart3,
-  Bell, Book, Bookmark, BookOpen, Box, Brain, Calendar, Camera, CheckCircle, CheckSquare,
-  Clock, Clock4, Cloud, Code, Cpu, Database, DollarSign, Download, Eye, File,
-  FileArchive, FileAudio, FileCode, FileImage, FileSpreadsheet, FileText, FileVideo,
-  Filter, Flag, Folder, Gift, GitBranch, GitMerge, Github, Globe, Grid, HardDrive,
-  Hash, Heart, History, Home, Image, Key, Layers, Layout, Leaf, Lightbulb, Link,
-  List, Lock, Mail, Map, Menu, MessageSquare, Monitor, Moon, Music, Network,
-  Package, PenTool, PieChart, RefreshCw, Rocket, Save, Search, Server, Settings,
-  Share2, Shield, Smartphone, Star, Sun, Tablet, Tag, Target, Terminal, TreePine,
-  TrendingUp, Upload, User, UserPlus, Users, Video, Wifi, WifiOff, Zap,
-  Send, Type as TypeIcon, type LucideIcon
+  AlignRight, Send, Type as TypeIcon
 } from 'lucide-react';
 import { getShapeClass, CardShape } from '../../lib/shapes';
-import { iconExists } from '../../lib/icon-system/icon-manager';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 
@@ -104,8 +93,6 @@ export const Card: React.FC<CardProps> = ({
 
   // --- Context Menu State ---
   const [contextMenu, setContextMenu] = useState<{ x: number, y: number } | null>(null);
-  // 图标获取已由 lib/icon-manager 的 getIconComponentSync 统一管理（含缓存）
-
   useEffect(() => {
     const handleClick = () => setContextMenu(null);
     window.addEventListener('click', handleClick);
@@ -380,122 +367,6 @@ export const Card: React.FC<CardProps> = ({
           // Arrow shape padding compensation
           shape === 'arrow' && "pl-8 pr-4"
       )}>
-
-      {/* 左上角图标 - DEBUG MODE */}
-      {/* ⚠️ 如果连这个 Zap 都不显示，说明 bundle 压根没加载 Lucide 组件 */}
-      {attributes.icon && shape === 'rect' && (
-          <div className="absolute top-4 left-4 z-20">
-              {(() => {
-                  const name: string = attributes.icon || '';
-                  let IconComponent: LucideIcon | null = null;
-                  
-                  // 先检查 icon-manager 有没有这个图标名
-                  const iconExistsInConfig = iconExists(name);
-                  
-                  switch (name) {
-                    case 'alert-triangle': IconComponent = AlertTriangle; break;
-                    case 'alert-circle': IconComponent = AlertCircle; break;
-                    case 'lightbulb': IconComponent = Lightbulb; break;
-                    case 'code': IconComponent = Code; break;
-                    case 'layers': IconComponent = Layers; break;
-                    case 'award': IconComponent = Award; break;
-                    case 'activity': IconComponent = Activity; break;
-                    case 'bar-chart': IconComponent = BarChart3; break;
-                    case 'target': IconComponent = Target; break;
-                    case 'zap': IconComponent = Zap; break;
-                    case 'clock': IconComponent = Clock; break;
-                    case 'brain': IconComponent = Brain; break;
-                    case 'book': IconComponent = Book; break;
-                    case 'book-open': IconComponent = BookOpen; break;
-                    case 'cpu': IconComponent = Cpu; break;
-                    case 'chart': IconComponent = BarChart2; break;
-                    case 'network': IconComponent = Network; break;
-                    case 'eye': IconComponent = Eye; break;
-                    case 'tag': IconComponent = Tag; break;
-                    case 'settings': IconComponent = Settings; break;
-                    case 'user': IconComponent = User; break;
-                    case 'users': IconComponent = Users; break;
-                    case 'shield': IconComponent = Shield; break;
-                    case 'calendar': IconComponent = Calendar; break;
-                    case 'star': IconComponent = Star; break;
-                    case 'heart': IconComponent = Heart; break;
-                    case 'bookmark': IconComponent = Bookmark; break;
-                    case 'message': IconComponent = MessageSquare; break;
-                    case 'message-square': IconComponent = MessageSquare; break;
-                    case 'box': IconComponent = Box; break;
-                    case 'globe': IconComponent = Globe; break;
-                    case 'trending-up': IconComponent = TrendingUp; break;
-                    case 'file': IconComponent = File; break;
-                    case 'file-text': IconComponent = FileText; break;
-                    case 'file-code': IconComponent = FileCode; break;
-                    case 'camera': IconComponent = Camera; break;
-                    case 'image': IconComponent = Image; break;
-                    case 'music': IconComponent = Music; break;
-                    case 'video': IconComponent = Video; break;
-                    case 'terminal': IconComponent = Terminal; break;
-                    case 'server': IconComponent = Server; break;
-                    case 'monitor': IconComponent = Monitor; break;
-                    case 'database': IconComponent = Database; break;
-                    case 'cloud': IconComponent = Cloud; break;
-                    case 'folder': IconComponent = Folder; break;
-                    case 'smartphone': IconComponent = Smartphone; break;
-                    case 'tablet': IconComponent = Tablet; break;
-                    case 'wifi': IconComponent = Wifi; break;
-                    case 'link': IconComponent = Link; break;
-                    case 'mail': IconComponent = Mail; break;
-                    case 'send': IconComponent = Send; break;
-                    case 'share-2': IconComponent = Share2; break;
-                    case 'home': IconComponent = Home; break;
-                    case 'map': IconComponent = Map; break;
-                    case 'menu': IconComponent = Menu; break;
-                    case 'download': IconComponent = Download; break;
-                    case 'upload': IconComponent = Upload; break;
-                    case 'filter': IconComponent = Filter; break;
-                    case 'search': IconComponent = Search; break;
-                    case 'refresh': IconComponent = RefreshCw; break;
-                    case 'save': IconComponent = Save; break;
-                    case 'pen-tool': IconComponent = PenTool; break;
-                    case 'type': IconComponent = TypeIcon; break;
-                    case 'sun': IconComponent = Sun; break;
-                    case 'moon': IconComponent = Moon; break;
-                    case 'timer': IconComponent = Clock4; break;
-                    case 'history': IconComponent = History; break;
-                    case 'bell': IconComponent = Bell; break;
-                    case 'flag': IconComponent = Flag; break;
-                    case 'gift': IconComponent = Gift; break;
-                    case 'rocket': IconComponent = Rocket; break;
-                    case 'check-circle': IconComponent = CheckCircle; break;
-                    case 'check-square': IconComponent = CheckSquare; break;
-                    default: IconComponent = null;
-                  }
-
-                  // 调试日志
-                  if (typeof window !== 'undefined') {
-                    console.log(`[Icon DEBUG] name="${name}", iconExists=${iconExistsInConfig}, switchMatched=${IconComponent !== null}, componentType=${IconComponent ? typeof IconComponent : 'null'}`);
-                  }
-
-                  // 如果 switch 没有匹配到但 icon-manager 认为它存在，用 Zap 作为 fallback
-                  if (!IconComponent && iconExistsInConfig) {
-                    if (typeof window !== 'undefined') console.log(`[Icon DEBUG] ⚠️ icon "${name}" exists in config but switch missing! Using Zap as fallback`);
-                    IconComponent = Zap;
-                  }
-                  
-                  return (
-                    <div className={clsx(
-                        "w-10 h-10 rounded-full flex items-center justify-center",
-                        IconComponent ? [
-                            "shadow-md",
-                            forcedCardColor !== 'default' 
-                                ? `bg-${forcedCardColor} text-white` 
-                                : "bg-primary/10 text-primary"
-                        ] : "bg-transparent"
-                    )}>
-                        {IconComponent ? <IconComponent size={20} /> : <div className="w-5 h-5" />}
-                    </div>
-                  );
-              })()}
-          </div>
-      )}
 
       {/* Header */}
       {/* v2.0: 只要有 icon 属性且为矩形，就应用 pl-14 左侧 padding，不论图标是否存在 */}

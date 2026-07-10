@@ -4,7 +4,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { Plus, LayoutGrid, Columns, Settings, Type, Palette, Check } from 'lucide-react';
 import { getLayoutStrategy } from './LayoutStrategies';
-import { iconExists } from '../../lib/icon-manager';
 
 interface SectionProps {
   title: string;
@@ -224,33 +223,6 @@ export const Section: React.FC<SectionProps> = ({
     }
   };
 
-  // v2.0: 增强的图标校验 - 同时检查属性存在一致性和图标名有效性
-  const validateIconConsistency = (): { valid: boolean; issues: string[] } => {
-    if (cards.length === 0) return { valid: true, issues: [] };
-    
-    const issues: string[] = [];
-    
-    // 1. 检查图标属性存在的一致性
-    const hasIconEntries = cards.filter(card => !!card.props.icon);
-    const noIconEntries = cards.filter(card => !card.props.icon);
-    
-    if (hasIconEntries.length > 0 && noIconEntries.length > 0) {
-        issues.push('同一 section 下的卡片要么都使用图标，要么都不使用图标');
-    }
-    
-    // 2. 检查图标名的有效性（v2.0 新增）
-    const invalidIcons = hasIconEntries
-        .map(card => card.props.icon)
-        .filter((iconName): iconName is string => !!iconName && !iconExists(iconName));
-    
-    if (invalidIcons.length > 0) {
-        const uniqueInvalid = Array.from(new Set(invalidIcons));
-        issues.push(`以下图标名称不存在：${uniqueInvalid.join('、')}`);
-    }
-    
-    return { valid: issues.length === 0, issues };
-  };
-
   // Determine selection state
   // Section is selected if:
   // 1. Explicitly selected via block index (New Architecture)
@@ -260,9 +232,6 @@ export const Section: React.FC<SectionProps> = ({
       (selectedBlockIndex === null && activeSectionBlockIndex !== undefined && activeSectionBlockIndex === blockIndex) ||
       (activeLine !== undefined && startLine !== undefined && activeLine === startLine)
   );
-
-  // v2.0: 图标使用一致性状态（含具体问题描述）
-  const { valid: isIconConsistent, issues: iconIssues } = validateIconConsistency();
 
   return (
     <section 
@@ -360,13 +329,6 @@ export const Section: React.FC<SectionProps> = ({
                 </h2>
             )}
         </div>
-        
-        {/* 图标使用一致性警告（v2.0: 显示具体问题内容） */}
-        {!isIconConsistent && (
-            <div className="mb-4 p-3 bg-amber-50 text-amber-700 text-sm rounded-lg border border-amber-200 flex items-center gap-2">
-                <span>⚠️ {iconIssues.join('；')}</span>
-            </div>
-        )}
       </div>
 
       {/* Divider between sections */}

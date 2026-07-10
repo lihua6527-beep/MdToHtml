@@ -23,6 +23,17 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
   const [settingsType, setSettingsType] = useState<SettingsType>('file');
   const [activeMode, setActiveMode] = useState<'welcome' | 'ai'>('ai');
 
+  // 监听 AIArea 触发的 "打开设置" 自定义事件
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const type = e.detail?.type || 'ai';
+      setSettingsType(type);
+      setShowSettings(true);
+    };
+    window.addEventListener('open-settings', handler as EventListener);
+    return () => window.removeEventListener('open-settings', handler as EventListener);
+  }, []);
+
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();

@@ -1,14 +1,14 @@
 # MdToHtml Pro — 系统架构完整索引 (System Index)
 
-> **生成日期**: 2026-07-08 (已更新)
-> **用途**: 为 AI 助手（如 sailiNG、Claude、Copilot）提供完整的项目概览，支持语义化导航与上下文理解。
-> **系统版本**: v1.0.0 | **技术栈**: Next.js 14 + TypeScript + Tailwind CSS
+> **生成日期**: 2026-07-10（基于全面审计更新）
+> **用途**: 为 AI 助手提供完整的项目概览，支持语义化导航与上下文理解。
+> **系统版本**: v1.0.0 | **技术栈**: Next.js 14 + TypeScript + Tailwind CSS + CodeMirror 6
 
 ---
 
 ## 一、项目概览 (Overview)
 
-MdToHtml Pro 是一个**离线 Markdown 转 HTML 的渲染引擎与编辑器**，核心能力是将符合 **CHD 协议**（Card-based Hierarchical Document）的 Markdown 文档解析并渲染为卡片式网格布局的静态 HTML 网页。
+MdToHtml Pro 是一个 **Windows 本地离线** 的 Markdown 文档工程系统，核心能力是将符合 **CHD 协议**（Card-based Hierarchical Document）的 Markdown 文档解析、编辑、渲染为卡片式网格布局。系统具备完整的文档生命周期管理、本地文件操作、AI 辅助生成能力。
 
 ### 核心流程
 
@@ -22,11 +22,11 @@ Markdown 文件 (*.md)
 
 ### 架构定位
 
-| 维度 | 现状 | 扩展目标 |
+| 维度 | 现状 | 扩展方向 |
 |------|------|----------|
-| 输入层 | ✅ 手动编写 + AI 自动识别双模式 | 多模态输入 |
-| 处理层 | ✅ 本地解析 + 渲染 + AI 生成 | AI 辅助编辑、实时建议 |
-| 输出层 | ✅ 静态 HTML 导出 + 浏览器原生下载 | 多格式导出（PDF/Markdown） |
+| 输入层 | ✅ 手动编写 + 拖拽导入 + 文件选择 | Docx/MD/TXT 文件智能导入 |
+| 处理层 | ✅ 本地解析 + 渲染引擎 + AI 生成 | 编辑器内 AI 辅助编辑、实时建议 |
+| 输出层 | ✅ 静态 HTML 导出 + 浏览器原生下载 | 多格式导出（PDF） |
 
 ---
 
@@ -37,36 +37,40 @@ MdToHmtl/                          # 项目根目录
 ├── MdToHtml/                      # 主项目（Next.js 应用）
 │   ├── src/                       # 源代码
 │   │   ├── app/                   # Next.js App Router 页面
-│   │   │   ├── page.tsx           # 首页（文档列表）
-│   │   │   ├── layout.tsx         # 根布局（ThemeProvider + ToastProvider）
-│   │   │   ├── loading.tsx        # 加载状态
+│   │   │   ├── page.tsx           # 首页（SSR→CSR，文档列表 + AI 功能）
+│   │   │   ├── layout.tsx         # 根布局（ThemeProvider）
+│   │   │   ├── loading.tsx        # 加载状态（旋转动画+步骤提示）
 │   │   │   ├── globals.css        # 全局样式
-│   │   │   ├── api/               # API 路由（18 个端点）
-│   │   │   ├── editor/            # 编辑器页面
+│   │   │   ├── api/               # API 路由（24 个端点）
+│   │   │   ├── editor/            # 编辑器页面（CodeMirror + CHD 实时预览）
 │   │   │   ├── preview/           # 独立预览页面
 │   │   │   ├── tag-showcase/      # 标签风格展示页
-│   │   │   └── test/              # 测试页面
+│   │   │   └── test/              # 测试验证仪表盘
 │   │   ├── components/            # React 组件
-│   │   │   ├── CHD/               # CHD 核心渲染组件（9 个文件）
-│   │   │   ├── Editor/            # 编辑器组件（4 个文件）
+│   │   │   ├── AI/                # AI 工作流组件（4 个文件）
+│   │   │   ├── CHD/               # CHD 核心渲染引擎（6 个文件）
+│   │   │   ├── Editor/            # 编辑器组件
 │   │   │   ├── ui/                # 通用 UI 组件（shadcn 风格）
-│   │   │   ├── settings/          # 设置相关组件
-│   │   │   └── ...                # 其他业务组件
-│   │   ├── hooks/                 # 自定义 Hooks（8 个文件）
-│   │   ├── services/              # 服务层（6 个文件）
-│   │   │   ├── core/              # 核心服务（ApiClient）
-│   │   │   └── ...                # 业务服务
-│   │   ├── lib/                   # 工具库（18 个文件）
-│   │   │   ├── export/            # 导出模块（HtmlBundler 等）
-│   │   │   └── __tests__/         # 工具库测试
+│   │   │   ├── settings/          # 设置面板相关
+│   │   │   └── ...                # 业务组件（12 个）
+│   │   ├── hooks/                 # 自定义 Hooks（12 个文件）
+│   │   │   └── editor/            # 编辑器专用 Hooks（3 个）
+│   │   ├── services/              # 服务层（7 个文件）
+│   │   │   ├── ai/                # AI 服务（AIService, PromptEngine 等）
+│   │   │   ├── core/              # 核心服务（ApiClient, TransactionManager 等）
+│   │   │   └── ...                # 业务服务（ConfigService, FileService, TrashService）
+│   │   ├── lib/                   # 工具库（22 个文件 + 子模块）
+│   │   │   ├── export/            # 导出模块（HtmlBundler, CssExtractor, template）
+│   │   │   ├── icon-system/       # 图标管理系统（icon-config, icon-manager, icon-renderer）
+│   │   │   └── __tests__/         # 工具库测试（7 个文件）
 │   │   ├── types/                 # TypeScript 类型定义（3 个文件）
-│   │   ├── config/                # 配置相关
+│   │   ├── config/                # 配置
 │   │   ├── constants/             # 常量定义
 │   │   └── data/                  # 数据文件
 │   ├── public/                    # 静态资源
-│   ├── posts/                     # 示例文档（1 篇论文）
-│   ├── scripts/                   # 构建/运维脚本（14 个文件）
-│   ├── tests/                     # 测试文件
+│   ├── posts/                     # 文档存储目录
+│   ├── scripts/                   # 构建/运维脚本（9 个文件）
+│   ├── tests/                     # 测试文件（Python 集成/单元测试）
 │   │   ├── unit/                  # 单元测试
 │   │   └── integration/           # 集成测试
 │   ├── electron/                  # Electron 桌面端（4 个文件）
@@ -74,20 +78,23 @@ MdToHmtl/                          # 项目根目录
 │   ├── archive/                   # 归档文件
 │   ├── recycle/                   # 回收站
 │   └── 配置文件 (11 个)
-├── docs/                          # 文档
-│   ├── 开发记录/                  # 开发日志
-│   ├── 计划书/                    # 规划文档
-│   ├── 技术规范与前端规范/        # 技术规范
-│   ├── 核心规划/                  # 核心规划
-│   ├── 错误经验/                  # 错误经验
-│   └── 归档/                      # 已归档文档
-├── PROJECT_STRUCTURE.md           # 旧版结构索引
-├── PROJECT_SYSTEM_INDEX.md        # 本文件（新版系统索引）
-├── CHD协议.md                     # CHD 协议规范（427 行）
-├── build_static.bat               # 静态构建脚本
-├── start.bat                      # 启动脚本
-├── splash-animation-demo.html     # 开屏动画演示
-└── 提示词记录.txt                 # 开发提示词记录
+├── docs/                          # 文档目录
+│   ├── 开发记录/                  # 每日开发日志（30+ 条历史记录）
+│   │   └── 历史记录/              # 完整历史记录存档
+│   ├── 核心规划/                  # 核心规划（6 个文件）
+│   │   ├── 1~5_编号文件            # 项目演化、方向、愿景、阶段、CHD 协议
+│   │   └── 技术栈与算法详情.markdown # 技术栈/算法/设计令牌/主题配色
+│   ├── 错误经验/                  # 错误经验总结
+│   └── 归档/                      # 已归档文档（旧计划书/旧规范/历史分析）
+├── plans/                         # 当前/计划中的开发任务（取代旧计划书目录）
+├── PROJECT_SYSTEM_INDEX.md        # 本文件（系统索引）
+├── README.md                      # 项目说明
+├── PROJECT_DEEP_UNDERSTANDING_GUIDE.md # 深度理解指南
+├── API接口手册.md                 # API 接口文档
+├── 进程通信与状态流转分析.md       # 进程/状态流转文档
+├── CHD协议.md                     # CHD 协议规范
+├── build_static.bat               # 生产构建与启动脚本
+└── start.bat                      # 启动脚本
 ```
 
 ---
@@ -96,18 +103,17 @@ MdToHmtl/                          # 项目根目录
 
 | 路由 | 文件 | 类型 | 功能描述 |
 |------|------|------|----------|
-| `/` | `src/app/page.tsx` | SSR→CSR | 首页，展示文档列表（从 `posts/` 读取） |
-| `/editor` | `src/app/editor/page.tsx` | `'use client'` | **核心编辑器**：左右分栏（左侧 CodeMirror + 右侧 CHD 实时预览） |
+| `/` | `src/app/page.tsx` | SSR→CSR | **首页**：左侧文档列表 + 右侧 AI 功能区（默认），支持拖拽上传、设置面板 |
+| `/editor` | `src/app/editor/page.tsx` | `'use client'` | **核心编辑器**：左右分栏（左侧 CodeMirror 6 + 右侧 CHD 实时预览 + 底部工具栏） |
 | `/preview` | `src/app/preview/page.tsx` | `'use client'` | 独立预览页（从 localStorage 读取 `chd_md_content`） |
 | `/tag-showcase` | `src/app/tag-showcase/page.tsx` | `'use client'` | 标签风格展示页（5 种风格：Glassmorphism/Tech/Gradient/Outline/3D Pop） |
-| `/test` | `src/app/test/page.tsx` | `'use client'` | 系统验证仪表盘（5 个单元测试 + 500 项压力测试） |
-| `/ai-input` | `src/app/ai-input/page.tsx` | `'use client'` | AI 智能转换独立页（开发调试用，正式入口在首页右侧） |
+| `/test` | `src/app/test/page.tsx` | `'use client'` | 系统验证仪表盘（单元测试 + 压力测试） |
 
 ---
 
 ## 四、API 路由 (API Routes)
 
-> 所有 API 基于 Next.js Route Handlers，部署于 `src/app/api/`。
+> 所有 API 基于 Next.js Route Handlers，部署于 `src/app/api/`。共 **24 个端点**。
 
 | 端点 | 方法 | 功能 |
 |------|------|------|
@@ -127,95 +133,122 @@ MdToHmtl/                          # 项目根目录
 | `/api/trash/stats` | GET | 回收站统计信息 |
 | `/api/save-export` | POST | 保存导出记录 |
 | `/api/save-session` | POST | 保存会话状态 |
-| `/api/app-info` | GET | 应用信息 |
-| `/api/app-info/chd-protocol` | GET | CHD 协议信息 |
+| `/api/app` | GET | 应用信息 |
+| `/api/app/chd-protocol` | GET | CHD 协议信息 |
 | `/api/clear-export` | POST | 清除导出记录 |
-| `/api/fs/list` | GET | 文件系统列表 |
+| `/api/temp-files` | GET/POST | 临时文件管理 |
+| `/api/temp-files/[name]` | DELETE | 删除指定临时文件 |
+| `/api/export/config` | GET/POST | 导出配置管理 |
+| `/api/ai/config` | GET | AI 配置信息 |
+| `/api/ai/generate` | POST | AI 生成（DeepSeek API 代理） |
 
 ---
 
 ## 五、核心组件架构 (Component Architecture)
 
-### 5.1 CHD 渲染体系 (9 个文件)
+### 5.1 首页组件体系
 
 ```
-CHDRenderer.tsx (主渲染引擎)
-├── 职责: 解析 Markdown → 提取 Frontmatter → 切分 Sections → 分配 Cards
-├── 关键函数: parseAttributes(), parseCHDBlocks(), useMemo 解析管线
-├── 输入: markdown: string
-├── 输出: Sections[] → 传递给 Section 组件
-└── 依赖: gray-matter, chdParser, attributeParser, Section, TagRenderer
+HomeClient.tsx（客户端布局编排器）
+├── 职责：管理拖放上传、设置面板开关、活动模式切换（welcome/ai）
+├── 默认模式：ai（首页打开直接显示 AI 功能区）
+├── 布局：左侧 DocumentList 边栏 + 主区域（AIArea / 欢迎页） + 右侧 SettingsPanel 抽屉
+└── 状态：activeMode, panelOpen, settingsType
 
-Section.tsx (章节容器)
-├── 职责: 渲染一个章节（Grid 网格布局），管理卡片排列
-├── 关键特性: 智能列数（Smart Columns：1-4=N列，5+=3列）
-├── 输入: title, layoutProps, cards[]
-└── 输出: Card 组件网格
-
-Card.tsx (卡片单元)
-├── 职责: 渲染单张卡片（4 种样式 + 6 种配色 + 5 种形态）
-├── 样式: normal | highlight | quote | code
-├── 配色: default | chart-1~5
-├── 形态: rectangle | cut-corner | arrow | floating | rounded
-├── 内容渲染: react-markdown + rehype-katex + remark-gfm + remark-math
-└── 交互: 选中、编辑、拖拽、删除
-
-BottomToolbar.tsx (底部工具栏)
-├── 职责: 240px 固定底部栏，3 个标签页控制主题/布局/卡片属性
-├── 标签页: 主题(ThemeSwitcher+TagStyle) | 布局(SectionProps) | 卡片(CardProps)
-└── 触发: 通过回调直接修改 Markdown 文本属性
-
-TagRenderer.tsx (标签渲染器)
-├── 职责: 渲染 Frontmatter 中的 tags 数组
-└── 风格: glass(默认) | tech | gradient | outline | 3d
-
-其他: ├── SectionRenderer.tsx
-      ├── SimpleRenderer.tsx
-      ├── EditorRenderer.tsx
-      └── CardAttributeEditor.tsx
+DocumentList.tsx（文档浏览侧边栏）
+├── 职责：文件列表展示、排序/收藏/置顶/删除、回收站管理
+├── 排序：导入时间 / 修改时间 / 访问时间
+├── 置顶/收藏：localStorage 持久化
+├── 右键菜单：【收藏】【置顶】【删除】三项
+└── 辅助：容量进度条、批量选择模式、回收站视图切换
 ```
 
-### 5.2 编辑器体系 (4 个文件)
+### 5.2 CHD 渲染体系（6 个文件）
 
 ```
-CodeMirrorEditor.tsx
-├── 职责: 基于 @uiw/react-codemirror 的 Markdown 源码编辑器
-├── 特性: 实时高亮、光标位置追踪、选区管理
-└── API: insertText(), scrollToLine(), getCursor()
+CHDRenderer.tsx（主渲染引擎）
+├── 职责：解析 Markdown → 提取 Frontmatter → 切分 Sections → 分配 Cards
+├── 关键函数：parseAttributes(), parseCHDBlocks(), useMemo 解析管线
+├── 输入：markdown: string
+├── 输出：Sections[] → 传递给 Section 组件
+└── 依赖：gray-matter, chdParser, attributeParser, Section, TagRenderer
 
-MarkdownEditor.tsx       # 简化版 Markdown 编辑器
-MarkdownEditorSimple.tsx # 极简版编辑器
+Section.tsx（章节容器）
+├── 职责：渲染一个章节（Grid 网格布局），管理卡片排列
+├── 关键特性：智能列数（1-4=N列，5+=3列）
+├── 输入：title, layoutProps, cards[]
+└── 输出：Card 组件网格
+
+Card.tsx（卡片单元）
+├── 职责：渲染单张卡片（4 种样式 + 6 种配色）
+├── 样式：normal | highlight | quote | code
+├── 配色：default | chart-1~5
+├── 内容渲染：react-markdown + rehype-katex + remark-gfm + remark-math
+└── 交互：HTML 文件操作
+
+其 他：SectionRenderer.tsx、SimpleRenderer.tsx
 ```
 
-### 5.3 通用组件
+### 5.3 AI 工作流组件（4 个文件）
+
+| 组件 | 文件 | 功能 |
+|------|------|------|
+| AIArea.tsx | `components/AI/AIArea.tsx` | AI 转换工作流编排器：管理临时文件列表、选中状态、模型切换、提示模板切换、生成/预览/下载/保存、退出确认 |
+| AIInputPanel.tsx | `components/AI/AIInputPanel.tsx` | 文件输入与提交 UI：拖放/点击选择文件（.txt/.md/.docx），生成/切换风格/清除按钮 |
+| AISaveDialog.tsx | `components/AI/AISaveDialog.tsx` | 退出确认弹窗（保存/不保存/取消） |
+| AITempFileList.tsx | `components/AI/AITempFileList.tsx` | 生成结果列表：多版本并列 + 预览/下载/保存/删除操作 |
+
+### 5.4 通用业务组件
 
 ```
 HomeClient.tsx           # 首页客户端逻辑
-DocumentList.tsx         # 文档列表展示
-SettingsPanel.tsx        # 设置面板
+DocumentList.tsx         # 文档列表（含收藏/置顶/回收站）
+AIArea.tsx               # AI 功能主区域
+SettingsPanel.tsx        # 设置面板（file/render/protocol/ai）
 PathSettingsPanel.tsx    # 路径设置
 GlobalErrorBoundary.tsx  # 全局错误边界
 ThemeProvider.tsx        # 主题上下文提供
-ThemeScope.tsx           # 主题作用域
 ThemeSwitcher.tsx        # 主题切换器
+ThemeScope.tsx           # 主题作用域
 FloatingUndoRedo.tsx     # 浮动撤销/重做按钮
 CapacityProgressBar.tsx  # 容量进度条
 CapacityWarningDialog.tsx# 容量警告弹窗
 RecycleBin.tsx           # 回收站面板
 InteractivePost.tsx      # 交互式文章组件
+InitialLoader.tsx        # 客户端初始加载动画
 ```
 
 ---
 
 ## 六、服务层 (Services)
 
+### 6.1 AI 服务层（4 个文件）
+
+```
+services/ai/
+├── AIService.ts         # AI 服务核心：调用 DeepSeek API、退避重试、错误处理
+├── PromptEngine.ts      # Prompt 模板引擎（默认/学术双模板）
+├── IconAutoFixService.ts# 图标自动修复服务
+└── TempFileManager.ts   # 临时文件管理器（sessionStorage、自动命名）
+```
+
+### 6.2 核心服务（4 个文件）
+
+```
+services/core/
+├── ApiClient.ts          # 通用 HTTP 客户端（封装 fetch，含错误处理）
+├── ErrorHandler.ts       # 统一错误处理
+├── PermissionManager.ts  # 权限管理
+└── TransactionManager.ts # 事务管理
+```
+
+### 6.3 业务服务（3 个文件）
+
 ```
 services/
-├── core/
-│   └── ApiClient.ts          # 通用 HTTP 客户端（封装 fetch，含错误处理）
-├── ConfigService.ts          # 配置管理（容量、应用信息、配置更新）
-├── FileService.ts            # 文件操作（保存、加载、导出、训练数据记录）
-└── TrashService.ts           # 回收站管理（列表、恢复、永久删除、统计）
+├── ConfigService.ts      # 配置管理（容量、应用信息、配置更新）
+├── FileService.ts        # 文件操作（保存、加载、导出、训练数据记录）
+└── TrashService.ts       # 回收站管理（列表、恢复、永久删除、统计）
 
 # 依赖关系
 ApiClient ← ConfigService
@@ -225,101 +258,125 @@ ApiClient ← TrashService
 
 ---
 
-## 七、自定义 Hooks (8 个文件)
+## 七、自定义 Hooks（12 个文件）
 
 | Hook | 文件 | 功能 |
 |------|------|------|
-| `useAutoSave` | `hooks/useAutoSave.ts` | 自动保存到 localStorage |
+| `useAutoSave` | `hooks/useAutoSave.ts` | 自动保存（500ms 防抖到 localStorage） |
 | `useCHDSelection` | `hooks/useCHDSelection.ts` | 根据光标位置确定当前选中的 Section/Card |
-| `useDebounce` | `hooks/useDebounce.ts` | 防抖 Hook |
+| `useDebounce` | `hooks/useDebounce.ts` | 通用防抖 Hook |
 | `useDocumentState` | `hooks/useDocumentState.ts` | 文档状态管理 |
 | `useErrorHandler` | `hooks/useErrorHandler.ts` | 统一错误处理 |
-| `useFileManager` | `hooks/useFileManager.ts` | 文件管理逻辑 |
+| `useFileManager` | `hooks/useFileManager.ts` | 文件管理逻辑（SWR 数据获取 + CRUD） |
 | `useFileSystem` | `hooks/useFileSystem.ts` | 文件系统接口 |
 | `useHistory` | `hooks/useHistory.ts` | 操作历史（撤销/重做） |
 | `useLocalStorage` | `hooks/useLocalStorage.ts` | localStorage 封装 |
 | `useMarkdownInteraction` | `hooks/useMarkdownInteraction.ts` | Markdown 文本直接操作（属性/内容/标题/卡片移动） |
-| `useScoring` | `hooks/useScoring.ts` | 评分系统 |
 | `useVisitHistory` | `hooks/useVisitHistory.ts` | 访问历史 |
-| 子目录 `hooks/editor/` | — | 编辑器专用 Hooks |
+| `hooks/editor/`（3 个） | `useEditorDragDrop` / `useEditorIO` / `useEditorScroll` | 编辑器专用 Hooks |
 
 ---
 
 ## 八、工具库 (Lib)
 
+### 核心工具（22 个文件）
+
 | 文件 | 功能 |
 |------|------|
 | `lib/chdParser.ts` | CHD 文档结构解析器（L0 Frontmatter / L1 Section / L2 Card） |
 | `lib/attributeParser.ts` | 属性解析器 `{key="val"}` → `{cleanText, props}` |
-| `lib/posts.ts` | 文档读取工具（读取 `posts/` 目录） |
-| `lib/utils.ts` | 通用工具函数（cn() 等） |
+| `lib/posts.ts` | 文档读取工具（读取 `posts/` 目录，MetadataCacheManager） |
+| `lib/utils.ts` | 通用工具函数（cn() 合并类名等） |
 | `lib/themes.ts` | 主题定义（5 种配色方案） |
-| `lib/constants.ts` | 全局常量 |
+| `lib/constants.ts` | 全局常量（文件类型、缓存参数、分页设置） |
 | `lib/logger.ts` | 日志工具 |
-| `lib/health-check.ts` | 健康检查服务 |
-| `lib/cache-manager.ts` | 缓存管理器 |
+| `lib/health-check.ts` | 健康检查 |
+| `lib/cache-manager.ts` | 缓存管理器（Top 500 策略 + 异步扫描） |
 | `lib/cache-manager-optimized.ts` | 优化版缓存管理器 |
 | `lib/icon-manager.ts` | 图标管理器 |
 | `lib/document-icon-mapping.ts` | 文档-图标映射 |
-| `lib/config-manager.ts` | 配置管理器 |
-| `lib/path-manager.ts` | 路径管理器 |
-| `lib/scorer.ts` | 评分器 |
+| `lib/config-manager.ts` | 配置管理器（`config.json` 读写） |
+| `lib/path-manager.ts` | 路径管理器（`path.config.json`） |
 | `lib/shapes.ts` | 卡片形状定义 |
-| `lib/trash-manager.ts` | 回收站管理器 |
-| `lib/validator.ts` | 校验器 |
+| `lib/trash-manager.ts` | 回收站管理器（`.trash` 目录操作） |
+| `lib/validator.ts` | 校验器（文件类型/CHD 结构验证） |
 | `lib/simple-frontmatter.ts` | 简化版 Frontmatter 解析 |
 | `lib/data-collector.ts` | 数据采集器 |
-| `lib/export/` | 导出模块 |
-| `lib/export/HtmlBundler.ts` | HTML 打包器（将 CHD 渲染结果导出为独立 HTML 文件） |
-| `lib/__tests__/` | 工具库测试 |
+| `lib/temp-file-manager.ts` | 临时文件管理器 |
+| `lib/env-hot-loader.ts` | 环境变量热加载（零 I/O 读取 API Key） |
+| `lib/icon-components.ts` | 图标组件 |
+| `lib/icon-map.ts` | 图标映射表 |
+
+### 子模块
+
+```
+lib/export/               # 导出模块（4 个文件）
+├── HtmlBundler.tsx        # HTML 打包器（将 CHD 渲染结果导出为独立 HTML 文件）
+├── CssExtractor.ts        # CSS 提取器
+├── template.ts            # HTML 模板
+└── HtmlBundler.test.tsx   # 打包器测试
+
+lib/icon-system/           # 图标系统（3 个文件）
+├── icon-config.ts         # 图标配置
+├── icon-manager.ts        # 图标管理器
+└── icon-renderer.ts       # 图标渲染器
+
+lib/__tests__/             # 工具库测试（7 个文件）
+├── chdParser.test.ts
+├── posts.test.ts
+├── data-collector.test.ts
+├── env-hot-loader.test.ts
+├── icon-config.test.ts
+├── icon-manager.test.ts
+└── icon-renderer.test.ts
+```
 
 ---
 
 ## 九、核心类型定义 (Types)
 
 ### `types/chd.ts` — CHD 协议类型
+
 ```typescript
-type CardStyle = 'normal' | 'highlight' | 'quote' | 'warning' | 'stat' | 'summary' | 'code'
+type CardStyle = 'normal' | 'highlight' | 'quote' | 'code'
 
 interface CHDSectionProps {
-  layout: string;
-  columns: number;
-  sectionColor: string;
-  titleSpacing: number;
-  showDivider: boolean;
+  layout?: string;
+  color?: string;
+  columns?: number;
+  titleSpacing?: number;
+  showDivider?: boolean;
+  blockIndex?: number;
+  titleAlign?: string;
 }
 
 interface CHDCardProps {
-  cardStyle: CardStyle;
-  cardColor: string;
-  icon: string;
-  badge: string;
-  shape: CardShape;
-  colSpan: number;
-  rowSpan: number;
+  shape?: string;
+  style?: CardStyle;
+  badge?: string;
+  blockIndex?: number;
 }
 
 interface CHDSelectionState {
-  sectionBlockIndex: number;
-  cardBlockIndex: number | null;
-  currentSectionTitle: string;
-  layout: string;
-  color: string;
-  columns: string;
-  titleSpacing: string;
-  showDivider: string;
+  activeSectionProps: CHDSectionProps | null;
+  activeCardProps: CHDCardProps | null;
+  selectedSectionTitle: string;
+  parentSectionIndex: number | null;
+  selectedBlockIndex: number | null;
 }
 ```
 
 ### `types/file-system.ts` — 文件系统类型
+
 ```typescript
-// 包含: ErrorType 枚举, AppError, FileSystemEntry, FileItem,
+// 包含: ErrorType 枚举, AppError, FileSystemEntry, FileItem（含 isPinned/isFavorited/pinOrder）,
 // CacheEntry, MetadataCache, TrashItem, TrashStats,
 // CapacityStats, FileOperationResult, FileSaveResponse,
 // 以及各种请求/响应接口
 ```
 
 ### `types/model-interface.ts` — 模型接口
+
 ```typescript
 // 包含: ScoreDimensions, Issue, ChangeOp,
 // InferenceRequest, ScoreResponse, OptimizeResponse,
@@ -330,45 +387,51 @@ interface CHDSelectionState {
 
 ## 十、关键数据流 (Data Flow)
 
-### 10.1 编辑-预览流
+### 10.1 首页加载流
 
 ```
-用户输入 Markdown
-    ↓ onChange
-CodeMirrorEditor (左侧)
-    ↓ setContent(content)
-EditorPage 状态管理
-    ↓ content prop
-CHDRenderer (右侧实时预览)
-    ├── gray-matter 解析 Frontmatter
-    ├── parseCHDBlocks() 解析结构
-    ├── parseAttributes() 提取属性
-    ├── 自动计算 Smart Columns
-    └── Section → Card 层级渲染
-    ↓ HtmlBundler.bundle()
-独立 HTML 文件导出
+浏览器请求 /
+    ↓ page.tsx (SSR)
+Suspense 边界 (loading.tsx 旋转动画)
+    ↓ (服务端) getAllPosts() → cache-manager.getAll()
+    ↓ 如果缓存为空，异步 scanAndSync() 扫描 posts/ 目录
+    ↓ 返回 initialPosts
+    ↓
+HomeClient (CSR)
+    ├── DocumentList 边栏（SWR 自动轮询更新）
+    ├── AIArea 主区域
+    └── SettingsPanel 抽屉
 ```
 
-### 10.2 保存流
+### 10.2 AI 生成流
 
 ```
-EditorPage
-    ↓ handleSaveToWorkspace()
-FileService.saveFile(slug, content)
-    ├── 写入 posts/{slug}.md
-    ├── 记录训练数据 (API: /api/dataset)
-    └── 更新 lastSavedContent
+用户选择/拖拽文件到 AIInputPanel
+    ↓ file.text() / mammoth.extractRawText({buffer})
+AIArea 展示文件内容预览（前 500 字符）
+    ↓ 点击「开始生成」
+PromptEngine 组装 Prompt（默认/学术模板）
+    ↓ AIService.generate() → POST /api/ai/generate
+    ↓ DeepSeek API 调用（退避重试机制）
+    ↓ 返回 CHD Markdown 文本
+AITempFileList 展示结果
+    ├── 预览 → 新标签页打开 HtmlBundler.bundle(content)
+    ├── 下载 → HtmlBundler 生成 + FileService 保存 + 浏览器下载
+    └── 保存 → FileService.saveFile() → 写入 posts/
 ```
 
-### 10.3 配置流
+### 10.3 缓存策略流
 
 ```
-SettingsPanel / PathSettingsPanel
-    ↓ 用户操作
-ConfigService.updateConfig()
-    ↓ POST /api/config
-    ↓ 更新 config.json
-    ↓ 触发 UI 重渲染
+启动时
+    ↓ cache-manager
+MetadataCache.loadCache() → 读取 .metadata_cache.json
+    ↓
+getAll() O(1) 直接返回内存缓存
+    ↓ (后台异步)
+scanAndSync() → 遍历 posts/ 目录 → 更新缓存
+    ↓
+定期自动保存到 .metadata_cache.json
 ```
 
 ---
@@ -377,8 +440,6 @@ ConfigService.updateConfig()
 
 | 脚本 | 类型 | 功能 |
 |------|------|------|
-| `post-build.js` | Node.js | 构建后处理（静态导出优化） |
-| `verify-static-build.js` | Node.js | 验证静态构建结果 |
 | `setup-port.js` | Node.js | 端口检测与设置 |
 | `batch_eval.ts` | TypeScript | 批量评估脚本 |
 | `classifyDocuments.js` | Node.js | 文档分类器 |
@@ -407,19 +468,20 @@ ConfigService.updateConfig()
 ### 三级刚性结构
 
 ```
-L0: YAML Frontmatter (title, subtitle, tags, category, ...)
+L0: YAML Frontmatter (title, subtitle, tags, version, status, ...)
 L1: ## Section {layout="grid" columns=N section-color="chart-N"}
-L2: ### Card {card-style="normal|highlight|quote" icon="icon-name"}
+L2: ### Card {card-style="normal|highlight|quote|code" icon="icon-name"}
 ```
 
 ### 卡片样式
-- `normal` — 标准卡片（默认）
-- `highlight` — 高亮卡片（核心观点）
-- `quote` — 引用卡片（名言/评价）
+- `normal` — 标准卡片（默认，无特殊背景）
+- `highlight` — 高亮卡片（强调色背景，用于核心观点）
+- `quote` — 引用卡片（斜体+分隔线+淡背景，用于名言/评价）
+- `code` — 代码卡片（深色背景 + 等宽字体，用于代码块/配置）
 
 ### 智能列数规则
 - 1-4 张卡片 → 列数 = 卡片数量
-- 5+ 张卡片 → 强制 3 列
+- 5+ 张卡片 → 强制 3 列（自动换行）
 
 ### 富文本支持
 - 数学公式: `$ LaTeX $` / `$$ LaTeX $$`
@@ -430,37 +492,41 @@ L2: ### Card {card-style="normal|highlight|quote" icon="icon-name"}
 
 ## 十四、依赖清单 (Dependencies)
 
-### 生产依赖 (20+)
-```
-next@14.1.0, react@18, react-dom@18
-@uiw/react-codemirror, @codemirror/lang-markdown
-react-markdown, remark-gfm, remark-math, rehype-katex
-gray-matter, katex, lucide-react
-@radix-ui/react-dialog, @radix-ui/react-label, @radix-ui/react-select, @radix-ui/react-slot
-class-variance-authority, clsx, tailwind-merge, tailwindcss-animate
-express, fs-extra, get-port, multer, swr
-```
+### 生产依赖 (28 个)
+
+| 分类 | 包名 |
+|------|------|
+| 框架 | `next@14.1.0`, `react@18`, `react-dom@18` |
+| 编辑器 | `@uiw/react-codemirror`, `@codemirror/lang-markdown`, `@codemirror/language-data` |
+| Markdown | `react-markdown`, `remark-gfm`, `remark-math`, `remark-breaks`, `rehype-katex` |
+| 解析 | `gray-matter`, `katex` |
+| 图标 | `lucide-react` |
+| UI 组件 | `@radix-ui/react-dialog`, `@radix-ui/react-label`, `@radix-ui/react-select`, `@radix-ui/react-slot` |
+| 样式 | `class-variance-authority`, `clsx`, `tailwind-merge`, `tailwindcss-animate` |
+| 服务端 | `express`, `fs-extra`, `get-port`, `multer`, `swr` |
+| 文件 | `mammoth`（.docx 解析） |
 
 ### 开发依赖 (15+)
-```
-typescript, @types/node, @types/react, @types/react-dom
-jest, ts-jest, @testing-library/react, @testing-library/jest-dom
-electron, electron-builder, concurrently, wait-on
-eslint, eslint-config-next, postcss, autoprefixer, tailwindcss
-cheerio, jsdom, cross-env, ts-node
-```
+
+| 分类 | 包名 |
+|------|------|
+| 语言 | `typescript`, `@types/node`, `@types/react`, `@types/react-dom` |
+| 测试 | `jest`, `ts-jest`, `@testing-library/react`, `@testing-library/jest-dom` |
+| 桌面 | `electron`, `electron-builder`, `concurrently`, `wait-on` |
+| 工具 | `eslint`, `eslint-config-next`, `postcss`, `autoprefixer`, `tailwindcss` |
+| 辅助 | `cheerio`, `jsdom`, `cross-env`, `ts-node` |
 
 ---
 
-## 十五、AI 服务层 (2026-07-08 新增)
+## 十五、AI 服务层
 
 ### AI 组件（4 个）
 
 ```
 src/components/AI/
-├── AIArea.tsx           # AI 主容器：顶部状态栏 + 输入面板 + 结果列表 + 退出弹窗
-├── AIInputPanel.tsx     # 输入面板：文件拖拽/上传（.txt/.md/.docx）/ URL导入
-├── AITempFileList.tsx   # 生成结果列表：多版本并列 + 5个操作按钮 + 文件大小
+├── AIArea.tsx           # AI 转换工作流编排器：模型/模板切换、生成/预览/下载/保存、退出确认
+├── AIInputPanel.tsx     # 输入面板：文件拖拽/上传（.txt/.md/.docx），生成/清除按钮
+├── AITempFileList.tsx   # 生成结果列表：多版本并列 + 预览/下载/保存/删除操作
 └── AISaveDialog.tsx     # 退出确认弹窗（保存/不保存/取消）
 ```
 
@@ -468,18 +534,15 @@ src/components/AI/
 
 ```
 src/services/ai/
-├── PromptEngine.ts      # Prompt 模板引擎（硬编码 Prompt A/B，约400行）
-├── AIService.ts         # AI 服务核心（调用 API、退避重试、错误处理）
-├── TempFileManager.ts   # 临时文件管理器（sessionStorage、自动命名）
-└── /api/ai/generate/route.ts  # DeepSeek V4 API 代理
-
-src/app/api/ai/
-└── generate/route.ts    # POST /api/ai/generate - 调用 DeepSeek API
+├── PromptEngine.ts      # Prompt 模板引擎（默认 Prompt A + 学术 Prompt B）
+├── AIService.ts         # AI 服务核心（DeepSeek API 调用、退避重试、错误处理）
+├── IconAutoFixService.ts# 图标自动修复服务
+└── TempFileManager.ts   # 临时文件管理器（sessionStorage、自动命名）
 ```
 
 ### AI 配置
 
-集成在 `SettingsPanel.tsx` 中作为 `settingsType='ai'` 面板，含：
+集成在 `SettingsPanel.tsx` 中作为 `settingsType='ai'` 面板：
 - DEEPSEEK_API_KEY 状态显示
 - Flash / Pro 模型选择
 - 连接测试按钮
@@ -490,25 +553,27 @@ src/app/api/ai/
 |------|----------|------|
 | `.txt` / `.md` | 原生 `file.text()` | 无 |
 | `.docx` | `mammoth.extractRawText()` 提取纯文本 | `mammoth` |
-| `.pdf` | 暂不支持（推荐转 .docx） | — |
 
 ---
 
 ## 十六、扩展点 (Extension Points)
 
-该架构已实现的功能及未来扩展方向：
-
 | 功能 | 状态 | 位置 |
 |------|------|------|
-| AI 输入页面 | ✅ 已集成到首页右侧 | `HomeClient.tsx` + `AIArea.tsx` |
-| AI 服务层 | ✅ 已实现 | `services/ai/` + `/api/ai/generate` |
-| AI 配置面板 | ✅ 已集成 | `SettingsPanel.tsx` |
-| CHDRenderer | ✅ 已有 Props 扩展 | `markdown` prop 可接受 AI 生成内容 |
-| HtmlBundler | ✅ 已有完整 HTML 导出能力 | `lib/export/` |
-| 类型系统 | ✅ 已扩展 AI 相关类型 | `types/model-interface.ts` |
-| 多格式导出 | 🔜 未来 | PDF / DOCX 导出 |
+| AI 页面集成 | ✅ 已集成到首页右侧（默认打开） | `HomeClient.tsx` + `AIArea.tsx` |
+| AI 服务层 | ✅ 已实现（DeepSeek API） | `services/ai/` + `/api/ai/generate` |
+| AI 配置面板 | ✅ 已集成到设置 | `SettingsPanel.tsx` |
+| CHD 渲染引擎 | ✅ v2.1 协议已稳定 | `components/CHD/` + `lib/chdParser.ts` |
+| HtmlBundler 导出 | ✅ 完整 HTML 导出能力 | `lib/export/` |
+| 缓存系统 | ✅ Top 500 策略 + 异步扫描 | `lib/cache-manager.ts` |
+| 临时文件管理 | ✅ 已实现 | `lib/temp-file-manager.ts` |
+| 图标系统三层架构 | ✅ 已重构 | `lib/icon-system/` |
+| 首屏启动优化 | ✅ SSR + loading.tsx 动画 + 路由预热 | `app/` + `scripts/setup-port.js` |
+| 文件收藏/置顶 | ✅ 已实现 | `DocumentList.tsx` + `types/file-system.ts` |
+| 回收站管理 | ✅ 完整生命周期 | `lib/trash-manager.ts` + API |
+| 多格式导出 | 🔜 未来 | PDF 等 |
 | AI 实时建议 | 🔜 未来 | 编辑器内 AI 辅助 |
 
 ---
 
-> **维护说明**: 当项目结构发生变动（新增/移除文件、目录、API、组件），请同步更新本文件。建议在每次提交前使用 `docs/scripts/validate_root.ps1` 或类似工具校验索引准确性。
+> **维护说明**: 当项目结构发生变动（新增/移除文件、目录、API、组件），请同步更新本文件。

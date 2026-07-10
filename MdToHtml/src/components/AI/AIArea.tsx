@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { mutate } from 'swr';
 import { AIInputPanel } from './AIInputPanel';
 import { AITempFileList } from './AITempFileList';
@@ -10,6 +10,7 @@ import { TempFileManager } from '@/services/ai/TempFileManager';
 import { HtmlBundler } from '@/lib/export/HtmlBundler';
 import { FileService } from '@/services/FileService';
 import { ApiClient } from '@/services/core/ApiClient';
+import { ApiKeyManager } from '@/lib/env-hot-loader';
 import { DEFAULT_THEME } from '@/lib/themes';
 import type { TempFileItem } from '@/services/ai/TempFileManager';
 
@@ -26,8 +27,17 @@ export const AIArea: React.FC<AIAreaProps> = ({ onClose, onOpenSettings }) => {
   const [currentPrompt, setCurrentPrompt] = useState<'default' | 'alternative'>('default');
   const [showExitDialog, setShowExitDialog] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasApiKey, setHasApiKey] = useState<boolean>(!!ApiKeyManager.get());
 
   const promptLabel = currentPrompt === 'default' ? '默认风格' : '学术风格';
+
+  useEffect(() => {
+    // 定期检查 API Key 状态（用户可能在设置面板中修改）
+    const checkKey = () => setHasApiKey(!!ApiKeyManager.get());
+    checkKey();
+    const interval = setInterval(checkKey, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const refreshFiles = useCallback(() => {
     setTempFiles(TempFileManager.listTemps());
@@ -169,6 +179,30 @@ export const AIArea: React.FC<AIAreaProps> = ({ onClose, onOpenSettings }) => {
 
   return (
     <div className="h-full flex flex-col">
+      {/* 🔑 API Key 未配置引导提示条 */}
+      {!hasApiKey && (
+        <div className="shrink-0 mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-lg">🔑</span>
+            <div>
+              <p className="text-sm font-medium text-amber-800">API Key 未配置</p>
+              <p className="text-xs text-amber-600 mt-0.5">请先配置 DeepSeek API Key 后才能使用 AI 转换功能</p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              // 触发父组件打开 AI 设置面板
+              onClose?.();
+              // 延迟触发打开设置事件，等面板关闭后
+              setTimeout(() => window.dispatchEvent(new CustomEvent('open-settings', { detail: { type: 'ai' } })), 300);
+            }}
+            className="shrink-0 px-4 py-1.5 text-xs font-medium bg-amber-500 text-white rounded-md hover:bg-amber-600 transition-colors shadow-sm"
+          >
+            前往设置
+          </button>
+        </div>
+      )}
+
       {/* 顶部状态栏 - 舒展版 */}
       <div className="flex items-center justify-between shrink-0 pb-5 border-b border-border-soft mb-5">
         <div className="flex items-center gap-4">

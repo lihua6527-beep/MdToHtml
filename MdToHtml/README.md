@@ -7,9 +7,11 @@
 此目录包含了基于 Next.js 的渲染引擎源代码。
 
 ### 核心命令
-*   `npm run dev`: 启动本地开发服务器 (Debug模式)。
-*   `npm run build`: 执行静态导出 (生成 `output/`)。
+*   `npm run dev`: 启动本地开发服务器 (Debug 模式)。
+*   `npm run build`: 执行生产构建 (生成 `.next/` 构建产物)。
 *   `npm run lint`: 代码风格检查。
+
+> **运行模式**: 本项目为动态 Web 应用，需要 Node.js 运行时。使用 `npm run dev` 或 `npm run build && npm start` 运行。不再支持纯静态导出模式。
 
 ### 目录指引
 *   `src/components/CHD/`: CHD 协议的核心渲染组件。

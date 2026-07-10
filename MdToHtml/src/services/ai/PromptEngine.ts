@@ -2,9 +2,10 @@
  * PromptEngine — Prompt 模板引擎
  * 
  * 职责：
- * - 提供两组完整的 System Prompt（Prompt A 默认稳定版、Prompt B 备选学术版）
- * - Prompt 文本硬编码在此文件中，不依赖外部文件
- * - 注：图标增强功能已暂缓（2026-07-09），保留代码但不对外暴露
+ * - 从 prompts.json 外部文件加载 Prompt 模板
+ * - 支持热加载（每次调用读取最新文件内容）
+ * - 文件不存在时 fallback 到内嵌的硬编码 Prompt
+ * - 用户修改 prompts.json 后无需重启应用
  * 
  * Prompt A 来源: CHD_System_Prompt_A_默认稳定版_20260707.md
  * Prompt B 来源: CHD_System_Prompt_B_备选学术版_20260707.md
@@ -14,16 +15,71 @@ export class PromptEngine {
   static readonly PROMPT_A = 'default';
   static readonly PROMPT_B = 'alternative';
 
+  private static readonly PROMPTS_PATH = '/prompts.json';
+
+  private static fallbackPrompts: Record<string, { name: string; system: string }> = {
+    default: { name: '默认版', system: PromptEngine.getDefaultFallback() },
+    alternative: { name: '学术版', system: PromptEngine.getAcademicFallback() },
+  };
+
   /**
    * 获取 System Prompt
    * @param variant 'default' | 'alternative'
    */
-  static getSystemPrompt(variant: 'default' | 'alternative'): string {
-    return variant === 'default' ? this.getPromptA() : this.getPromptB();
+  static async getSystemPrompt(variant: 'default' | 'alternative'): Promise<string> {
+    try {
+      const response = await fetch(this.PROMPTS_PATH, {
+        cache: 'no-store', // 禁用缓存，实现热加载
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to load prompts.json: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const prompts = data?.prompts;
+
+      if (prompts?.[variant]?.system) {
+        return prompts[variant].system;
+      }
+
+      // 如果外部文件缺少指定 variant，fallback 到内嵌
+      console.warn(`[PromptEngine] prompts.json 缺少 variant "${variant}"，使用内嵌 fallback`);
+      return this.fallbackPrompts[variant]?.system || this.fallbackPrompts.default.system;
+    } catch (error) {
+      // 加载失败时 fallback 到内嵌硬编码
+      console.warn(`[PromptEngine] 加载 prompts.json 失败: ${error}，使用内嵌 fallback`);
+      return this.fallbackPrompts[variant]?.system || this.fallbackPrompts.default.system;
+    }
   }
 
-  /** Prompt A — 默认稳定版（纯文字，不含图标内容） */
-  private static getPromptA(): string {
+  /**
+   * 获取可用的 Prompt 版本列表
+   */
+  static async getAvailablePrompts(): Promise<{ id: string; name: string; description?: string }[]> {
+    try {
+      const response = await fetch(this.PROMPTS_PATH, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`Failed to load prompts.json: ${response.status}`);
+      const data = await response.json();
+      const prompts = data?.prompts;
+      if (!prompts) throw new Error('prompts.json 缺少 prompts 字段');
+
+      return Object.entries(prompts).map(([id, p]: [string, any]) => ({
+        id,
+        name: p.name || id,
+        description: p.description,
+      }));
+    } catch {
+      // Fallback 到内嵌版本
+      return [
+        { id: 'default', name: '默认版', description: '默认稳定版，适用于通用文档转换' },
+        { id: 'alternative', name: '学术版', description: '学术风格版，适用于论文、研究报告、技术文档等场景' },
+      ];
+    }
+  }
+
+  /** 获取内嵌的默认版 Prompt（fallback 用） */
+  private static getDefaultFallback(): string {
     return `你是一位资深的信息架构师兼 UI 设计师。你的任务是将用户提供的任意文档内容转化为符合 CHD 协议（Card-based Hierarchical Document）v2.1 规范的 Markdown 文档。
 
 ## CHD 协议核心规则
@@ -156,8 +212,8 @@ def hello():
 以下是用户提供的文档内容，请将其转化为 CHD 格式的 Markdown：`;
   }
 
-  /** Prompt B — 备选学术版（纯文字，不含图标内容） */
-  private static getPromptB(): string {
+  /** 获取内嵌的学术版 Prompt（fallback 用） */
+  private static getAcademicFallback(): string {
     return `你是一位资深的信息架构师兼学术文档设计师。你的任务是将用户提供的任意文档内容转化为符合 CHD 协议（Card-based Hierarchical Document）v2.1 规范的 Markdown 文档。
 
 你的输出风格偏向**学术化、结构化、层次清晰**，适合用于论文、研究报告、技术文档等场景。

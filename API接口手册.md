@@ -6,34 +6,34 @@
 
 ## 接口总览
 
-| # | 路径 | 方法 | 类型 | 静态导出兼容 |
-|---|------|------|------|-------------|
-| 1 | `/api/app` | GET | 静态 | ✅ |
-| 2 | `/api/app/chd-protocol` | GET | 静态 | ✅ |
-| 3 | `/api/app/chd-protocol/icons` | GET | 静态 | ✅ |
-| 4 | `/api/clear-export` | POST | 动态 | ❌ (Node.js fs) |
-| 5 | `/api/config` | GET/POST | 动态 | ❌ (文件读写) |
-| 6 | `/api/config/capacity` | GET/POST | 动态 | ❌ (文件读写) |
-| 7 | `/api/dataset` | POST | 动态 | ❌ (文件读写) |
-| 8 | `/api/delete` | POST | 动态 | ❌ (文件删除) |
-| 9 | `/api/export` | POST | 动态 | ❌ (HTML 导出) |
-| 10 | `/api/files` | GET | 静态 | ✅ |
-| 11 | `/api/fs/list` | GET | 动态 | ❌ (fs + request.url) |
-| 12 | `/api/load` | POST | 动态 | ❌ (文件读取) |
-| 13 | `/api/save` | POST | 动态 | ❌ (文件写入) |
-| 14 | `/api/save-export` | POST | 动态 | ❌ (文件写入) |
-| 15 | `/api/save-session` | POST | 动态 | ❌ (文件写入) |
-| 16 | `/api/trash/delete` | POST | 动态 | ❌ (文件删除) |
-| 17 | `/api/trash/empty` | POST | 动态 | ❌ (文件操作) |
-| 18 | `/api/trash/files` | GET | 静态 | ✅ |
-| 19 | `/api/trash/restore` | POST | 动态 | ❌ (文件操作) |
-| 20 | `/api/trash/stats` | GET | 静态 | ✅ |
-| 21 | `/api/upload` | POST | 动态 | ❌ (文件上传) |
-| 22 | `/api/save-temp` | POST | 动态 | ❌ (临时文件写入) |
-| 23 | `/api/load-temp` | POST | 动态 | ❌ (临时文件读取) |
-| 24 | `/api/confirm-save` | POST | 动态 | ❌ (临时文件转正) |
+| # | 路径 | 方法 | 说明 |
+|---|------|------|------|
+| 1 | `/api/app` | GET | 获取应用配置和路径信息 |
+| 2 | `/api/app/chd-protocol` | GET | 获取 CHD 协议文档 |
+| 3 | `/api/app/chd-protocol/icons` | GET | 获取可用图标列表 |
+| 4 | `/api/clear-export` | POST | 清空导出目录 |
+| 5 | `/api/config` | GET/POST | 读写全局配置 |
+| 6 | `/api/config/capacity` | GET/POST | 容量限制管理 |
+| 7 | `/api/dataset` | POST | 批量数据集操作 |
+| 8 | `/api/delete` | POST | 删除文件 |
+| 9 | `/api/export` | POST | Markdown → HTML 导出 |
+| 10 | `/api/files` | GET | 获取文件列表 |
+| 11 | `/api/fs/list` | GET | 文件系统目录列表 |
+| 12 | `/api/load` | POST | 加载文件内容 |
+| 13 | `/api/save` | POST | 保存文件 |
+| 14 | `/api/save-export` | POST | 保存导出文件 |
+| 15 | `/api/save-session` | POST | 保存编辑会话 |
+| 16 | `/api/trash/delete` | POST | 回收站永久删除 |
+| 17 | `/api/trash/empty` | POST | 清空回收站 |
+| 18 | `/api/trash/files` | GET | 回收站文件列表 |
+| 19 | `/api/trash/restore` | POST | 从回收站恢复 |
+| 20 | `/api/trash/stats` | GET | 回收站统计信息 |
+| 21 | `/api/upload` | POST | 上传文件 |
+| 22 | `/api/save-temp` | POST | 保存临时文件 |
+| 23 | `/api/load-temp` | POST | 加载临时文件 |
+| 24 | `/api/confirm-save` | POST | 临时文件转正 |
 
-> **注意**：标记为"动态"的接口在纯静态导出模式下不可用，需在 Next.js 服务端环境下运行。
+> 所有 API 均基于 Next.js Route Handlers，需要 Node.js 服务端环境运行。
 
 ---
 
@@ -228,7 +228,7 @@
 - **方法**: GET
 - **Query**: `?path=C:/Users/despe/Documents`
 - **响应格式**: `{ "files": [...], "directories": [...] }`
-- **⚠️ 注意**: 使用 `request.url`，静态导出模式下不可用
+- **⚠️ 注意**: 使用 `request.url`，仅在 Next.js 服务端环境下可用
 
 ---
 

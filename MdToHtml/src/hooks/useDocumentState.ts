@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useHistory } from './useHistory';
 import { useMarkdownInteraction } from './useMarkdownInteraction';
-import { useScoring } from './useScoring';
 import { useToast } from '@/components/ui/use-toast';
 import { useRouter } from 'next/navigation';
 import { FileService } from '@/services/FileService';
@@ -56,11 +55,6 @@ interface UseDocumentStateReturn {
   deleteCard: (blockIndex: number) => void;
   addCard: (blockIndex: number) => void;
   batchUpdateAttributes: (updates: Array<{blockIndex: number, key: string, value: any}>) => void;
-  
-  // Scoring
-  scoreResult: any;
-  showScoreDetails: boolean;
-  setShowScoreDetails: (show: boolean) => void;
   
   // Navigation
   handleBack: () => void;
@@ -133,11 +127,6 @@ export const useDocumentState = ({
   
   // Parse Frontmatter for Global Settings
   const frontmatter = useRef<any>({});
-  
-  // Real-time Scoring
-  // Combine initial history count with current session operations for immediate feedback
-  const effectiveHistoryCount = historyCount + operationLog.length;
-  const { scoreResult, showScoreDetails, setShowScoreDetails } = useScoring(content, effectiveHistoryCount);
   
   // Parse frontmatter with error handling
   useEffect(() => {
@@ -359,11 +348,6 @@ export const useDocumentState = ({
     deleteCard,
     addCard,
     batchUpdateAttributes,
-    
-    // Scoring
-    scoreResult,
-    showScoreDetails,
-    setShowScoreDetails,
     
     // Navigation
     handleBack
