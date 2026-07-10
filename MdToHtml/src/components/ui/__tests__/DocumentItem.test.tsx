@@ -4,10 +4,14 @@ import DocumentItem from '../DocumentItem';
 
 const mockPost = {
   slug: 'test-document',
-  type: 'project',
   status: 'incomplete',
   mtime: Date.now(),
-  birthtime: Date.now() - 3600000
+  birthtime: Date.now() - 3600000,
+  isFavorited: false,
+  isPinned: false,
+  tags: [],
+  title: '',
+  excerpt: ''
 };
 
 describe('DocumentItem', () => {
@@ -21,45 +25,9 @@ describe('DocumentItem', () => {
     onContextMenu: jest.fn()
   };
   
-  test('renders document item', () => {
+  test('renders document item with slug', () => {
     render(<DocumentItem {...defaultProps} />);
-    
     expect(screen.getByText('test-document')).toBeInTheDocument();
-    expect(screen.getByText('项目')).toBeInTheDocument();
-  });
-  
-  test('renders document type label', () => {
-    render(<DocumentItem {...defaultProps} />);
-    
-    expect(screen.getByText('项目')).toBeInTheDocument();
-  });
-  
-  test('renders status icon for incomplete', () => {
-    render(<DocumentItem {...defaultProps} />);
-    
-    expect(screen.getByTitle('未完成')).toBeInTheDocument();
-  });
-  
-  test('renders status icon for completed', () => {
-    render(
-      <DocumentItem 
-        {...defaultProps} 
-        post={{ ...mockPost, status: 'completed' }}
-      />
-    );
-    
-    expect(screen.getByTitle('已完成')).toBeInTheDocument();
-  });
-  
-  test('renders status icon for modified', () => {
-    render(
-      <DocumentItem 
-        {...defaultProps} 
-        post={{ ...mockPost, status: 'modified' }}
-      />
-    );
-    
-    expect(screen.getByTitle('已修改')).toBeInTheDocument();
   });
   
   test('renders in selection mode', () => {
@@ -127,20 +95,27 @@ describe('DocumentItem', () => {
     expect(onContextMenu).toHaveBeenCalled();
   });
   
-  test('renders different document types', () => {
-    const types = ['project', 'paper', 'knowledge', 'other'];
-    const labels = ['项目', '论文', '知识', '其他'];
+  test('renders favorited and pinned indicators', () => {
+    render(
+      <DocumentItem 
+        {...defaultProps} 
+        post={{ 
+          ...mockPost, 
+          isFavorited: true, 
+          isPinned: true 
+        }}
+      />
+    );
     
-    types.forEach((type, index) => {
-      const { container, unmount } = render(
-        <DocumentItem 
-          {...defaultProps} 
-          post={{ ...mockPost, type }}
-        />
-      );
-      
-      expect(screen.getByText(labels[index])).toBeInTheDocument();
-      unmount();
-    });
+    expect(screen.getByTitle('已收藏')).toBeInTheDocument();
+    expect(screen.getByTitle('已置顶')).toBeInTheDocument();
+  });
+  
+  test('renders date with modified sort', () => {
+    render(<DocumentItem {...defaultProps} />);
+    
+    // Date should be displayed (format depends on locale)
+    const dateElement = screen.getByText(new Date(mockPost.mtime).toLocaleDateString());
+    expect(dateElement).toBeInTheDocument();
   });
 });

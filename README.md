@@ -44,11 +44,6 @@ npm run build
 npm start
 ```
 
-或者使用一键部署脚本：
-```bash
-build_static.bat
-```
-
 构建产物位于 `MdToHtml/.next/` 目录，运行时需要 Node.js 环境。
 
 ---
@@ -63,7 +58,7 @@ MdToHmtl/                          # 项目根目录
 │   │   ├── components/            # React 组件（CHD/AI/Editor/UI）
 │   │   ├── hooks/                 # 自定义 Hooks（12 个）
 │   │   ├── services/              # 服务层（AI/Core/业务）
-│   │   ├── lib/                   # 工具库（导出/图标系统/缓存/校验）
+│   │   ├── lib/                   # 工具库（导出/缓存/解析/校验）
 │   │   └── types/                 # 类型定义
 │   ├── posts/                     # 文档存储
 │   ├── electron/                  # Electron 桌面端支持
@@ -77,11 +72,9 @@ MdToHmtl/                          # 项目根目录
 │   └── 归档/                      # 已归档的旧文档
 ├── plans/                         # 当前开发计划
 ├── PROJECT_SYSTEM_INDEX.md        # 系统架构索引（AI 助手用）
-├── PROJECT_DEEP_UNDERSTANDING_GUIDE.md # 深度理解指南
 ├── API接口手册.md                 # API 接口文档
 ├── CHD协议.md                     # CHD 协议规范
-├── start.bat                      # 一键启动
-└── build_static.bat               # 静态构建
+└── start.bat                      # 一键启动
 ```
 
 ---

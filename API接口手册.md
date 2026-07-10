@@ -10,28 +10,27 @@
 |---|------|------|------|
 | 1 | `/api/app` | GET | 获取应用配置和路径信息 |
 | 2 | `/api/app/chd-protocol` | GET | 获取 CHD 协议文档 |
-| 3 | `/api/app/chd-protocol/icons` | GET | 获取可用图标列表 |
-| 4 | `/api/clear-export` | POST | 清空导出目录 |
-| 5 | `/api/config` | GET/POST | 读写全局配置 |
-| 6 | `/api/config/capacity` | GET/POST | 容量限制管理 |
-| 7 | `/api/dataset` | POST | 批量数据集操作 |
-| 8 | `/api/delete` | POST | 删除文件 |
-| 9 | `/api/export` | POST | Markdown → HTML 导出 |
-| 10 | `/api/files` | GET | 获取文件列表 |
-| 11 | `/api/fs/list` | GET | 文件系统目录列表 |
-| 12 | `/api/load` | POST | 加载文件内容 |
-| 13 | `/api/save` | POST | 保存文件 |
-| 14 | `/api/save-export` | POST | 保存导出文件 |
-| 15 | `/api/save-session` | POST | 保存编辑会话 |
-| 16 | `/api/trash/delete` | POST | 回收站永久删除 |
-| 17 | `/api/trash/empty` | POST | 清空回收站 |
-| 18 | `/api/trash/files` | GET | 回收站文件列表 |
-| 19 | `/api/trash/restore` | POST | 从回收站恢复 |
-| 20 | `/api/trash/stats` | GET | 回收站统计信息 |
-| 21 | `/api/upload` | POST | 上传文件 |
-| 22 | `/api/save-temp` | POST | 保存临时文件 |
-| 23 | `/api/load-temp` | POST | 加载临时文件 |
-| 24 | `/api/confirm-save` | POST | 临时文件转正 |
+| 3 | `/api/clear-export` | POST | 清空导出目录 |
+| 4 | `/api/config` | GET/POST | 读写全局配置 |
+| 5 | `/api/config/capacity` | GET/POST | 容量限制管理 |
+| 6 | `/api/dataset` | POST | 批量数据集操作 |
+| 7 | `/api/delete` | POST | 删除文件 |
+| 8 | `/api/export` | POST | Markdown → HTML 导出 |
+| 9 | `/api/files` | GET | 获取文件列表 |
+| 10 | `/api/fs/list` | GET | 文件系统目录列表 |
+| 11 | `/api/load` | POST | 加载文件内容 |
+| 12 | `/api/save` | POST | 保存文件 |
+| 13 | `/api/save-export` | POST | 保存导出文件 |
+| 14 | `/api/save-session` | POST | 保存编辑会话 |
+| 15 | `/api/trash/delete` | POST | 回收站永久删除 |
+| 16 | `/api/trash/empty` | POST | 清空回收站 |
+| 17 | `/api/trash/files` | GET | 回收站文件列表 |
+| 18 | `/api/trash/restore` | POST | 从回收站恢复 |
+| 19 | `/api/trash/stats` | GET | 回收站统计信息 |
+| 20 | `/api/upload` | POST | 上传文件 |
+| 21 | `/api/save-temp` | POST | 保存临时文件 |
+| 22 | `/api/load-temp` | POST | 加载临时文件 |
+| 23 | `/api/confirm-save` | POST | 临时文件转正 |
 
 > 所有 API 均基于 Next.js Route Handlers，需要 Node.js 服务端环境运行。
 
@@ -74,31 +73,7 @@
 
 ---
 
-## 3. GET /api/app/chd-protocol/icons
-
-获取所有可用图标的列表。
-
-- **方法**: GET
-- **请求参数**: 无（客户端自行过滤分类）
-- **响应格式**:
-```json
-{
-  "total": 135,
-  "categories": ["基础", "文件", "开发", "..."],
-  "icons": [
-    {
-      "name": "zap",
-      "label": "闪电",
-      "category": "基础",
-      "component": "Zap"
-    }
-  ]
-}
-```
-
----
-
-## 4. POST /api/clear-export
+## 3. POST /api/clear-export
 
 清空导出目录（删除生成的 .html 和 .json 文件）。
 
@@ -112,7 +87,7 @@
 
 ---
 
-## 5. GET /api/config — 获取配置<br/>POST /api/config — 更新配置
+## 4. GET /api/config — 获取配置<br/>POST /api/config — 更新配置
 
 读写全局配置文件。
 
@@ -133,7 +108,7 @@
 
 ---
 
-## 6. GET /api/config/capacity — 获取容量限制<br/>POST /api/config/capacity — 更新容量限制
+## 5. GET /api/config/capacity — 获取容量限制<br/>POST /api/config/capacity — 更新容量限制
 
 - **GET 方法**: 无参数
 - **POST 方法**: Body `{ "limit": 104857600 }` (字节)
@@ -144,7 +119,7 @@
 
 ---
 
-## 7. POST /api/dataset
+## 6. POST /api/dataset
 
 批量数据集操作（备份/恢复/迁移）。
 
@@ -160,7 +135,7 @@
 
 ---
 
-## 8. POST /api/delete
+## 7. POST /api/delete
 
 删除文件（及关联的输出文件）。
 
@@ -184,7 +159,7 @@
 
 ---
 
-## 9. POST /api/export
+## 8. POST /api/export
 
 将 Markdown 文件导出为单个 HTML 页面。
 
@@ -201,7 +176,7 @@
 
 ---
 
-## 10. GET /api/files
+## 9. GET /api/files
 
 获取所有 Markdown 文件列表。
 
@@ -221,7 +196,7 @@
 
 ---
 
-## 11. GET /api/fs/list
+## 10. GET /api/fs/list
 
 获取文件系统目录列表（Electron 端使用）。
 
@@ -232,7 +207,7 @@
 
 ---
 
-## 12. POST /api/load
+## 11. POST /api/load
 
 加载单个 Markdown 文件内容。
 
@@ -254,7 +229,7 @@
 
 ---
 
-## 13. POST /api/save
+## 12. POST /api/save
 
 保存 Markdown 文件。
 
@@ -271,7 +246,7 @@
 
 ---
 
-## 14. POST /api/save-export
+## 13. POST /api/save-export
 
 保存导出文件到输出目录。
 
@@ -281,7 +256,7 @@
 
 ---
 
-## 15. POST /api/save-session
+## 14. POST /api/save-session
 
 保存编辑会话（自动保存/草稿恢复）。
 
@@ -291,7 +266,7 @@
 
 ---
 
-## 16. POST /api/trash/delete
+## 15. POST /api/trash/delete
 
 从回收站永久删除文件。
 
@@ -302,7 +277,7 @@
 
 ---
 
-## 17. POST /api/trash/empty
+## 16. POST /api/trash/empty
 
 一键清空回收站。
 
@@ -311,7 +286,7 @@
 
 ---
 
-## 18. GET /api/trash/files
+## 17. GET /api/trash/files
 
 获取回收站文件列表。
 
@@ -330,7 +305,7 @@
 
 ---
 
-## 19. POST /api/trash/restore
+## 18. POST /api/trash/restore
 
 从回收站恢复文件。
 
@@ -340,7 +315,7 @@
 
 ---
 
-## 20. GET /api/trash/stats
+## 19. GET /api/trash/stats
 
 获取回收站统计信息。
 
@@ -349,7 +324,7 @@
 
 ---
 
-## 21. POST /api/upload
+## 20. POST /api/upload
 
 上传 Markdown 文件。
 
@@ -388,7 +363,7 @@ HTTP 状态码通常为 400（参数错误）或 500（服务器错误）。
 
 ---
 
-## 22. POST /api/save-temp
+## 21. POST /api/save-temp
 
 保存内容到临时目录（用于预览）。
 
@@ -417,7 +392,7 @@ HTTP 状态码通常为 400（参数错误）或 500（服务器错误）。
 
 ---
 
-## 23. POST /api/load-temp
+## 22. POST /api/load-temp
 
 根据 fileName 加载临时文件内容。
 
@@ -441,7 +416,7 @@ HTTP 状态码通常为 400（参数错误）或 500（服务器错误）。
 
 ---
 
-## 24. POST /api/confirm-save
+## 23. POST /api/confirm-save
 
 将临时文件"转正"为正式文件（写入 input/ 目录），支持重命名。
 

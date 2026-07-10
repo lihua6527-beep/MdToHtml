@@ -53,9 +53,8 @@ npm --prefix MdToHtml run build
 1. **所有 CLI 命令优先使用 `npm --prefix` 方式**，避免 `cd` 切换目录的兼容问题
 2. **使用 VS Code 终端** 而非系统 CMD 执行命令
 3. **TypeScript 类型检查** 作为 `next build` 的一部分自动执行，无需单独运行 `tsc --noEmit`
-4. **构建脚本** (`build_static.bat`) 中应包含 `chcp 65001 >nul` 确保编码正确
+4. **构建命令** 执行 `npm --prefix MdToHtml run build` 时，确保终端编码正确（VS Code 终端无此问题）；或直接使用 `start.bat`（已包含 `chcp 65001 >nul`）
 
 ## 相关文件
-- `build_static.bat` - 静态站点构建脚本
 - `start.bat` - 开发服务器启动脚本（已包含 `chcp 65001 >nul`）
 - `MdToHtml/package.json` - 项目构建命令定义

@@ -47,7 +47,7 @@ MdToHmtl/                          # 项目根目录
 │   │   │   ├── tag-showcase/      # 标签风格展示页
 │   │   │   └── test/              # 测试验证仪表盘
 │   │   ├── components/            # React 组件
-│   │   │   ├── AI/                # AI 工作流组件（4 个文件）
+│   │   │   ├── AI/                # AI 工作流组件（3 个文件）
 │   │   │   ├── CHD/               # CHD 核心渲染引擎（6 个文件）
 │   │   │   ├── Editor/            # 编辑器组件
 │   │   │   ├── ui/                # 通用 UI 组件（shadcn 风格）
@@ -55,14 +55,13 @@ MdToHmtl/                          # 项目根目录
 │   │   │   └── ...                # 业务组件（12 个）
 │   │   ├── hooks/                 # 自定义 Hooks（12 个文件）
 │   │   │   └── editor/            # 编辑器专用 Hooks（3 个）
-│   │   ├── services/              # 服务层（7 个文件）
-│   │   │   ├── ai/                # AI 服务（AIService, PromptEngine 等）
+│   │   ├── services/              # 服务层（6 个文件）
+│   │   │   ├── ai/                # AI 服务（AIService, PromptEngine, TempFileManager）
 │   │   │   ├── core/              # 核心服务（ApiClient, TransactionManager 等）
 │   │   │   └── ...                # 业务服务（ConfigService, FileService, TrashService）
-│   │   ├── lib/                   # 工具库（22 个文件 + 子模块）
+│   │   ├── lib/                   # 工具库（16 个文件 + 子模块）
 │   │   │   ├── export/            # 导出模块（HtmlBundler, CssExtractor, template）
-│   │   │   ├── icon-system/       # 图标管理系统（icon-config, icon-manager, icon-renderer）
-│   │   │   └── __tests__/         # 工具库测试（7 个文件）
+│   │   │   └── __tests__/         # 工具库测试（4 个文件）
 │   │   ├── types/                 # TypeScript 类型定义（3 个文件）
 │   │   ├── config/                # 配置
 │   │   ├── constants/             # 常量定义
@@ -89,11 +88,9 @@ MdToHmtl/                          # 项目根目录
 ├── plans/                         # 当前/计划中的开发任务（取代旧计划书目录）
 ├── PROJECT_SYSTEM_INDEX.md        # 本文件（系统索引）
 ├── README.md                      # 项目说明
-├── PROJECT_DEEP_UNDERSTANDING_GUIDE.md # 深度理解指南
 ├── API接口手册.md                 # API 接口文档
 ├── 进程通信与状态流转分析.md       # 进程/状态流转文档
 ├── CHD协议.md                     # CHD 协议规范
-├── build_static.bat               # 生产构建与启动脚本
 └── start.bat                      # 启动脚本
 ```
 
@@ -105,7 +102,7 @@ MdToHmtl/                          # 项目根目录
 |------|------|------|----------|
 | `/` | `src/app/page.tsx` | SSR→CSR | **首页**：左侧文档列表 + 右侧 AI 功能区（默认），支持拖拽上传、设置面板 |
 | `/editor` | `src/app/editor/page.tsx` | `'use client'` | **核心编辑器**：左右分栏（左侧 CodeMirror 6 + 右侧 CHD 实时预览 + 底部工具栏） |
-| `/preview` | `src/app/preview/page.tsx` | `'use client'` | 独立预览页（从 localStorage 读取 `chd_md_content`） |
+| `/preview` | `src/app/preview/page.tsx` | `'use client'` | 独立预览页（从 localStorage / API 加载内容），导航栏含 Eye 图标 |
 | `/tag-showcase` | `src/app/tag-showcase/page.tsx` | `'use client'` | 标签风格展示页（5 种风格：Glassmorphism/Tech/Gradient/Outline/3D Pop） |
 | `/test` | `src/app/test/page.tsx` | `'use client'` | 系统验证仪表盘（单元测试 + 压力测试） |
 
@@ -184,18 +181,20 @@ Card.tsx（卡片单元）
 ├── 样式：normal | highlight | quote | code
 ├── 配色：default | chart-1~5
 ├── 内容渲染：react-markdown + rehype-katex + remark-gfm + remark-math
-└── 交互：HTML 文件操作
+├── 形状支持：rect / circle / rounded / floating / arrow（由 shapes.ts 定义）
+└── 交互：编辑模式（标题/内容内联编辑、属性调整、右键删除）
 
-其 他：SectionRenderer.tsx、SimpleRenderer.tsx
+其他：SectionRenderer.tsx、SimpleRenderer.tsx、CardIconTest.tsx
 ```
 
-### 5.3 AI 工作流组件（4 个文件）
+> **说明**：卡片图标系统（`attributes.icon` 用于 `pl-14` padding 布局）已移除渲染层，仅保留布局残影。预览页面的 `Eye` 图标（导航栏标题旁）保留不变。
+
+### 5.3 AI 工作流组件（3 个文件）
 
 | 组件 | 文件 | 功能 |
 |------|------|------|
 | AIArea.tsx | `components/AI/AIArea.tsx` | AI 转换工作流编排器：管理临时文件列表、选中状态、模型切换、提示模板切换、生成/预览/下载/保存、退出确认 |
 | AIInputPanel.tsx | `components/AI/AIInputPanel.tsx` | 文件输入与提交 UI：拖放/点击选择文件（.txt/.md/.docx），生成/切换风格/清除按钮 |
-| AISaveDialog.tsx | `components/AI/AISaveDialog.tsx` | 退出确认弹窗（保存/不保存/取消） |
 | AITempFileList.tsx | `components/AI/AITempFileList.tsx` | 生成结果列表：多版本并列 + 预览/下载/保存/删除操作 |
 
 ### 5.4 通用业务组件
@@ -222,15 +221,16 @@ InitialLoader.tsx        # 客户端初始加载动画
 
 ## 六、服务层 (Services)
 
-### 6.1 AI 服务层（4 个文件）
+### 6.1 AI 服务层（3 个文件）
 
 ```
 services/ai/
 ├── AIService.ts         # AI 服务核心：调用 DeepSeek API、退避重试、错误处理
 ├── PromptEngine.ts      # Prompt 模板引擎（默认/学术双模板）
-├── IconAutoFixService.ts# 图标自动修复服务
 └── TempFileManager.ts   # 临时文件管理器（sessionStorage、自动命名）
 ```
+
+> **注意**：`IconAutoFixService.ts` 已随卡片图标系统移除。
 
 ### 6.2 核心服务（4 个文件）
 
@@ -279,7 +279,7 @@ ApiClient ← TrashService
 
 ## 八、工具库 (Lib)
 
-### 核心工具（22 个文件）
+### 核心工具（16 个文件）
 
 | 文件 | 功能 |
 |------|------|
@@ -292,20 +292,14 @@ ApiClient ← TrashService
 | `lib/logger.ts` | 日志工具 |
 | `lib/health-check.ts` | 健康检查 |
 | `lib/cache-manager.ts` | 缓存管理器（Top 500 策略 + 异步扫描） |
-| `lib/cache-manager-optimized.ts` | 优化版缓存管理器 |
-| `lib/icon-manager.ts` | 图标管理器 |
-| `lib/document-icon-mapping.ts` | 文档-图标映射 |
 | `lib/config-manager.ts` | 配置管理器（`config.json` 读写） |
 | `lib/path-manager.ts` | 路径管理器（`path.config.json`） |
-| `lib/shapes.ts` | 卡片形状定义 |
+| `lib/shapes.ts` | 卡片形状定义（rect / circle / rounded / floating / arrow） |
 | `lib/trash-manager.ts` | 回收站管理器（`.trash` 目录操作） |
 | `lib/validator.ts` | 校验器（文件类型/CHD 结构验证） |
-| `lib/simple-frontmatter.ts` | 简化版 Frontmatter 解析 |
 | `lib/data-collector.ts` | 数据采集器 |
 | `lib/temp-file-manager.ts` | 临时文件管理器 |
 | `lib/env-hot-loader.ts` | 环境变量热加载（零 I/O 读取 API Key） |
-| `lib/icon-components.ts` | 图标组件 |
-| `lib/icon-map.ts` | 图标映射表 |
 
 ### 子模块
 
@@ -316,20 +310,16 @@ lib/export/               # 导出模块（4 个文件）
 ├── template.ts            # HTML 模板
 └── HtmlBundler.test.tsx   # 打包器测试
 
-lib/icon-system/           # 图标系统（3 个文件）
-├── icon-config.ts         # 图标配置
-├── icon-manager.ts        # 图标管理器
-└── icon-renderer.ts       # 图标渲染器
+lib/simple-frontmatter.ts  # 简化版 Frontmatter 解析
 
-lib/__tests__/             # 工具库测试（7 个文件）
+lib/__tests__/             # 工具库测试（4 个文件）
 ├── chdParser.test.ts
 ├── posts.test.ts
 ├── data-collector.test.ts
-├── env-hot-loader.test.ts
-├── icon-config.test.ts
-├── icon-manager.test.ts
-└── icon-renderer.test.ts
+└── env-hot-loader.test.ts
 ```
+
+> **说明**：此前引用的 `lib/icon-system/` 目录（含 icon-config.ts / icon-manager.ts / icon-renderer.ts）及 `lib/icon-manager.ts`、`lib/document-icon-mapping.ts`、`lib/icon-components.ts`、`lib/icon-map.ts`、`lib/cache-manager-optimized.ts` 等文件已在重构中移除，相关图标测试文件亦已同步删除。
 
 ---
 
@@ -470,8 +460,10 @@ scanAndSync() → 遍历 posts/ 目录 → 更新缓存
 ```
 L0: YAML Frontmatter (title, subtitle, tags, version, status, ...)
 L1: ## Section {layout="grid" columns=N section-color="chart-N"}
-L2: ### Card {card-style="normal|highlight|quote|code" icon="icon-name"}
+L2: ### Card {card-style="normal|highlight|quote|code"}
 ```
+
+> **注意**：`icon` 属性已从 CHD 协议 v2.1 卡片层级中移除。卡片不再渲染图标，仅保留 `attributes.icon` 的 `pl-14` 左侧 padding 布局残影以兼容旧文档。
 
 ### 卡片样式
 - `normal` — 标准卡片（默认，无特殊背景）
@@ -488,6 +480,13 @@ L2: ### Card {card-style="normal|highlight|quote|code" icon="icon-name"}
 - 表格: GFM Markdown 表格语法
 - 代码块: Markdown 标准 ``` 语法
 
+### 卡片形状（由 `shapes.ts` 定义）
+- `rect` — 矩形（默认，支持图标 padding 残影）
+- `circle` — 圆形（自适应 aspect-square）
+- `rounded` — 大圆角矩形
+- `floating` — 浮动效果（带 badge 徽章）
+- `arrow` — 箭头形状（左侧箭头）
+
 ---
 
 ## 十四、依赖清单 (Dependencies)
@@ -500,7 +499,7 @@ L2: ### Card {card-style="normal|highlight|quote|code" icon="icon-name"}
 | 编辑器 | `@uiw/react-codemirror`, `@codemirror/lang-markdown`, `@codemirror/language-data` |
 | Markdown | `react-markdown`, `remark-gfm`, `remark-math`, `remark-breaks`, `rehype-katex` |
 | 解析 | `gray-matter`, `katex` |
-| 图标 | `lucide-react` |
+| 图标 | `lucide-react`（仅用于 UI 控件图标，非卡片图标） |
 | UI 组件 | `@radix-ui/react-dialog`, `@radix-ui/react-label`, `@radix-ui/react-select`, `@radix-ui/react-slot` |
 | 样式 | `class-variance-authority`, `clsx`, `tailwind-merge`, `tailwindcss-animate` |
 | 服务端 | `express`, `fs-extra`, `get-port`, `multer`, `swr` |
@@ -520,23 +519,21 @@ L2: ### Card {card-style="normal|highlight|quote|code" icon="icon-name"}
 
 ## 十五、AI 服务层
 
-### AI 组件（4 个）
+### AI 组件（3 个）
 
 ```
 src/components/AI/
 ├── AIArea.tsx           # AI 转换工作流编排器：模型/模板切换、生成/预览/下载/保存、退出确认
 ├── AIInputPanel.tsx     # 输入面板：文件拖拽/上传（.txt/.md/.docx），生成/清除按钮
-├── AITempFileList.tsx   # 生成结果列表：多版本并列 + 预览/下载/保存/删除操作
-└── AISaveDialog.tsx     # 退出确认弹窗（保存/不保存/取消）
+└── AITempFileList.tsx   # 生成结果列表：多版本并列 + 预览/下载/保存/删除操作
 ```
 
-### AI 服务层（4 个）
+### AI 服务层（3 个）
 
 ```
 src/services/ai/
 ├── PromptEngine.ts      # Prompt 模板引擎（默认 Prompt A + 学术 Prompt B）
 ├── AIService.ts         # AI 服务核心（DeepSeek API 调用、退避重试、错误处理）
-├── IconAutoFixService.ts# 图标自动修复服务
 └── TempFileManager.ts   # 临时文件管理器（sessionStorage、自动命名）
 ```
 
@@ -567,7 +564,7 @@ src/services/ai/
 | HtmlBundler 导出 | ✅ 完整 HTML 导出能力 | `lib/export/` |
 | 缓存系统 | ✅ Top 500 策略 + 异步扫描 | `lib/cache-manager.ts` |
 | 临时文件管理 | ✅ 已实现 | `lib/temp-file-manager.ts` |
-| 图标系统三层架构 | ✅ 已重构 | `lib/icon-system/` |
+| 图标系统 | ❌ **已移除** | 卡片图标渲染层已删除，仅保留布局残影；预览页导航栏 Eye 图标保留 |
 | 首屏启动优化 | ✅ SSR + loading.tsx 动画 + 路由预热 | `app/` + `scripts/setup-port.js` |
 | 文件收藏/置顶 | ✅ 已实现 | `DocumentList.tsx` + `types/file-system.ts` |
 | 回收站管理 | ✅ 完整生命周期 | `lib/trash-manager.ts` + API |

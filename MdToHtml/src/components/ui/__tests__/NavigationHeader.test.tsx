@@ -3,15 +3,13 @@ import { render, screen, fireEvent } from '@testing-library/react';
 
 // Mock NavigationHeader component to avoid ES module dependencies
 jest.mock('../NavigationHeader', () => {
-  return function MockNavigationHeader({ decodedSlug, theme, documentType, isEditing, isSaving, showTypeDropdown, setShowTypeDropdown, handleTypeChange, docStatus, isStatusUpdating, handleStatusChange, scoreResult, showScoreDetails, setShowScoreDetails, setIsEditing, saveSuccess, handleSave, content, isExporting, setIsExporting, handleBack, isSavingRef }: any) {
+  return function MockNavigationHeader({ decodedSlug, theme, isEditing, isSaving, docStatus, isStatusUpdating, handleStatusChange, setIsEditing, saveSuccess, handleSave, content, isExporting, setIsExporting, handleBack, isSavingRef }: any) {
     return (
       <div data-testid="navigation-header">
         <h1>{decodedSlug}</h1>
         <div data-testid="theme-indicator">{theme}</div>
-        <div data-testid="document-type" onClick={() => setShowTypeDropdown && setShowTypeDropdown(true)}>{documentType === 'project' ? '项目' : documentType}</div>
         <button title="Go back" data-testid="back-button" onClick={() => handleBack && handleBack()}>Back</button>
-        <div data-testid="score-indicator">{scoreResult.totalScore}分</div>
-        <button data-testid="status-incomplete">未完成</button>
+        <button data-testid="status-incomplete" onClick={() => handleStatusChange && handleStatusChange('incomplete')}>未完成</button>
         <button data-testid="status-completed" onClick={() => handleStatusChange && handleStatusChange('completed')}>已完成</button>
         <button data-testid="export-button">导出 HTML</button>
         {!isEditing && <button data-testid="edit-button" onClick={() => setIsEditing && setIsEditing(true)}>编辑页面</button>}
@@ -84,55 +82,13 @@ global.Blob = class Blob {
   }
 };
 
-const mockScoreResult = {
-  totalScore: 95,
-  dimensions: {
-    structure: 90,
-    atomicity: 100,
-    metadata: 95,
-    syntax: 100,
-    styling: 90
-  },
-  issues: []
-};
-
 describe('NavigationHeader', () => {
-  const defaultProps: {
-    decodedSlug: string;
-    theme: ThemeId;
-    documentType: string;
-    showTypeDropdown: boolean;
-    setShowTypeDropdown: jest.Mock;
-    handleTypeChange: jest.Mock;
-    docStatus: string;
-    isStatusUpdating: boolean;
-    handleStatusChange: jest.Mock;
-    scoreResult: typeof mockScoreResult;
-    showScoreDetails: boolean;
-    setShowScoreDetails: jest.Mock;
-    isEditing: boolean;
-    setIsEditing: jest.Mock;
-    isSaving: boolean;
-    saveSuccess: boolean;
-    handleSave: jest.Mock;
-    content: string;
-    isExporting: boolean;
-    setIsExporting: jest.Mock;
-    handleBack: jest.Mock;
-    isSavingRef: { current: boolean };
-  } = {
+  const defaultProps = {
     decodedSlug: 'test-document',
-    theme: 'ocean',
-    documentType: 'project',
-    showTypeDropdown: false,
-    setShowTypeDropdown: jest.fn(),
-    handleTypeChange: jest.fn(),
+    theme: 'ocean' as ThemeId,
     docStatus: 'incomplete',
     isStatusUpdating: false,
     handleStatusChange: jest.fn(),
-    scoreResult: mockScoreResult,
-    showScoreDetails: false,
-    setShowScoreDetails: jest.fn(),
     isEditing: false,
     setIsEditing: jest.fn(),
     isSaving: false,
@@ -147,73 +103,45 @@ describe('NavigationHeader', () => {
   
   test('renders navigation header', () => {
     render(<NavigationHeader {...defaultProps} />);
-    
     expect(screen.getByText('test-document')).toBeInTheDocument();
-    expect(screen.getByText('项目')).toBeInTheDocument();
   });
   
   test('renders back button', () => {
     render(<NavigationHeader {...defaultProps} />);
-    
     const backButton = screen.getByTitle('Go back');
     expect(backButton).toBeInTheDocument();
   });
   
-  test('renders score indicator', () => {
-    render(<NavigationHeader {...defaultProps} />);
-    
-    expect(screen.getByText('95分')).toBeInTheDocument();
-  });
-  
   test('renders status buttons', () => {
     render(<NavigationHeader {...defaultProps} />);
-    
     expect(screen.getByText('未完成')).toBeInTheDocument();
     expect(screen.getByText('已完成')).toBeInTheDocument();
   });
   
   test('renders export button', () => {
     render(<NavigationHeader {...defaultProps} />);
-    
     expect(screen.getByText('导出 HTML')).toBeInTheDocument();
   });
   
   test('renders edit button when not editing', () => {
     render(<NavigationHeader {...defaultProps} />);
-    
     expect(screen.getByText('编辑页面')).toBeInTheDocument();
   });
   
   test('renders save and cancel buttons when editing', () => {
     render(<NavigationHeader {...defaultProps} isEditing={true} />);
-    
     expect(screen.getByText('取消/预览')).toBeInTheDocument();
     expect(screen.getByText('保存修改')).toBeInTheDocument();
   });
   
   test('renders save success state', () => {
     render(<NavigationHeader {...defaultProps} isEditing={true} saveSuccess={true} />);
-    
     expect(screen.getByText('已保存')).toBeInTheDocument();
   });
   
   test('renders saving state', () => {
     render(<NavigationHeader {...defaultProps} isEditing={true} isSaving={true} />);
-    
     expect(screen.getByText('保存中...')).toBeInTheDocument();
-  });
-  
-  test('handles document type dropdown toggle', () => {
-    const setShowTypeDropdown = jest.fn();
-    render(
-      <NavigationHeader 
-        {...defaultProps} 
-        setShowTypeDropdown={setShowTypeDropdown}
-      />
-    );
-    
-    fireEvent.click(screen.getByText('项目'));
-    expect(setShowTypeDropdown).toHaveBeenCalledWith(true);
   });
   
   test('handles status change', () => {

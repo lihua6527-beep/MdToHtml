@@ -122,8 +122,9 @@ describe('Posts Library', () => {
       const posts = getAllPosts();
       
       expect(posts).toHaveLength(2);
-      expect(posts[0]).toEqual({ slug: 'a', mtime: 1000, birthtime: 1000, status: null, title: '', tags: [], type: '', excerpt: '' });
-      expect(posts[1]).toEqual({ slug: 'b', mtime: 1000, birthtime: 1000, status: null, title: '', tags: [], type: '', excerpt: '' });
+      // Note: type field was removed in 2026-07-09 document classification cleanup
+      expect(posts[0]).toEqual({ slug: 'a', mtime: 1000, birthtime: 1000, status: null, title: '', tags: [], excerpt: '' });
+      expect(posts[1]).toEqual({ slug: 'b', mtime: 1000, birthtime: 1000, status: null, title: '', tags: [], excerpt: '' });
     });
   });
 });
