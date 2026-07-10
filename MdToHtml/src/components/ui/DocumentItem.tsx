@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { AlertCircle, PenTool, CheckCircle2, Clock, CheckSquare, Square } from 'lucide-react';
+import { Clock, CheckSquare, Square } from 'lucide-react';
 import { clsx } from 'clsx';
 import { FileItem } from '@/types/file-system';
 
@@ -29,8 +29,8 @@ const DocumentItem: React.FC<DocumentItemProps> = ({
         key={post.slug}
         onClick={() => onToggleSelection?.(post.slug)}
         className={clsx(
-          "block px-3 py-2 rounded-md transition-colors flex items-center gap-3 cursor-pointer select-none",
-          isSelected ? "bg-primary/10" : "hover:bg-bg-page"
+          "document-item-card px-3 py-2 flex items-center gap-3 cursor-pointer select-none",
+          isSelected ? "bg-primary/15 border-primary/30 shadow-[0_0_0_1px_hsl(var(--primary)/0.3)]" : ""
         )}
       >
         <div className={clsx("shrink-0", isSelected ? "text-primary" : "text-text-secondary")}>
@@ -39,16 +39,6 @@ const DocumentItem: React.FC<DocumentItemProps> = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <div className={clsx("truncate font-medium", isSelected ? "text-primary" : "text-text-primary")}>{post.slug}</div>
-            {/* Status Icons */}
-            {(post.status === 'pending' || post.status === 'incomplete') && (
-              <div title="未完成" className="text-amber-500 shrink-0"><AlertCircle size={14} /></div>
-            )}
-            {post.status === 'modified' && (
-              <div title="已修改" className="text-blue-500 shrink-0"><PenTool size={14} /></div>
-            )}
-            {(post.status === 'done' || post.status === 'completed') && (
-              <div title="已完成" className="text-green-600 shrink-0"><CheckCircle2 size={14} /></div>
-            )}
           </div>
           <div className="flex items-center gap-1 text-[10px] text-text-muted mt-0.5">
             <Clock size={10} />
@@ -65,7 +55,7 @@ const DocumentItem: React.FC<DocumentItemProps> = ({
       draggable={true}
       onDragStart={(e) => onDragStart?.(e, post.slug)}
       onContextMenu={(e) => onContextMenu?.(e, post.slug)}
-      className="px-3 py-3 rounded-md hover:bg-bg-page transition-colors flex items-start gap-3 group relative"
+      className="document-item-card px-3 py-3 flex items-start gap-3 group relative"
     >
       <Link 
         href={`/editor/${post.slug}`}
@@ -73,23 +63,10 @@ const DocumentItem: React.FC<DocumentItemProps> = ({
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between">
-            <div className="truncate font-medium flex-1 pr-6">{post.slug}</div>
-            <div className="flex items-center gap-2 shrink-0">
-              {(post.status === 'pending' || post.status === 'incomplete') && (
-                <div title="未完成" className="text-amber-500 shrink-0 p-1">
-                  <AlertCircle size={16} />
-                </div>
-              )}
-              {post.status === 'modified' && (
-                <div title="已修改" className="text-blue-500 shrink-0 p-1">
-                  <PenTool size={16} />
-                </div>
-              )}
-              {(post.status === 'done' || post.status === 'completed') && (
-                <div title="已完成" className="text-green-600 shrink-0 p-1">
-                  <CheckCircle2 size={16} />
-                </div>
-              )}
+            <div className="truncate font-medium flex-1 pr-2">{post.slug}</div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {post.isFavorited && <span className="text-[11px]" title="已收藏">⭐</span>}
+              {post.isPinned && <span className="text-[11px]" title="已置顶">📌</span>}
             </div>
           </div>
           <div className="text-[12px] text-text-muted mt-1">

@@ -37,8 +37,46 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
   const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number; slug: string | null }>({ visible: false, x: 0, y: 0, slug: null });
   const [sortMethod, setSortMethod] = useLocalStorage<SortMethod>('chd_sort_method', 'import');
   
+  // 收藏 & 置顶状态（localStorage 存储）
+  const [pinnedDocs, setPinnedDocs] = useLocalStorage<Record<string, number>>('chd_pinned_docs', {});
+  const [favoritedDocs, setFavoritedDocs] = useLocalStorage<string[]>('chd_favorited_docs', []);
+
+  const isPinned = useCallback((slug: string) => slug in pinnedDocs, [pinnedDocs]);
+  const isFavorited = useCallback((slug: string) => favoritedDocs.includes(slug), [favoritedDocs]);
+
+  const togglePin = useCallback((slug: string) => {
+    setPinnedDocs(prev => {
+      const next = { ...prev };
+      if (slug in next) {
+        delete next[slug];
+      } else {
+        next[slug] = Date.now(); // 最新置顶的数值最大
+      }
+      return next;
+    });
+  }, [setPinnedDocs]);
+
+  const toggleFavorite = useCallback((slug: string) => {
+    setFavoritedDocs(prev => {
+      if (prev.includes(slug)) {
+        return prev.filter(s => s !== slug);
+      }
+      return [...prev, slug];
+    });
+  }, [setFavoritedDocs]);
+
   // Layout State (Default: true for Wide Mode)
   const [isExpanded, setIsExpanded] = useLocalStorage<boolean>('chd_sidebar_expanded', true);
+  
+  // 将 localStorage 中的状态合并到 posts 中
+  const enrichedPosts = useMemo(() => {
+    return (rawFiles || []).map(p => ({
+      ...p,
+      isPinned: p.slug in pinnedDocs,
+      isFavorited: favoritedDocs.includes(p.slug),
+      pinOrder: pinnedDocs[p.slug] || 0,
+    }));
+  }, [rawFiles, pinnedDocs, favoritedDocs]);
   
   // Batch selection state
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -66,7 +104,7 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
     };
   }, [router, refresh, refreshCapacity]);
 
-  // Client-side sorting with useMemo
+  // Client-side sorting with useMemo — 置顶文档排在最前面，再按原有排序
   const sortedPosts = useMemo(() => {
     try {
         let visitedMap: Record<string, number> = {};
@@ -76,7 +114,15 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
             visitedMap = visitedStr ? JSON.parse(visitedStr) : {};
         }
 
-        return [...(rawFiles || [])].sort((a, b) => {
+        return [...(enrichedPosts || [])].sort((a, b) => {
+            // 置顶文档优先
+            if (a.isPinned && !b.isPinned) return -1;
+            if (!a.isPinned && b.isPinned) return 1;
+            if (a.isPinned && b.isPinned) {
+                // 同为置顶按 pinOrder 降序（最后置顶的排最上面）
+                return (b.pinOrder || 0) - (a.pinOrder || 0);
+            }
+
             if (sortMethod === 'visited') {
                 const timeA = visitedMap[a.slug] || 0;
                 const timeB = visitedMap[b.slug] || 0;
@@ -94,9 +140,9 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
         });
     } catch (e) {
         console.error('Failed to sort posts', e);
-        return rawFiles || [];
+        return enrichedPosts || [];
     }
-  }, [rawFiles, sortMethod]);
+  }, [enrichedPosts, sortMethod]);
 
   useEffect(() => {
     setPosts(sortedPosts);
@@ -357,7 +403,7 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
   }
 
   return (
-    <div className={clsx("flex flex-col h-full bg-bg-card transition-all duration-300 border-r border-border-soft", isExpanded ? "w-[50vw]" : "w-64", className)}>
+    <div className={clsx("flex flex-col h-full bg-transparent transition-all duration-300 border-r border-border-soft", isExpanded ? "w-[50vw]" : "w-64", className)}>
         <CapacityWarningDialog 
             isOpen={warningDialog.isOpen}
             onClose={() => setWarningDialog(prev => ({ ...prev, isOpen: false }))}
@@ -385,7 +431,7 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
         <CapacityProgressBar />
 
         {/* List */}
-        <div className={clsx("flex-1 overflow-y-auto p-2", isExpanded ? "grid grid-cols-2 gap-2 content-start" : "space-y-1")}>
+        <div className={clsx("flex-1 overflow-y-auto p-3", isExpanded ? "grid grid-cols-2 gap-3 content-start" : "space-y-3")}>
            {posts.map((post) => {
              const isSelected = selectedSlugs.has(post.slug);
              
@@ -404,7 +450,7 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
            })}
         </div>
 
-        {/* Context Menu (Single Item) */}
+        {/* Context Menu (Single Item) — 收藏/置顶/删除 */}
         {contextMenu.visible && contextMenu.slug && !isSelectionMode && (
           <div
             className="fixed z-50 w-56 bg-bg-card border border-border-soft rounded-lg shadow-xl p-1 animate-in fade-in zoom-in-95 duration-100"
@@ -417,17 +463,25 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
             </div>
             <button
               className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-bg-page transition-colors text-text-primary flex items-center gap-2"
-              onClick={() => performDelete(contextMenu.slug!, false)}
+              onClick={() => { toggleFavorite(contextMenu.slug!); setContextMenu(prev => ({ ...prev, visible: false })); }}
             >
-              <FileText className="w-4 h-4" />
-              仅删除源文件
+              <span className="w-4 h-4 flex items-center justify-center">{isFavorited(contextMenu.slug!) ? '⭐' : '☆'}</span>
+              {isFavorited(contextMenu.slug!) ? '取消收藏' : '收藏'}
             </button>
             <button
+              className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-bg-page transition-colors text-text-primary flex items-center gap-2"
+              onClick={() => { togglePin(contextMenu.slug!); setContextMenu(prev => ({ ...prev, visible: false })); }}
+            >
+              <span className="w-4 h-4 flex items-center justify-center">{isPinned(contextMenu.slug!) ? '📌' : '📍'}</span>
+              {isPinned(contextMenu.slug!) ? '取消置顶' : '置顶'}
+            </button>
+            <div className="border-t border-border-soft my-1" />
+            <button
               className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-bg-page transition-colors text-red-600 flex items-center gap-2"
-              onClick={() => performDelete(contextMenu.slug!, true)}
+              onClick={() => { setContextMenu(prev => ({ ...prev, visible: false })); performDelete(contextMenu.slug!, true); }}
             >
               <Trash2 className="w-4 h-4" />
-              删除源文件与输出
+              删除
             </button>
           </div>
         )}

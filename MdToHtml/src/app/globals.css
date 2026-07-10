@@ -233,6 +233,19 @@
 }
 
 @layer utilities {
+  /* Document Item Card - 浅灰色卡片分隔 */
+  .document-item-card {
+    background: hsla(var(--bg-page) / 0.65);
+    border: 1px solid hsla(var(--border-soft) / 0.6);
+    border-radius: var(--radius-card);
+    transition: all 0.2s ease;
+  }
+
+  .document-item-card:hover {
+    background: hsla(var(--bg-page) / 0.9);
+    border-color: hsla(var(--border-soft) / 0.9);
+  }
+
   /* Card Shape Utilities */
   .shape-cut {
     clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0% 100%, 0% 20px);

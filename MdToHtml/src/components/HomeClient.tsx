@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { Settings, Upload, FileText, Sparkles, RefreshCw } from 'lucide-react';
 import { mutate } from 'swr';
@@ -81,7 +81,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
   };
 
   return (
-    <div className="flex h-screen bg-bg-page overflow-hidden transition-colors duration-300">
+    <div className="flex h-screen bg-white overflow-hidden transition-colors duration-300">
       {/* Left Sidebar */}
       <DocumentList 
         initialPosts={initialPosts} 

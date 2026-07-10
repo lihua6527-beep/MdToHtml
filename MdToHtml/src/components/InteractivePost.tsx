@@ -60,9 +60,6 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
     deleteCard,
     addCard,
     batchUpdateAttributes,
-    scoreResult,
-    showScoreDetails,
-    setShowScoreDetails,
     handleBack
   } = useDocumentState({
     initialContent,
@@ -150,10 +147,7 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
          docStatus={docStatus}
          isStatusUpdating={isStatusUpdating}
          handleStatusChange={handleStatusChange}
-         scoreResult={scoreResult}
-         showScoreDetails={showScoreDetails}
-         setShowScoreDetails={setShowScoreDetails}
-         isEditing={isEditing}
+          isEditing={isEditing}
          setIsEditing={setIsEditing}
          isSaving={isSaving}
          saveSuccess={saveSuccess}

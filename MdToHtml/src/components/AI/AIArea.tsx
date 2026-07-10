@@ -169,37 +169,32 @@ export const AIArea: React.FC<AIAreaProps> = ({ onClose, onOpenSettings }) => {
 
   return (
     <div className="h-full flex flex-col">
-      {/* 顶部状态栏 */}
-      <div className="flex items-center justify-between shrink-0 pb-3 border-b border-border-soft mb-3">
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full">🤖 AI 转换</span>
-          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full border transition-all" style={{
+      {/* 顶部状态栏 - 舒展版 */}
+      <div className="flex items-center justify-between shrink-0 pb-5 border-b border-border-soft mb-5">
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-semibold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full">🤖 AI 转换</span>
+          <span className="text-sm font-semibold px-3 py-1.5 rounded-full border transition-all" style={{
             backgroundColor: currentPrompt === 'default' ? '#eef2ff' : '#fce7f3',
             borderColor: currentPrompt === 'default' ? '#c7d2fe' : '#f9a8d4',
             color: currentPrompt === 'default' ? '#4338ca' : '#be185d',
           }}>
             {promptLabel}
           </span>
-          <span className="text-xs text-text-muted hidden sm:inline">任意文档 → CHD 格式</span>
+          <span className="text-sm text-text-muted hidden sm:inline">任意文档 → CHD 格式</span>
         </div>
-        <div className="flex items-center gap-2">
-          <select value={currentModel} onChange={(e) => setCurrentModel(e.target.value as any)} className="px-2 py-1 text-[11px] border border-border-soft rounded-md bg-white text-text-primary cursor-pointer">
+        <div className="flex items-center gap-4">
+          <select value={currentModel} onChange={(e) => setCurrentModel(e.target.value as any)} className="px-3 py-1.5 text-sm border border-border-soft rounded-md bg-white text-text-primary cursor-pointer">
             <option value="deepseek-chat">DeepSeek Flash ⚡</option>
             <option value="deepseek-reasoner">DeepSeek Pro 🧠</option>
           </select>
-          <span className="flex items-center gap-1">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full inline-block" />
-            <span className="text-[10px] text-green-600 hidden sm:inline">已连接</span>
-          </span>
-          {onClose && <button onClick={handleExit} className="text-text-muted hover:text-text-primary text-sm px-1" title="关闭">✕</button>}
-          {onClose && <button onClick={onClose} className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-indigo-600 bg-indigo-50 rounded-md hover:bg-indigo-100 transition-colors" title="经典模式 - 拖拽上传 Markdown">📄 经典模式</button>}
+          {onClose && <button onClick={onClose} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-100 rounded-lg hover:bg-indigo-200 hover:shadow-sm transition-all border border-indigo-200" title="经典模式 - 拖拽上传 Markdown">📄 经典模式</button>}
         </div>
       </div>
 
       <div className="shrink-0">
-        <div className="text-xs font-semibold text-text-secondary mb-2 flex items-center gap-1">
+        <div className="text-base font-semibold text-text-secondary mb-4 flex items-center gap-2">
           📝 输入文档
-          <span className="font-normal text-text-muted text-[10px] ml-1">— 拖拽文件 / 选择文件 / URL</span>
+          <span className="font-normal text-text-muted text-sm ml-1">— 拖拽文件 / 选择文件 / URL</span>
         </div>
         <AIInputPanel onSubmit={handleGenerate} onStyleChange={handleStyleChange} isGenerating={isGenerating} />
       </div>

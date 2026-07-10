@@ -20,7 +20,6 @@ export const AIInputPanel: React.FC<AIInputPanelProps> = ({
   const [fileName, setFileName] = useState<string>('');
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [urlInput, setUrlInput] = useState('');
 
   const charCount = fileContent?.length || 0;
 
@@ -118,32 +117,6 @@ export const AIInputPanel: React.FC<AIInputPanelProps> = ({
               className="hidden"
               onChange={handleFileSelect}
             />
-          </div>
-
-          {/* URL 导入（辅助行） */}
-          <div className="flex gap-2">
-            <input
-              type="url"
-              value={urlInput}
-              onChange={(e) => setUrlInput(e.target.value)}
-              placeholder="或输入网页 URL 导入内容..."
-              className="flex-1 px-3 py-2 text-xs border border-border-soft rounded-lg focus:outline-none focus:ring-1 focus:ring-indigo-300 bg-white text-text-primary placeholder:text-text-muted/40"
-              disabled={isGenerating}
-            />
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                if (!urlInput.trim()) return;
-                setFileContent(`[URL 导入内容]\n来源: ${urlInput}\n\n（真实抓取功能将在后续轮次实现）`);
-                setFileName(urlInput.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_') || '网页');
-                setUrlInput('');
-              }}
-              disabled={!urlInput.trim() || isGenerating}
-              className="shrink-0"
-            >
-              导入
-            </Button>
           </div>
         </>
       ) : (

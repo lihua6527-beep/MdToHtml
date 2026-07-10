@@ -1,7 +1,6 @@
 import React from 'react';
 import { ArrowLeft, Edit, Save, Eye, CheckCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import ScoreIndicator from './ScoreIndicator';
 import ExportButton from './ExportButton';
 import { clsx } from 'clsx';
 import { ThemeId } from '@/lib/themes';
@@ -15,11 +14,6 @@ interface NavigationHeaderProps {
   docStatus: string | null;
   isStatusUpdating: boolean;
   handleStatusChange: (newStatus: string) => void;
-  
-  // Scoring
-  scoreResult: any;
-  showScoreDetails: boolean;
-  setShowScoreDetails: (show: boolean) => void;
   
   // Edit state
   isEditing: boolean;
@@ -46,9 +40,6 @@ const NavigationHeader: React.FC<NavigationHeaderProps> = ({
   docStatus,
   isStatusUpdating,
   handleStatusChange,
-  scoreResult,
-  showScoreDetails,
-  setShowScoreDetails,
   isEditing,
   setIsEditing,
   isSaving,
@@ -73,13 +64,6 @@ const NavigationHeader: React.FC<NavigationHeaderProps> = ({
         >
           <ArrowLeft size={20} />
         </Button>
-
-        {/* Score Indicator */}
-        <ScoreIndicator
-          scoreResult={scoreResult}
-          showScoreDetails={showScoreDetails}
-          setShowScoreDetails={setShowScoreDetails}
-        />
 
         {/* Status Toggle Group (Always Visible) */}
         <div className="flex items-center gap-1 mx-4 bg-secondary/10 p-1 rounded-lg border border-border-soft">

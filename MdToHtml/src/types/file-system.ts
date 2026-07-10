@@ -41,6 +41,9 @@ export interface FileItem {
   title?: string; // Extracted title from content
   tags?: string[];
   excerpt?: string;
+  isPinned?: boolean;     // 是否置顶
+  isFavorited?: boolean;  // 是否收藏
+  pinOrder?: number;      // 置顶排序（最后置顶的数值最大）
   [key: string]: any;
 }
 
