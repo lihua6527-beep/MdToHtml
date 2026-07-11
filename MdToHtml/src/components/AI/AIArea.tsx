@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { mutate } from 'swr';
 import { AIInputPanel } from './AIInputPanel';
 import { AITempFileList } from './AITempFileList';
@@ -178,7 +179,7 @@ export const AIArea: React.FC<AIAreaProps> = ({ onClose, onOpenSettings }) => {
   }, [onClose]);
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col px-6 py-5">
       {/* 🔑 API Key 未配置引导提示条 */}
       {!hasApiKey && (
         <div className="shrink-0 mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
@@ -224,7 +225,7 @@ export const AIArea: React.FC<AIAreaProps> = ({ onClose, onOpenSettings }) => {
             <option value="deepseek-chat">DeepSeek Flash ⚡</option>
             <option value="deepseek-reasoner">DeepSeek Pro 🧠</option>
           </select>
-          {onClose && <button onClick={onClose} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-100 rounded-lg hover:bg-indigo-200 hover:shadow-sm transition-all border border-indigo-200" title="拖拽或选择本地 .txt/.md/.docx 文件">📂 导入本地文件</button>}
+          {onClose && <button onClick={onClose} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100 hover:shadow-sm transition-all border border-indigo-200" title="返回首页"><ArrowLeft className="w-3.5 h-3.5" />返回首页</button>}
         </div>
       </div>
 

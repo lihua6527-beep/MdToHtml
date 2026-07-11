@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CHD Document Renderer - 加载中</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: linear-gradient(135deg, #f0f5ff 0%, #e8f0fe 50%, #f5f3ff 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .card {
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    border-radius: 24px;
+    padding: 48px 56px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(79, 110, 247, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+    max-width: 380px;
+    width: 90%;
+  }
+
+  /* Logo 图标容器 */
+  .logo-wrapper {
+    width: 72px;
+    height: 72px;
+    background: linear-gradient(135deg, #4f6ef7, #7c5cfc);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    box-shadow: 0 4px 16px rgba(79, 110, 247, 0.3);
+    position: relative;
+  }
+  .logo-wrapper span {
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: -0.5px;
+  }
+
+  /* 标题 */
+  h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 4px;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: #9ca3af;
+    margin-bottom: 28px;
+  }
+
+  /* 旋转加载动画（独立 SVG，和 layout.tsx 风格一致） */
+  .spinner {
+    margin: 0 auto 24px;
+    width: 40px;
+    height: 40px;
+  }
+  .spinner svg {
+    width: 40px;
+    height: 40px;
+  }
+
+  /* 进度条 */
+  .progress-track {
+    width: 100%;
+    height: 3px;
+    background: #e0e7ff;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #4f6ef7, #7c5cfc);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+  }
+
+  /* 状态文字 */
+  .status {
+    font-size: 13px;
+    color: #6b7280;
+    transition: opacity 0.3s ease;
+  }
+  .status-dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    background: #4f6ef7;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+    animation: pulse-dot 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 0.4; transform: scale(0.8); }
+    50% { opacity: 1; transform: scale(1.2); }
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <!-- Logo -->
+  <div class="logo-wrapper">
+    <span>C</span>
+  </div>
+
+  <!-- 标题 -->
+  <h1>CHD Document Renderer</h1>
+  <p class="subtitle">智能文档渲染引擎</p>
+
+  <!-- 旋转动画（和 layout.tsx 的 #initial-loader 完全一致） -->
+  <div class="spinner">
+    <svg width="40" height="40" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="24" cy="24" r="20" stroke="#d0d7ff" stroke-width="4" fill="none" />
+      <circle cx="24" cy="24" r="20" stroke="#4f6ef7" stroke-width="4" fill="none"
+        stroke-dasharray="125" stroke-dashoffset="0" stroke-linecap="round">
+        <animateTransform attributeName="transform" type="rotate"
+          from="0 24 24" to="360 24 24" dur="0.8s" repeatCount="indefinite" />
+      </circle>
+    </svg>
+  </div>
+
+  <!-- 进度条 -->
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill"></div>
+  </div>
+
+  <!-- 状态文字 -->
+  <div class="status" id="status-text">
+    <span class="status-dot"></span>
+    正在准备文档服务...
+  </div>
+</div>
+
+<script>
+(function() {
+  // ===== 从 URL query string 获取端口 =====
+  var params = new URLSearchParams(location.search);
+  var port = params.get('port') || '3000';
+  var targetUrl = 'http://localhost:' + port + '/';
+  var statusEl = document.getElementById('status-text');
+  var progressEl = document.getElementById('progress-fill');
+
+  // ===== 状态提示文案轮播（纯安慰剂） =====
+  // 每次轮播进度条也会小幅前进，让用户感觉有进展
+  var msgIdx = 0;
+  var statusMessages = [
+    '正在准备文档服务...',
+    '正在扫描可用端口...',
+    '正在加载文档目录',
+    '正在加载整体布局',
+    '正在加载网页格式',
+    '加载编辑器组件...'
+  ];
+  var msgTimer = setInterval(function() {
+    msgIdx = (msgIdx + 1) % statusMessages.length;
+    if (statusEl) {
+      statusEl.innerHTML = '<span class="status-dot"></span>' + statusMessages[msgIdx];
+    }
+    // 进度条缓慢前进（到 80% 停止，留 20% 给就绪瞬间）
+    var current = parseFloat(progressEl.style.width || '0');
+    if (current < 80) {
+      progressEl.style.width = Math.min(current + (Math.random() * 5 + 1), 80) + '%';
+    }
+  }, 1500);
+
+  // ===== 就绪 → 立刻跳转 =====
+  function onReady() {
+    clearInterval(msgTimer);          // 停止文案轮播
+    progressEl.style.width = '100%';  // 进度条同步填满（同帧）
+    window.location.href = targetUrl; // ★ 立刻跳转，不等待任何延迟
+  }
+
+  // ===== 轮询检测 Next.js 服务就绪 =====
+  var MAX_RETRIES = 120;
+  var retryCount = 0;
+
+  function poll() {
+    if (retryCount >= MAX_RETRIES) {
+      onReady();  // 超时也直接就绪
+      return;
+    }
+
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', targetUrl, true);
+    xhr.timeout = 2000;
+
+    xhr.onload = function() { onReady(); };
+    xhr.onerror = function() { retryCount++; setTimeout(poll, 300); };
+    xhr.ontimeout = function() { retryCount++; setTimeout(poll, 300); };
+    xhr.send();
+  }
+
+  // 页面加载完成后开始轮询
+  if (document.readyState === 'complete') {
+    poll();
+  } else {
+    window.addEventListener('load', poll);
+  }
+})();
+</script>
+</body>
+</html>
