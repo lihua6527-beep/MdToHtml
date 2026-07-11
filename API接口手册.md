@@ -1,6 +1,6 @@
 # MdToHtml Pro API 接口手册
 
-> 最后更新于 2026-07-09 | 基于 `MdToHtml/src/app/api` 目录分析
+> 最后更新于 2026-07-11 | 基于 `MdToHtml/src/app/api` 目录分析（无 API 变更，纯前端搜索功能）
 
 ---
 
@@ -438,6 +438,39 @@ HTTP 状态码通常为 400（参数错误）或 500（服务器错误）。
 - **错误响应**: `{ "success": false, "error": "临时文件不存在" }` (400)
 - **用途**: 预览页中点击"保存为正式文档"后调用。将 `temp/` 目录下的临时文件内容写入 `input/` 目录，并删除临时文件。
 - **内部逻辑**: 使用 `MetadataCacheManager.update()` 写入，自动更新缓存和文件列表
+
+---
+
+## 导出模块说明
+
+> 导出模块位于 `lib/export/`，负责将 Markdown 内容导出为独立的 HTML 文件。
+
+### 文件清单
+
+| 文件 | 职责 | 调用关系 |
+|------|------|---------|
+| `HtmlBundler.tsx` | 导出入口。调用 `getCleanCSS` 获取 CSS，调用 `renderToStaticMarkup` 渲染 HTML，注入模板生成 Blob | → `getCleanCSS` / → `CssExtractor`（降级） |
+| `getCleanCSS.ts` | **主路径**。通过隐藏 iframe 创建干净页面上下文，抽取完整的 CSS（避免主题切换导致样式残留） | 浏览器环境，利用 `document.styleSheets` |
+| `CssExtractor.ts` | **降级路径**。直接从当前页面 `document.styleSheets` 抽取 CSS | 仅在 `getCleanCSS` 失败时调用 |
+| `template.ts` | HTML 导出模板（doctype、meta、容器、样式/脚本注入插槽） | 被 `HtmlBundler` 使用 |
+| `HtmlBundler.test.tsx` | 导出模块测试 | |
+
+### HtmlBundler 调用流程
+
+```
+编辑器「导出HTML」按钮 / AI「预览/下载」
+    ↓
+HtmlBundler.bundle(markdown, title, theme)
+    ├── ① renderToStaticMarkup() → HTML 内容字符串
+    ├── ② getCleanCSS(theme) → 从隐藏 iframe 抽取干净 CSS
+    │     └── 失败时降级 → CssExtractor.extract()
+    ├── ③ escapeTemplate() 转义所有用户输入
+    └── ④ 注入 HTML_TEMPLATE → 返回 Blob
+```
+
+### 安全性
+
+所有用户输入（标题、主题名）在注入 HTML 模板前均经过 `escapeTemplate()` 转义，处理 `& < > " ' $ \` 等特殊字符。
 
 ---
 

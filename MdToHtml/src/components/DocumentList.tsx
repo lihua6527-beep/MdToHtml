@@ -23,10 +23,12 @@ import SettingsMenu from '@/components/ui/SettingsMenu';
 interface DocumentListProps {
   initialPosts: FileItem[];
   onOpenSettings?: (type: 'file' | 'render' | 'protocol' | 'ai') => void;
+  onSearch?: () => void;
+  searchQuery?: string;
   className?: string;
 }
 
-const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOpenSettings, className }) => {
+const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOpenSettings, onSearch, searchQuery, className }) => {
   const router = useRouter();
   const { toast } = useToast();
   const { error, isErrorVisible, handleError, clearError } = useErrorHandler();
@@ -426,6 +428,7 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
           onBatchDelete={performBatchDelete}
           onDropToTrash={handleDropToTrash}
           onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
+          onSearch={onSearch}
         />
         
         <CapacityProgressBar />

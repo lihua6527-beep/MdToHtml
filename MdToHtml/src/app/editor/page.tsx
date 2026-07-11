@@ -7,7 +7,7 @@ import { GlobalErrorBoundary } from '@/components/GlobalErrorBoundary';
 import { loadFromStorage } from '@/hooks/useAutoSave';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Button } from '@/components/ui/button';
-import { FileCode, Save, Download, Bold, Italic, List, Link as LinkIcon, Heading1, Heading2, Heading3, Code as CodeIcon, Upload, Home, ExternalLink, Check } from 'lucide-react';
+import { FileCode, Save, Download, FileText, Bold, Italic, List, Link as LinkIcon, Heading1, Heading2, Heading3, Code as CodeIcon, Upload, Home, ExternalLink, Check } from 'lucide-react';
 import Link from 'next/link';
 import { clsx } from 'clsx';
 import { parseCHDBlocks } from '@/lib/chdParser';
@@ -66,6 +66,8 @@ export default function EditorPage() {
   const [isDragging, setIsDragging] = useState(false);
   // Export State
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [isExportingMD, setIsExportingMD] = useState(false);
 
   // Refs
   const editorRef = useRef<CodeMirrorEditorHandle>(null);
@@ -200,9 +202,9 @@ export default function EditorPage() {
     }
   };
 
-  // Export
-  const handleExport = () => {
-    const filename = prompt('请输入下载文件名:', currentFilename || `document-${new Date().toISOString().slice(0, 10)}.md`);
+  // Export Markdown (直接下载文件)
+  const handleExportMarkdown = () => {
+    const filename = prompt('请输入文件名:', currentFilename || `document-${new Date().toISOString().slice(0, 10)}.md`);
     if (!filename) return;
     const finalFilename = filename.endsWith('.md') ? filename : `${filename}.md`;
     const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
@@ -214,6 +216,62 @@ export default function EditorPage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  // Export PDF (通过 iframe + window.print())
+  const handleExportPDF = async () => {
+    const title = currentFilename.replace(/\.md$/i, '') || 'Untitled';
+    setIsExportingPDF(true);
+    
+    try {
+      // 1. 使用 HtmlBundler 生成完整 HTML（与 HTML 导出复用同一管线）
+      const blob = await HtmlBundler.bundle(content, title, theme);
+      const html = await blob.text();
+
+      // 2. 创建隐藏 iframe，只渲染纯文档内容
+      const iframe = document.createElement('iframe');
+      iframe.style.position = 'fixed';
+      iframe.style.top = '-9999px';
+      iframe.style.left = '-9999px';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.title = 'PDF Export Context';
+      document.body.appendChild(iframe);
+
+      // 3. 注入 HTML 内容
+      const iframeDoc = iframe.contentDocument;
+      if (!iframeDoc) {
+        throw new Error('无法创建 iframe 上下文');
+      }
+      
+      iframeDoc.open();
+      iframeDoc.write(html);
+      iframeDoc.close();
+
+      // 4. 等待渲染完成后触发打印
+      // 注意：window.print() 在用户选择"另存为 PDF"前会阻塞
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (e) {
+          console.warn('[handleExportPDF] Print dialog failed:', e);
+        }
+        
+        // 5. 打印对话框关闭后清理 iframe
+        setTimeout(() => {
+          if (iframe.parentNode) {
+            document.body.removeChild(iframe);
+          }
+        }, 1000);
+      }, 500);
+      
+    } catch (err: any) {
+      console.error('[handleExportPDF] Failed:', err);
+      alert('PDF 导出失败：' + (err.message || '未知错误'));
+    } finally {
+      setIsExportingPDF(false);
+    }
   };
 
   // Save to Workspace
@@ -307,63 +365,88 @@ export default function EditorPage() {
           <div className="flex items-center gap-4 text-xs text-text-secondary">
              <ThemeSwitcher />
              <div className="w-px h-4 bg-border-soft" />
-             <Button 
-                variant="ghost" 
-                size="sm" 
-                className="gap-2 text-text-primary hover:bg-primary/10 hover:text-primary"
-                onClick={async () => {
-                    setIsExporting(true);
-                    try {
-                        const title = currentFilename.replace(/\.md$/i, '') || 'Untitled';
-                        const blob = await HtmlBundler.bundle(content, title, theme);
-                        
-                        // Sync to output directory
-                        try {
-                            const htmlContent = await blob.text();
-                            
-                            // Parse frontmatter
-                            const { data: frontmatter } = matter(content);
-                            
-                            await FileService.saveExport({
-                                filename: `${title}.html`,
-                                content: htmlContent,
-                                metadata: {
-                                    id: title,
-                                    title: frontmatter.title || title,
-                                    brief: frontmatter.brief || '',
-                                    date: frontmatter.date ? new Date(frontmatter.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
-                                    tags: frontmatter.tags || [],
-                                    chdVersion: '2.4',
-                                    htmlFile: `${title}.html`
-                                }
-                            });
-                            console.log('Export synced to output directory');
-                        } catch (saveErr) {
-                            console.error('Failed to sync export to output:', saveErr);
-                        }
+             {/* ── 导出功能区 ── */}
+             <div className="flex items-center gap-1" title="导出">
+               <span className="text-[10px] text-text-muted mr-1 hidden sm:inline">导出</span>
+               <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="gap-1.5 text-text-primary hover:bg-primary/10 hover:text-primary h-7"
+                  onClick={handleExportPDF}
+                  disabled={isExportingPDF}
+                  title="导出为 PDF（通过浏览器打印）"
+               >
+                  <FileText className={`w-3.5 h-3.5 ${isExportingPDF ? 'animate-bounce' : ''}`} />
+                  <span className="hidden sm:inline">PDF</span>
+               </Button>
+               <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="gap-1.5 text-text-primary hover:bg-primary/10 hover:text-primary h-7"
+                  onClick={handleExportMarkdown}
+                  title="导出为 Markdown (.md)"
+               >
+                  <FileCode className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">.md</span>
+               </Button>
+               <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="gap-1.5 text-text-primary hover:bg-primary/10 hover:text-primary h-7"
+                  onClick={async () => {
+                      setIsExporting(true);
+                      try {
+                          const title = currentFilename.replace(/\.md$/i, '') || 'Untitled';
+                          const blob = await HtmlBundler.bundle(content, title, theme);
+                          
+                          // Sync to output directory
+                          try {
+                              const htmlContent = await blob.text();
+                              
+                              // Parse frontmatter
+                              const { data: frontmatter } = matter(content);
+                              
+                              await FileService.saveExport({
+                                  filename: `${title}.html`,
+                                  content: htmlContent,
+                                  metadata: {
+                                      id: title,
+                                      title: frontmatter.title || title,
+                                      brief: frontmatter.brief || '',
+                                      date: frontmatter.date ? new Date(frontmatter.date).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10),
+                                      tags: frontmatter.tags || [],
+                                      chdVersion: '2.4',
+                                      htmlFile: `${title}.html`
+                                  }
+                              });
+                              console.log('Export synced to output directory');
+                          } catch (saveErr) {
+                              console.error('Failed to sync export to output:', saveErr);
+                          }
 
-                        const url = URL.createObjectURL(blob);
-                        
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `${title}.html`;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                    } catch (err: any) {
-                        console.error('Export failed:', err);
-                        alert('导出失败：' + (err.message || '未知错误'));
-                    } finally {
-                        setIsExporting(false);
-                    }
-                }}
-                disabled={isExporting}
-                title="导出为静态网页 (HTML)"
-             >
-                <Download className={`w-4 h-4 ${isExporting ? 'animate-bounce' : ''}`} />
-                <span className="hidden sm:inline">{isExporting ? '导出中...' : '导出 HTML'}</span>
-             </Button>
+                          const url = URL.createObjectURL(blob);
+                          
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `${title}.html`;
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                          URL.revokeObjectURL(url);
+                      } catch (err: any) {
+                          console.error('Export failed:', err);
+                          alert('导出失败：' + (err.message || '未知错误'));
+                      } finally {
+                          setIsExporting(false);
+                      }
+                  }}
+                  disabled={isExporting}
+                  title="导出为静态网页 (HTML)"
+               >
+                  <Download className={`w-3.5 h-3.5 ${isExporting ? 'animate-bounce' : ''}`} />
+                  <span className="hidden sm:inline">HTML</span>
+               </Button>
+             </div>
              <div className="w-px h-4 bg-border-soft" />
              <Button 
                 variant="ghost" 

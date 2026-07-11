@@ -7,6 +7,8 @@ import { mutate } from 'swr';
 import { DocumentList } from './DocumentList';
 import { SettingsPanel } from './SettingsPanel';
 import { AIArea } from '@/components/AI/AIArea';
+import SearchPanel from '@/components/SearchPanel';
+import { useSearch } from '@/hooks/useSearch';
 import { FileItem } from '../types/file-system';
 import { QUERY_KEYS } from '@/constants/query-keys';
 
@@ -21,7 +23,10 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsType, setSettingsType] = useState<SettingsType>('file');
-  const [activeMode, setActiveMode] = useState<'welcome' | 'ai'>('ai');
+  const [activeMode, setActiveMode] = useState<'welcome' | 'ai' | 'search'>('ai');
+
+  // 搜索状态
+  const { query, results, search, clearSearch } = useSearch(initialPosts);
 
   // 监听 AIArea 触发的 "打开设置" 自定义事件
   useEffect(() => {
@@ -100,6 +105,8 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
           setSettingsType(type);
           setShowSettings(true);
         }} 
+        onSearch={() => setActiveMode('search')}
+        searchQuery={query}
         className="shrink-0 border-r border-border-soft"
       />
 
@@ -121,7 +128,15 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
         )}
 
         <div className={`mx-auto h-full flex flex-col ${activeMode === 'ai' ? 'max-w-4xl' : 'max-w-5xl'}`}>
-          {activeMode === 'ai' ? (
+          {activeMode === 'search' ? (
+            <SearchPanel
+              query={query}
+              results={results}
+              onSearch={search}
+              onClear={clearSearch}
+              onClose={() => setActiveMode('welcome')}
+            />
+          ) : activeMode === 'ai' ? (
             <AIArea 
               onClose={() => setActiveMode('welcome')}
             />

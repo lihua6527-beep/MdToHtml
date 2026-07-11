@@ -1,6 +1,6 @@
 # MdToHtml Pro — 系统架构完整索引 (System Index)
 
-> **生成日期**: 2026-07-10（基于全面审计更新）
+> **生成日期**: 2026-07-11（新增文档全文搜索功能）
 > **用途**: 为 AI 助手提供完整的项目概览，支持语义化导航与上下文理解。
 > **系统版本**: v1.0.0 | **技术栈**: Next.js 14 + TypeScript + Tailwind CSS + CodeMirror 6
 
@@ -26,7 +26,7 @@ Markdown 文件 (*.md)
 |------|------|----------|
 | 输入层 | ✅ 手动编写 + 拖拽导入 + 文件选择 | Docx/MD/TXT 文件智能导入 |
 | 处理层 | ✅ 本地解析 + 渲染引擎 + AI 生成 | 编辑器内 AI 辅助编辑、实时建议 |
-| 输出层 | ✅ 静态 HTML 导出 + 浏览器原生下载 | 多格式导出（PDF） |
+| 输出层 | ✅ HTML + Markdown 双格式导出 | 网页端结构化阅读（❌ PP/PDF 已验证不兼容） |
 
 ---
 
@@ -50,6 +50,7 @@ MdToHmtl/                          # 项目根目录
 │   │   │   ├── AI/                # AI 工作流组件（3 个文件）
 │   │   │   ├── CHD/               # CHD 核心渲染引擎（6 个文件）
 │   │   │   ├── Editor/            # 编辑器组件
+│   │   │   ├── SearchPanel.tsx     # 🔍 搜索面板（Fuse.js 全文搜索弹窗）
 │   │   │   ├── ui/                # 通用 UI 组件（shadcn 风格）
 │   │   │   ├── settings/          # 设置面板相关
 │   │   │   └── ...                # 业务组件（12 个）
@@ -68,7 +69,7 @@ MdToHmtl/                          # 项目根目录
 │   │   └── data/                  # 数据文件
 │   ├── public/                    # 静态资源
 │   ├── posts/                     # 文档存储目录
-│   ├── scripts/                   # 构建/运维脚本（9 个文件）
+│   ├── scripts/                   # 构建/运维脚本（11 个文件）
 │   ├── tests/                     # 测试文件（Python 集成/单元测试）
 │   │   ├── unit/                  # 单元测试
 │   │   └── integration/           # 集成测试
@@ -304,9 +305,10 @@ ApiClient ← TrashService
 ### 子模块
 
 ```
-lib/export/               # 导出模块（4 个文件）
+lib/export/               # 导出模块（5 个文件）
 ├── HtmlBundler.tsx        # HTML 打包器（将 CHD 渲染结果导出为独立 HTML 文件）
-├── CssExtractor.ts        # CSS 提取器
+├── CssExtractor.ts        # CSS 提取器（降级保留，供 HtmlBundler 回退使用）
+├── getCleanCSS.ts         # 干净上下文 CSS 抽取器（隐藏 iframe 隔离主题残留，主路径）
 ├── template.ts            # HTML 模板
 └── HtmlBundler.test.tsx   # 打包器测试
 
@@ -439,6 +441,7 @@ scanAndSync() → 遍历 posts/ 目录 → 更新缓存
 | `validate_root.ps1` | PowerShell | 根目录验证 |
 | `verify_data_loop.js` | Node.js | 数据循环校验 |
 | `archive_project.py` | Python | 项目归档 |
+| `archive_and_record.bat` | Batch | 归档/收尾/记录 自动化入口（调用 archive_and_record.py） |
 
 ---
 
@@ -568,7 +571,7 @@ src/services/ai/
 | 首屏启动优化 | ✅ SSR + loading.tsx 动画 + 路由预热 | `app/` + `scripts/setup-port.js` |
 | 文件收藏/置顶 | ✅ 已实现 | `DocumentList.tsx` + `types/file-system.ts` |
 | 回收站管理 | ✅ 完整生命周期 | `lib/trash-manager.ts` + API |
-| 多格式导出 | 🔜 未来 | PDF 等 |
+| 多格式导出 | ❌ **已放弃** | PDF/PPT 已验证与 CHD 流式编辑不兼容（2026-07-11 最终决策） |
 | AI 实时建议 | 🔜 未来 | 编辑器内 AI 辅助 |
 
 ---

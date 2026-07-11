@@ -1,5 +1,5 @@
 import React from 'react';
-import { Layout, Minimize2, Maximize2, Trash2, CheckSquare } from 'lucide-react';
+import { Layout, Minimize2, Maximize2, Trash2, CheckSquare, Search } from 'lucide-react';
 import SelectionMode from './SelectionMode';
 
 interface ListHeaderProps {
@@ -14,6 +14,7 @@ interface ListHeaderProps {
   onBatchDelete: (deleteOutput: boolean) => void;
   onDropToTrash: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
+  onSearch?: () => void;
 }
 
 const ListHeader: React.FC<ListHeaderProps> = ({
@@ -27,7 +28,8 @@ const ListHeader: React.FC<ListHeaderProps> = ({
   onSelectAll,
   onBatchDelete,
   onDropToTrash,
-  onDragOver
+  onDragOver,
+  onSearch
 }) => {
   return (
     <div className="h-14 flex items-center justify-between px-4 border-b border-border-soft shrink-0 bg-bg-card z-10">
@@ -47,6 +49,13 @@ const ListHeader: React.FC<ListHeaderProps> = ({
             <span>文档列表</span>
           </div>
           <div className="flex items-center gap-1">
+            <button 
+              onClick={onSearch}
+              className="text-text-secondary hover:text-primary transition-colors p-1 rounded-md hover:bg-bg-page"
+              title="搜索文档"
+            >
+              <Search size={18} />
+            </button>
             <button 
               onClick={onToggleExpanded}
               className="text-text-secondary hover:text-primary transition-colors p-1 rounded-md hover:bg-bg-page"

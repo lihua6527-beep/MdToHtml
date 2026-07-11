@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, FileCode, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { HtmlBundler } from '@/lib/export/HtmlBundler';
@@ -24,16 +24,15 @@ const ExportButton: React.FC<ExportButtonProps> = ({
 }) => {
   const { toast } = useToast();
 
-  const handleExport = async () => {
+  /** 导出 HTML */
+  const handleExportHTML = async () => {
     setIsExporting(true);
     try {
       const title = decodedSlug || 'Untitled';
       const blob = await HtmlBundler.bundle(content, title, theme);
-      
-      // Parse metadata from markdown
+
       const meta = parseFrontmatter(content);
 
-      // Sync to output directory
       try {
         const htmlContent = await blob.text();
         const success = await FileService.saveExport({
@@ -51,7 +50,7 @@ const ExportButton: React.FC<ExportButtonProps> = ({
             ...meta
           }
         });
-        
+
         if (success) {
           console.log('Export synced to output directory');
           toast({
@@ -72,14 +71,13 @@ const ExportButton: React.FC<ExportButtonProps> = ({
       }
 
       const url = URL.createObjectURL(blob);
-      
       const a = document.createElement('a');
-          a.href = url;
-          a.download = `${title}.html`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          URL.revokeObjectURL(url);
+      a.href = url;
+      a.download = `${title}.html`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     } catch (err: any) {
       console.error('Export failed:', err);
       toast({
@@ -92,18 +90,46 @@ const ExportButton: React.FC<ExportButtonProps> = ({
     }
   };
 
+  /** 导出为 Markdown（直接下载 .md 文件） */
+  const handleExportMarkdown = () => {
+    const filename = prompt('请输入文件名:', `${decodedSlug || 'document'}.md`);
+    if (!filename) return;
+    const finalName = filename.endsWith('.md') ? filename : `${filename}.md`;
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = finalName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <Button 
-      variant="outline" 
-      size="sm"
-      className="gap-2 text-text-secondary hover:text-primary mr-2"
-      onClick={handleExport}
-      disabled={isExporting}
-      title="导出为静态网页 (HTML)"
-    >
-      <Download className={`w-4 h-4 ${isExporting ? 'animate-bounce' : ''}`} />
-      <span className="hidden sm:inline">{isExporting ? '导出中...' : '导出 HTML'}</span>
-    </Button>
+    <div className="flex items-center gap-1">
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-1.5 text-text-secondary hover:text-primary h-8 px-2"
+        onClick={handleExportMarkdown}
+        title="导出为 Markdown (.md)"
+      >
+        <FileCode className="w-3.5 h-3.5" />
+        <span className="hidden sm:inline text-xs">.md</span>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-1.5 text-text-secondary hover:text-primary h-8 px-2"
+        onClick={handleExportHTML}
+        disabled={isExporting}
+        title="导出为静态网页 (HTML)"
+      >
+        <Download className={`w-3.5 h-3.5 ${isExporting ? 'animate-bounce' : ''}`} />
+        <span className="hidden sm:inline text-xs">HTML</span>
+      </Button>
+    </div>
   );
 };
 

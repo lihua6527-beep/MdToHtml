@@ -80,6 +80,92 @@ export const HTML_TEMPLATE = `<!DOCTYPE html>
 
         /* Extracted CSS */
         {{CSS}}
+
+        /* ========================================
+           PDF/Print 导出样式
+           利用 @media print + window.print() 实现零依赖 PDF
+           ======================================== */
+        @media print {
+            @page {
+                margin: 2cm;
+                size: A4;
+            }
+
+            body {
+                font-size: 12pt;
+                line-height: 1.6;
+                color: #000;
+                background: #fff !important;
+            }
+
+            .chd-export-container {
+                max-width: 100%;
+                padding: 0;
+                margin: 0;
+            }
+
+            nav, button, iframe, .toolbar, .no-print,
+            [class*="debug"], [class*="fixed"], [class*="sticky"] {
+                display: none !important;
+            }
+
+            /* Section 分页控制 */
+            [class*="section"] {
+                page-break-after: auto;
+                margin-bottom: 1.5cm;
+            }
+
+            /* 卡片不跨页 */
+            [class*="card"] {
+                break-inside: avoid;
+                page-break-inside: avoid;
+            }
+
+            /* 代码块 */
+            pre, code {
+                font-size: 9pt;
+                white-space: pre-wrap;
+                word-break: break-all;
+                background: #f5f5f5 !important;
+                border: 1px solid #ddd !important;
+            }
+
+            /* 表格 */
+            table {
+                font-size: 10pt;
+                border-collapse: collapse;
+                width: 100%;
+            }
+            th, td {
+                border: 1px solid #ccc;
+                padding: 6px 10px;
+            }
+
+            /* 链接显示 URL */
+            a[href^="http"]:after {
+                content: " (" attr(href) ")";
+                font-size: 9pt;
+                color: #666;
+                word-break: break-all;
+            }
+
+            /* 图片适配 */
+            img {
+                max-width: 100% !important;
+                page-break-inside: avoid;
+            }
+
+            /* 数学公式 */
+            .katex { font-size: 11pt !important; }
+
+            /* 统一白色背景覆盖 */
+            * {
+                background: #fff !important;
+                color: #000 !important;
+                box-shadow: none !important;
+                text-shadow: none !important;
+            }
+        }
     </style>
     <script>
         // Init Theme

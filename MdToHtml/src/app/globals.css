@@ -283,3 +283,96 @@
     clip-path: polygon(0% 0%, 100% 0%, 100% 75%, 75% 75%, 75% 100%, 50% 75%, 0% 75%);
   }
 }
+
+/* ========================================
+   PDF Export Styles (via @media print)
+   利用浏览器原生 window.print() 实现零依赖 PDF 导出
+   ======================================== */
+@media print {
+  @page {
+    margin: 2cm;
+    size: A4;
+  }
+
+  body {
+    font-size: 12pt;
+    line-height: 1.6;
+    color: #000;
+    background: #fff !important;
+  }
+
+  /* 导出容器 */
+  .chd-export-container {
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+
+  /* 隐藏所有 UI 控件和交互元素 */
+  nav,
+  .toolbar,
+  .no-print,
+  button,
+  iframe,
+  [class*="debug"],
+  [class*="fixed"],
+  [class*="sticky"] {
+    display: none !important;
+  }
+
+  /* CHD Section 分页控制 */
+  .chd-section {
+    page-break-after: auto;
+    margin-bottom: 1.5cm;
+  }
+
+  .chd-section:last-child {
+    page-break-after: avoid;
+  }
+
+  /* 卡片内容不跨页 */
+  .chd-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* 代码块格式优化 */
+  pre, code {
+    font-size: 9pt;
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: #f5f5f5 !important;
+    border: 1px solid #ddd !important;
+  }
+
+  /* 表格样式 */
+  table {
+    font-size: 10pt;
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  th, td {
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+  }
+
+  /* 链接显示完整 URL */
+  a[href^="http"]:after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #666;
+    word-break: break-all;
+  }
+
+  /* 图片适配 */
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  /* 确保数学公式可读 */
+  .katex {
+    font-size: 11pt !important;
+  }
+}
