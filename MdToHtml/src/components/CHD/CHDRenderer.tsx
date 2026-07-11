@@ -3,7 +3,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import matter from 'gray-matter';
 import { Section } from './Section';
-import { parseCHDBlocks } from '@/lib/chdParser';
+import { parseCHDBlocks, parseCHDBlocksWithDiagnostics } from '@/lib/chdParser';
 import { parseAttributes } from '@/lib/attributeParser';
 import { useTheme } from '@/components/ThemeProvider';
 import { Cpu, Zap, TrendingUp, Award, Layers, Box, Globe, Tag } from 'lucide-react';
@@ -74,10 +74,22 @@ export const CHDRenderer: React.FC<CHDRendererProps> = ({
             console.warn('Frontmatter parsing failed', e);
         }
 
-        // 2. Parse Blocks
-        const blocks = parseCHDBlocks(markdown);
+        // 2. Parse Blocks with diagnostics
+        const { blocks, diagnostics } = parseCHDBlocksWithDiagnostics(markdown);
         
-        // 3. Build Sections
+        // 3. Report diagnostics
+        if (diagnostics.errorCount > 0) {
+          console.warn(`[CHDParser] ${diagnostics.errorCount} error(s) in ${diagnostics.parseTime.toFixed(2)}ms (${diagnostics.totalLines} lines):`);
+          diagnostics.errors.forEach(err => {
+            console.warn(`  Line ${err.line}: ${err.message}`);
+          });
+          if (diagnostics.incomplete) {
+            console.warn(`  ⚠️ 解析不完整，结果被截断`);
+            if (onError) onError(`解析不完整：文档中存在 ${diagnostics.errorCount} 个格式错误`);
+          }
+        }
+        
+        // 4. Build Sections
         const result: any[] = [];
         let currentSection: any = null;
         const lines = markdown.split('\n');

@@ -4,7 +4,7 @@
 // =============================================================================
 // Phase 1: 安全兜底防线 (SAFE_MAX_LINES + 空标题守卫 + 内容哈希 ID) ✅
 // Phase 2: DFA 状态机 + 4 种错误恢复策略 ✅
-// Phase 3: 分片增量解析 + diagnostics (TODO)
+// Phase 3: 轻量内容哈希缓存 + diagnostics 集成 ✅
 // =============================================================================
 
 // --- 安全常量 ---
@@ -458,8 +458,48 @@ export function parseCHDBlocksWithDiagnostics(markdown: string): ParseResult {
   return { blocks: state.blocks, diagnostics };
 }
 
+// --- 轻量内容哈希缓存 ---
+
+const cache = new Map<string, ParseResult>();
+
+/**
+ * 生成内容的快速哈希（用于缓存键）
+ * 取首尾各 100 字符 + 总长度的简单拼接
+ */
+function quickHash(content: string): string {
+  if (content.length <= 200) return `${content.length}:${content}`;
+  return `${content.length}:${content.slice(0, 100)}:${content.slice(-100)}`;
+}
+
+/**
+ * 带缓存的解析函数
+ * 相同内容重复调用时跳过解析直接返回上一次结果
+ * 适用于 React useMemo 场景——内容未变时不重解析
+ */
+export function parseCHDBlocksWithCache(markdown: string): ParseResult {
+  const hash = quickHash(markdown);
+  const cached = cache.get(hash);
+  if (cached) {
+    return cached;
+  }
+  const result = parseCHDBlocksWithDiagnostics(markdown);
+  // 限制缓存大小防止内存泄漏
+  if (cache.size > 50) {
+    cache.clear();
+  }
+  cache.set(hash, result);
+  return result;
+}
+
+/**
+ * 清除缓存（用于测试或内容结构发生重大变化时）
+ */
+export function clearParseCache(): void {
+  cache.clear();
+}
+
 // --- 重置解析器状态（用于测试） ---
 
 export function resetParserState(): void {
-  // 状态重置逻辑（目前无持久状态需要重置）
+  clearParseCache();
 }
