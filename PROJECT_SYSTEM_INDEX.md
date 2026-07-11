@@ -1,6 +1,6 @@
 # MdToHtml Pro — 系统架构完整索引 (System Index)
 
-> **生成日期**: 2026-07-11（新增文档全文搜索功能）
+> **生成日期**: 2026-07-11（完成 CHD 解析器 DFA 状态机重构三阶段）
 > **用途**: 为 AI 助手提供完整的项目概览，支持语义化导航与上下文理解。
 > **系统版本**: v1.0.0 | **技术栈**: Next.js 14 + TypeScript + Tailwind CSS + CodeMirror 6
 
@@ -62,7 +62,8 @@ MdToHmtl/                          # 项目根目录
 │   │   │   └── ...                # 业务服务（ConfigService, FileService, TrashService）
 │   │   ├── lib/                   # 工具库（16 个文件 + 子模块）
 │   │   │   ├── export/            # 导出模块（HtmlBundler, CssExtractor, template）
-│   │   │   └── __tests__/         # 工具库测试（4 个文件）
+│   │   │   ├── chdParser.ts       # CHD 协议解析器（DFA 状态机 + 错误恢复 + 缓存）
+│   │   │   └── __tests__/         # 工具库测试（14 个测试用例）
 │   │   ├── types/                 # TypeScript 类型定义（3 个文件）
 │   │   ├── config/                # 配置
 │   │   ├── constants/             # 常量定义
@@ -166,7 +167,8 @@ DocumentList.tsx（文档浏览侧边栏）
 ```
 CHDRenderer.tsx（主渲染引擎）
 ├── 职责：解析 Markdown → 提取 Frontmatter → 切分 Sections → 分配 Cards
-├── 关键函数：parseAttributes(), parseCHDBlocks(), useMemo 解析管线
+├── 关键函数：parseAttributes(), parseCHDBlocksWithCache(), useMemo 解析管线
+├── 诊断输出：解析耗时、错误数、截断标记 → console.warn
 ├── 输入：markdown: string
 ├── 输出：Sections[] → 传递给 Section 组件
 └── 依赖：gray-matter, chdParser, attributeParser, Section, TagRenderer
