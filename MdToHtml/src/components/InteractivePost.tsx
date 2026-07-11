@@ -48,9 +48,6 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
     handleSave,
     isExporting,
     setIsExporting,
-    docStatus,
-    isStatusUpdating,
-    handleStatusChange,
     frontmatter,
     updateAttribute,
     updateContent,
@@ -144,10 +141,7 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
        <NavigationHeader
          decodedSlug={decodedSlug}
          theme={theme}
-         docStatus={docStatus}
-         isStatusUpdating={isStatusUpdating}
-         handleStatusChange={handleStatusChange}
-          isEditing={isEditing}
+         isEditing={isEditing}
          setIsEditing={setIsEditing}
          isSaving={isSaving}
          saveSuccess={saveSuccess}

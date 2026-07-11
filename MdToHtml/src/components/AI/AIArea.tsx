@@ -191,10 +191,8 @@ export const AIArea: React.FC<AIAreaProps> = ({ onClose, onOpenSettings }) => {
           </div>
           <button
             onClick={() => {
-              // 触发父组件打开 AI 设置面板
-              onClose?.();
-              // 延迟触发打开设置事件，等面板关闭后
-              setTimeout(() => window.dispatchEvent(new CustomEvent('open-settings', { detail: { type: 'ai' } })), 300);
+              // 直接触发打开设置事件，不关闭 AI 区域
+              window.dispatchEvent(new CustomEvent('open-settings', { detail: { type: 'ai' } }));
             }}
             className="shrink-0 px-4 py-1.5 text-xs font-medium bg-amber-500 text-white rounded-md hover:bg-amber-600 transition-colors shadow-sm"
           >
@@ -217,11 +215,16 @@ export const AIArea: React.FC<AIAreaProps> = ({ onClose, onOpenSettings }) => {
           <span className="text-sm text-text-muted hidden sm:inline">任意文档 → CHD 格式</span>
         </div>
         <div className="flex items-center gap-4">
+          {/* 连接状态指示（仅检查一次，不轮询） */}
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-bg-card border border-border-soft">
+            <span className={`w-2 h-2 rounded-full ${hasApiKey ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span className="text-[10px] font-medium text-text-secondary">{hasApiKey ? '已连接' : '未连接'}</span>
+          </div>
           <select value={currentModel} onChange={(e) => setCurrentModel(e.target.value as any)} className="px-3 py-1.5 text-sm border border-border-soft rounded-md bg-white text-text-primary cursor-pointer">
             <option value="deepseek-chat">DeepSeek Flash ⚡</option>
             <option value="deepseek-reasoner">DeepSeek Pro 🧠</option>
           </select>
-          {onClose && <button onClick={onClose} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-100 rounded-lg hover:bg-indigo-200 hover:shadow-sm transition-all border border-indigo-200" title="经典模式 - 拖拽上传 Markdown">📄 经典模式</button>}
+          {onClose && <button onClick={onClose} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-100 rounded-lg hover:bg-indigo-200 hover:shadow-sm transition-all border border-indigo-200" title="拖拽或选择本地 .txt/.md/.docx 文件">📂 导入本地文件</button>}
         </div>
       </div>
 

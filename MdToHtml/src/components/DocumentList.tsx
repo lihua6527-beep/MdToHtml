@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { FileText, Trash2, Settings } from 'lucide-react';
+import { Database, FileText, Trash2, Settings, X, Edit2, RotateCcw, AlertTriangle } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useFiles, useCapacity } from '../hooks/useFileSystem';
@@ -16,6 +16,7 @@ import { TrashService } from '@/services/TrashService';
 import { FileService } from '@/services/FileService';
 import { useToast } from '@/components/ui/use-toast';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { Button } from '@/components/ui/button';
 import DocumentItem from '@/components/ui/DocumentItem';
 import ListHeader from '@/components/ui/ListHeader';
 import SettingsMenu from '@/components/ui/SettingsMenu';
@@ -85,6 +86,7 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
   const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
   const capacityLimit = capacityStats?.limit || DEFAULT_CAPACITY;
   const [showRecycleBin, setShowRecycleBin] = useState(false);
+  const [showCapacityPanel, setShowCapacityPanel] = useState(false);
   const [warningDialog, setWarningDialog] = useState<{
     isOpen: boolean;
     message: string;
@@ -429,9 +431,89 @@ const DocumentListComponent: React.FC<DocumentListProps> = ({ initialPosts, onOp
           onDropToTrash={handleDropToTrash}
           onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }}
           onSearch={onSearch}
+          onCapacityClick={() => setShowCapacityPanel(true)}
         />
         
-        <CapacityProgressBar />
+        {/* Capacity Management Panel (Right Side) */}
+        {showCapacityPanel && (
+          <>
+            <div 
+              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-50 transition-opacity"
+              onClick={() => setShowCapacityPanel(false)}
+            />
+            <div className="fixed top-0 right-0 h-full w-96 bg-bg-card border-l border-border-soft shadow-2xl z-50 animate-in slide-in-from-right duration-300 flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b border-border-soft bg-bg-page/50 backdrop-blur">
+                <div className="flex items-center gap-2 text-text-primary font-bold text-lg">
+                  <Database className="w-5 h-5" />
+                  <span>存储容量管理</span>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setShowCapacityPanel(false)}>
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {/* 当前使用状态 */}
+                <div className="bg-bg-page rounded-lg p-4 border border-border-soft">
+                  <div className="text-xs font-semibold text-text-secondary mb-3">当前使用状态</div>
+                  <CapacityProgressBar variant="default" />
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <div className="p-3 bg-bg-card rounded border border-border-soft text-center">
+                      <div className="text-lg font-bold text-text-primary">{capacityStats?.count || 0}</div>
+                      <div className="text-[10px] text-text-muted mt-0.5">已用文档数</div>
+                    </div>
+                    <div className="p-3 bg-bg-card rounded border border-border-soft text-center">
+                      <div className="text-lg font-bold text-text-primary">{capacityStats?.limit || DEFAULT_CAPACITY}</div>
+                      <div className="text-[10px] text-text-muted mt-0.5">容量上限</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 容量设置 */}
+                <div className="bg-bg-page rounded-lg p-4 border border-border-soft">
+                  <label className="text-xs font-semibold text-text-secondary block mb-3">容量上限调整</label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { value: 20, label: '20 (极简)' },
+                      { value: 50, label: '50 (轻量)' },
+                      { value: 100, label: '100 (标准)' },
+                      { value: 200, label: '200 (专业)' },
+                      { value: 300, label: '300 (扩容)' },
+                      { value: 500, label: '500 (极限)' }
+                    ].map(option => (
+                      <button
+                        key={option.value}
+                        onClick={() => updateCapacity(option.value)}
+                        className={clsx(
+                          "px-3 py-1.5 text-xs rounded-md border transition-colors",
+                          (capacityStats?.limit || DEFAULT_CAPACITY) === option.value 
+                            ? "bg-primary text-white border-primary" 
+                            : "bg-bg-card border-border-soft hover:border-primary text-text-primary"
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-text-muted mt-2 flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3" />
+                    当前设置: {capacityStats?.limit || DEFAULT_CAPACITY} 个文档
+                  </p>
+                </div>
+
+                {/* 自动清理策略 */}
+                <div className="bg-bg-page rounded-lg p-4 border border-border-soft">
+                  <label className="text-xs font-semibold text-text-secondary block mb-2">自动清理策略</label>
+                  <p className="text-xs text-text-muted leading-relaxed">
+                    当文档数量达到容量上限时，系统将自动清理最早导入的文档以腾出空间。被清理的文档将移入回收站。
+                  </p>
+                </div>
+              </div>
+              <div className="p-4 border-t border-border-soft bg-bg-page/50 text-center text-xs text-text-muted">
+                容量管理仅在本地生效
+              </div>
+            </div>
+          </>
+        )}
 
         {/* List */}
         <div className={clsx("flex-1 overflow-y-auto p-3", isExpanded ? "grid grid-cols-2 gap-3 content-start" : "space-y-3")}>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Edit, Save, Eye, CheckCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, Edit, Save, Eye, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ExportButton from './ExportButton';
 import { clsx } from 'clsx';
@@ -9,11 +9,6 @@ interface NavigationHeaderProps {
   // Document info
   decodedSlug: string;
   theme: ThemeId;
-  
-  // Status
-  docStatus: string | null;
-  isStatusUpdating: boolean;
-  handleStatusChange: (newStatus: string) => void;
   
   // Edit state
   isEditing: boolean;
@@ -37,9 +32,6 @@ interface NavigationHeaderProps {
 const NavigationHeader: React.FC<NavigationHeaderProps> = ({
   decodedSlug,
   theme,
-  docStatus,
-  isStatusUpdating,
-  handleStatusChange,
   isEditing,
   setIsEditing,
   isSaving,
@@ -64,44 +56,6 @@ const NavigationHeader: React.FC<NavigationHeaderProps> = ({
         >
           <ArrowLeft size={20} />
         </Button>
-
-        {/* Status Toggle Group (Always Visible) */}
-        <div className="flex items-center gap-1 mx-4 bg-secondary/10 p-1 rounded-lg border border-border-soft">
-          <button
-            onClick={() => handleStatusChange('incomplete')}
-            disabled={isStatusUpdating}
-            className={clsx(
-              "flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md transition-all",
-              ['pending', 'modified', 'incomplete', ''].includes(docStatus || '')
-                ? "bg-amber-100 text-amber-700 shadow-sm" 
-                : "text-text-secondary hover:bg-secondary/20",
-              isStatusUpdating && "opacity-70 cursor-wait"
-            )}
-            title="文档需要修改"
-          >
-            {isStatusUpdating && ['pending', 'modified', 'incomplete', ''].includes(docStatus || '') && (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            )}
-            未完成
-          </button>
-          <button
-            onClick={() => handleStatusChange('completed')}
-            disabled={isStatusUpdating}
-            className={clsx(
-              "flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-md transition-all",
-              ['done', 'completed'].includes(docStatus || '')
-                ? "bg-green-100 text-green-700 shadow-sm" 
-                : "text-text-secondary hover:bg-secondary/20",
-              isStatusUpdating && "opacity-70 cursor-wait"
-            )}
-            title="文档已完成并锁定"
-          >
-            {isStatusUpdating && ['done', 'completed'].includes(docStatus || '') && (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            )}
-            已完成
-          </button>
-        </div>
       </div>
       
       <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-3">

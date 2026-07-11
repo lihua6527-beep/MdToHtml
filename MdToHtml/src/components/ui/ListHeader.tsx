@@ -1,5 +1,6 @@
 import React from 'react';
-import { Layout, Minimize2, Maximize2, Trash2, CheckSquare, Search } from 'lucide-react';
+import { Layout, Minimize2, Maximize2, Trash2, CheckSquare, Search, Database } from 'lucide-react';
+import { clsx } from 'clsx';
 import SelectionMode from './SelectionMode';
 
 interface ListHeaderProps {
@@ -15,6 +16,7 @@ interface ListHeaderProps {
   onDropToTrash: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
   onSearch?: () => void;
+  onCapacityClick?: () => void;
 }
 
 const ListHeader: React.FC<ListHeaderProps> = ({
@@ -29,7 +31,8 @@ const ListHeader: React.FC<ListHeaderProps> = ({
   onBatchDelete,
   onDropToTrash,
   onDragOver,
-  onSearch
+  onSearch,
+  onCapacityClick
 }) => {
   return (
     <div className="h-14 flex items-center justify-between px-4 border-b border-border-soft shrink-0 bg-bg-card z-10">
@@ -45,10 +48,19 @@ const ListHeader: React.FC<ListHeaderProps> = ({
       ) : (
         <>
           <div className="flex items-center gap-2 font-bold text-text-primary">
-            <Layout className="w-5 h-5 text-primary" />
-            <span>文档列表</span>
+            <Layout className="w-5 h-5 text-primary shrink-0" />
+            <span className={clsx("transition-all duration-300 overflow-hidden", isExpanded ? "max-w-[200px] opacity-100" : "max-w-0 opacity-0")}>文档列表</span>
           </div>
           <div className="flex items-center gap-1">
+            {onCapacityClick && (
+              <button 
+                onClick={onCapacityClick}
+                className="text-text-secondary hover:text-primary transition-colors p-1 rounded-md hover:bg-bg-page"
+                title="存储容量管理"
+              >
+                <Database size={18} />
+              </button>
+            )}
             <button 
               onClick={onSearch}
               className="text-text-secondary hover:text-primary transition-colors p-1 rounded-md hover:bg-bg-page"
