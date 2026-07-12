@@ -65,31 +65,18 @@ function getLoadingPageHtml(targetPort) {
 <title>CHD Document Renderer - 加载中</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  body{
-    background:linear-gradient(135deg,#f0f5ff 0%,#e8f0fe 50%,#f5f3ff 100%);
-    min-height:100vh;display:flex;align-items:center;justify-content:center;
-    font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
-    -webkit-font-smoothing:antialiased
-  }
+  body{background:linear-gradient(135deg,#f0f5ff 0%,#e8f0fe 50%,#f5f3ff 100%);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,sans-serif;-webkit-font-smoothing:antialiased}
   .card{
+    position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
     background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
     border:1px solid rgba(255,255,255,0.6);border-radius:24px;
     padding:48px 56px;text-align:center;
     box-shadow:0 8px 32px rgba(79,110,247,0.08),0 2px 8px rgba(0,0,0,0.04);
     max-width:380px;width:90%
   }
-  .logo-wrapper{
-    width:72px;height:72px;
-    background:linear-gradient(135deg,#4f6ef7,#7c5cfc);
-    border-radius:20px;display:flex;align-items:center;justify-content:center;
-    margin:0 auto 20px;box-shadow:0 4px 16px rgba(79,110,247,0.3)
-  }
-  .logo-wrapper span{font-size:28px;font-weight:700;color:#fff;letter-spacing:-0.5px}
-  h1{font-size:20px;font-weight:700;color:#1f2937;margin-bottom:4px}
-  .subtitle{font-size:13px;color:#9ca3af;margin-bottom:28px}
-  .spinner{margin:0 auto 24px;width:40px;height:40px}
-  .spinner svg{width:40px;height:40px}
-  .progress-track{width:100%;height:3px;background:#e0e7ff;border-radius:2px;overflow:hidden;margin-bottom:16px}
+  h1{font-size:20px;font-weight:700;color:#1f2937;margin-bottom:12px}
+  .subtitle{font-size:13px;color:#9ca3af;margin-bottom:24px}
+  .progress-track{width:100%;height:3px;background:#e0e7ff;border-radius:2px;overflow:hidden;margin-bottom:12px}
   .progress-fill{height:100%;width:0%;background:linear-gradient(90deg,#4f6ef7,#7c5cfc);border-radius:2px;transition:width 0.2s ease}
   .status{font-size:13px;color:#6b7280}
   .status-dot{display:inline-block;width:6px;height:6px;background:#4f6ef7;border-radius:50%;margin-right:8px;vertical-align:middle;animation:pulse-dot 1.2s ease-in-out infinite}
@@ -98,18 +85,8 @@ function getLoadingPageHtml(targetPort) {
 </head>
 <body>
 <div class="card">
-  <div class="logo-wrapper"><span>C</span></div>
   <h1>CHD Document Renderer</h1>
   <p class="subtitle">智能文档渲染引擎</p>
-  <div class="spinner">
-    <svg width="40" height="40" viewBox="0 0 48 48">
-      <circle cx="24" cy="24" r="20" stroke="#d0d7ff" stroke-width="4" fill="none"/>
-      <circle cx="24" cy="24" r="20" stroke="#4f6ef7" stroke-width="4" fill="none"
-        stroke-dasharray="125" stroke-dashoffset="0" stroke-linecap="round">
-        <animateTransform attributeName="transform" type="rotate" from="0 24 24" to="360 24 24" dur="0.8s" repeatCount="indefinite"/>
-      </circle>
-    </svg>
-  </div>
   <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
   <div class="status" id="status-text"><span class="status-dot"></span>正在准备文档服务...</div>
 </div>
@@ -126,8 +103,8 @@ function getLoadingPageHtml(targetPort) {
     idx = (idx + 1) % msgs.length;
     if (statusEl) statusEl.innerHTML = '<span class="status-dot"></span>' + msgs[idx];
     var cur = parseFloat(progressEl.style.width || '0');
-    if (cur < 80) progressEl.style.width = Math.min(cur + (Math.random() * 5 + 1), 80) + '%';
-  }, 1500);
+    if (cur < 80) progressEl.style.width = Math.min(cur + (Math.random() * 8 + 2), 80) + '%';
+  }, 750);
 
   // ★ 轮询同源的 /status 端点（http://localhost:PORT+1/status）
   // 由 setup-port.js 通过 stdout 监听 ✓ Compiled 来控制状态

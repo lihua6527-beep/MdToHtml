@@ -12,7 +12,7 @@ import { QUERY_KEYS } from '@/constants/query-keys';
 // ★ 懒加载重型面板组件：避免首屏打包不必要的 JS
 const SettingsPanel = lazy(() => import('./SettingsPanel').then(m => ({ default: m.SettingsPanel })));
 const AIArea = lazy(() => import('@/components/AI/AIArea').then(m => ({ default: m.AIArea })));
-const SearchPanel = lazy(() => import('@/components/SearchPanel').then(m => ({ default: m.SearchPanel })));
+const SearchPanel = lazy(() => import('@/components/SearchPanel'));
 
 function LazyFallback() {
   return (
@@ -171,7 +171,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
               {/* Logo */}
               <div className="mb-6">
                 <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200">
-                  <span className="text-2xl font-bold text-white">C</span>
+                  <span className="text-base font-bold text-white tracking-wider">CHD</span>
                 </div>
               </div>
 
@@ -201,18 +201,18 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
               {/* === 导入本地文件按钮 === */}
               <div
                 onClick={() => fileInputRef.current?.click()}
-                className="group w-full max-w-md py-4 px-8 border-2 border-dashed border-gray-300 hover:border-indigo-400 hover:bg-indigo-50/50 rounded-2xl cursor-pointer transition-all duration-200 active:scale-[0.98]"
+                className="group w-full max-w-md py-5 px-8 border-2 border-dashed border-gray-300 hover:border-indigo-400 hover:bg-indigo-50/50 rounded-2xl cursor-pointer transition-all duration-200 active:scale-[0.98]"
               >
                 <div className="flex items-center justify-center gap-4">
-                  <div className="w-10 h-10 bg-gray-100 group-hover:bg-indigo-100 rounded-xl flex items-center justify-center transition-colors">
-                    <Upload className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors" />
+                  <div className="w-12 h-12 bg-gray-100 group-hover:bg-indigo-100 rounded-xl flex items-center justify-center transition-colors">
+                    <Upload className="w-7 h-7 text-gray-400 group-hover:text-indigo-500 transition-colors" />
                   </div>
                   <div className="text-left">
-                    <p className="text-base font-semibold text-gray-700 group-hover:text-indigo-700 transition-colors">
+                    <p className="text-xl font-bold text-gray-700 group-hover:text-indigo-700 transition-colors">
                       导入本地文件
                     </p>
-                    <p className="text-sm text-gray-400 group-hover:text-indigo-400 transition-colors">
-                      支持拖拽或点击选择 .md / .markdown 文件
+                    <p className="text-sm text-gray-400 group-hover:text-indigo-400 transition-colors mt-0.5">
+                      支持拖拽或点击选择文件
                     </p>
                   </div>
                 </div>

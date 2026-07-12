@@ -209,7 +209,7 @@ function collectStyles(): string {
   return styleTags
     .map(el => {
       // 跳过跨域或特定场景的样式表（如 inline critical CSS）
-      if (el.tagName === 'LINK' && !el.href) return '';
+      if (el.tagName === 'LINK' && !(el as HTMLLinkElement).href) return '';
       return el.outerHTML;
     })
     .filter(Boolean)
