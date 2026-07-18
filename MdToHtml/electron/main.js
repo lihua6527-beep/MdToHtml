@@ -1,5 +1,7 @@
 const { app, BrowserWindow, shell } = require('electron');
 const path = require('path');
+const { fork } = require('child_process');
+const net = require('net');
 
 // Determine mode
 // In dev: process.env.NODE_ENV === 'development'
@@ -8,36 +10,79 @@ const path = require('path');
 const forceServe = process.env.FORCE_SERVE === 'true';
 
 let mainWindow;
-let serverPromise;
-let shouldLoadLocalServer;
-let serverInstance;
+let serverProcess;
+
+/**
+ * Find a free port for the Next.js production server
+ */
+function getFreePort() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.listen(0, '127.0.0.1', () => {
+      const port = server.address().port;
+      server.close(() => resolve(port));
+    });
+    server.on('error', reject);
+  });
+}
 
 async function createWindow() {
-  // Now app is ready, we can check isPackaged
-  shouldLoadLocalServer = app.isPackaged || forceServe;
+  const isPackaged = app.isPackaged || forceServe;
   
   let url;
   
-  if (shouldLoadLocalServer) {
-    // Start server in parallel
-      console.log('[Main] Starting server initialization...');
-      serverPromise = (async () => {
-        try {
-          const { startServer } = require('./server');
-          const { port, server } = await startServer();
-          serverInstance = server;
-          console.log('[Main] Server started on port:', port);
-          return `http://localhost:${port}`;
-        } catch (err) {
-          console.error('[Main] Failed to start server:', err);
-          return null;
-        }
-      })();
+  if (isPackaged) {
+    // === 打包模式：启动 Next.js 生产服务器 ===
+    console.log('[Main] Starting Next.js production server...');
+    
+    try {
+      const nextPort = await getFreePort();
+      const nextServerPath = path.join(__dirname, '..', 'node_modules', 'next', 'dist', 'bin', 'next');
       
-      // Wait for server to start
-      url = await serverPromise;
+      serverProcess = fork(nextServerPath, ['start', '-p', String(nextPort)], {
+        cwd: path.join(__dirname, '..'),
+        stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+        env: { ...process.env, NODE_ENV: 'production' }
+      });
+      
+      // Wait for server to be ready
+      url = await new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          console.log('[Main] Server startup timeout, trying to connect anyway...');
+          resolve(`http://localhost:${nextPort}`);
+        }, 15000);
+        
+        serverProcess.stdout.on('data', (data) => {
+          const msg = data.toString();
+          console.log('[NextServer]', msg.trim());
+          if (msg.includes('Ready') || msg.includes('started') || msg.includes('localhost')) {
+            clearTimeout(timeout);
+            resolve(`http://localhost:${nextPort}`);
+          }
+        });
+        
+        serverProcess.stderr.on('data', (data) => {
+          console.error('[NextServer Error]', data.toString().trim());
+        });
+        
+        serverProcess.on('error', (err) => {
+          clearTimeout(timeout);
+          console.error('[Main] Failed to start Next.js server:', err);
+          resolve(null);
+        });
+        
+        serverProcess.on('exit', (code) => {
+          if (code !== 0 && code !== null) {
+            console.error(`[Main] Next.js server exited with code ${code}`);
+          }
+        });
+      });
+    } catch (err) {
+      console.error('[Main] Failed to start Next.js server:', err);
+      url = null;
+    }
   } else {
-    // Development mode: connect to Next.js dev server
+    // 开发模式：连接 Next.js 开发服务器
     url = 'http://localhost:3000';
   }
 
@@ -68,7 +113,7 @@ async function createWindow() {
   mainWindow.once('ready-to-show', () => {
     console.log('[Main] Window ready to show');
     mainWindow.show();
-    if (shouldLoadLocalServer) {
+    if (isPackaged) {
         // Open DevTools in packaged app for debugging per user request
         mainWindow.webContents.openDevTools();
     }
@@ -128,26 +173,20 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', function () {
-  // Close server if it's running
-  if (serverInstance) {
-    console.log('[Main] Closing server...');
-    serverInstance.close(() => {
-      console.log('[Main] Server closed');
-      if (process.platform !== 'darwin') app.quit();
-    });
-  } else {
-    if (process.platform !== 'darwin') app.quit();
+  // Close Next.js server if it's running
+  if (serverProcess) {
+    console.log('[Main] Killing Next.js server...');
+    serverProcess.kill('SIGTERM');
   }
+  if (process.platform !== 'darwin') app.quit();
 });
 
 // Handle app quit event
 app.on('quit', function () {
-  // Ensure server is closed
-  if (serverInstance) {
-    console.log('[Main] Closing server on quit...');
-    serverInstance.close(() => {
-      console.log('[Main] Server closed on quit');
-    });
+  // Ensure Next.js server is killed
+  if (serverProcess && !serverProcess.killed) {
+    console.log('[Main] Killing Next.js server on quit...');
+    serverProcess.kill('SIGTERM');
   }
 });
 
