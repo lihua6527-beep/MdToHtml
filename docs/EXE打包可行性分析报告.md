@@ -1,7 +1,6 @@
 # EXE 打包可行性分析报告
 
-> 日期：2026-07-18
-> 项目：MdToHtml Pro
+> 日期：2026-07-18 | 项目：MdToHtml Pro | 版本：v2
 
 ---
 
@@ -9,285 +8,246 @@
 
 | 项目 | 状态 |
 |------|------|
-| **整体可行性** | ✅ **完全可行**，已有完整基础设施 |
-| 预估工作周期 | 1-2 天 |
-| 预估产物体积 | 约 150~200 MB（含 Chromium） |
-| 核心风险 | Next.js 构建产物与 Electron 的整合方式需要明确 |
+| **整体可行性** | ✅ **完全可行** |
+| **推荐方案** | **方案 B：Electron 内嵌 Next.js 生产服务器** |
+| **需要修改的文件** | 仅 2-3 个 |
+| **需要修改的前端代码** | **0 行** |
+| **预估产物体积** | ~250-300 MB（含 Chromium + 运行时依赖） |
 
 ---
 
-## 二、技术架构分析
+## 二、项目实际架构（重要）
 
-### 2.1 当前项目架构（简化）
+经过对源码的详细分析，当前项目的架构远比预想的更统一：
 
 ```
-┌─────────────────────────────────────────────┐
-│                 Electron                     │
-│  ┌─────────────────────────────────────┐    │
-│  │         Express API Server           │    │
-│  │  (electron/server.js)               │    │
-│  │  - /api/files                       │    │
-│  │  - /api/load                        │    │
-│  │  - /api/save                        │    │
-│  │  - /api/save-export                 │    │
-│  │  - /api/clear-export                │    │
-│  └─────────────────────────────────────┘    │
-│                                              │
-│  ┌─────────────────────────────────────┐    │
-│  │      Next.js 前端 (React 18)         │    │
-│  │  - 代码编辑器 (CodeMirror)          │    │
-│  │  - Markdown 渲染引擎                │    │
-│  │  - CHD 卡片布局系统                │    │
-│  │  - 文件管理 / 搜索 / 标签系统       │    │
-│  └─────────────────────────────────────┘    │
-│                                              │
-│  ┌─────────────────────────────────────┐    │
-│  │      本地文件系统交互               │    │
-│  │  (PathManager)                      │    │
-│  └─────────────────────────────────────┘    │
-└─────────────────────────────────────────────┘
+开发模式 (npm run dev:electron)
+  ┌──────────────────────────────────────┐
+  │  Next.js Dev Server                  │
+  │  - 页面渲染 (React/SSR)              │
+  │  - API Routes (/api/*) ←  前端直接调用  │
+  │  - 热更新                            │
+  └──────────┬───────────────────────────┘
+             │ http://localhost:3000
+             ▼
+  ┌──────────────────────────────────────┐
+  │  Electron 窗口                       │
+  │  - 加载 http://localhost:3000        │
+  │  - preload.js (electronAPI)          │
+  └──────────────────────────────────────┘
 ```
 
-### 2.2 依赖组件清单
+### 关键发现
 
-| 组件 | 作用 | 可否打包 |
-|------|------|----------|
-| **Electron** | 桌面壳，提供 Chromium 运行时 | ✅ electron-builder 原生支持 |
-| **Next.js 前端** | UI 界面 | ✅ 需先 `next build` |
-| **Express 服务端** | API 接口 (文件CRUD/配置) | ✅ 内嵌在 Electron 进程中 |
-| **Node.js 标准库** | fs/path/process | ✅ 打包时自动包含 |
-| **外部依赖** | npm 包 (react/codemirror/等) | ✅ 打包时自动包含 |
+| 发现 | 影响 |
+|------|------|
+| **前端所有 API 调用** 使用 `fetch('/api/...')` **相对路径** | API 由 Next.js API Routes 提供，不是 Express |
+| **Next.js API Routes** (`src/app/api/`) 已有完整实现 | 包含 files/load/save/delete/export/config/trash 等 20+ 个路由 |
+| **Electron 中的 server.js** 是一套**重复**的 API 实现 | 与 Next.js API Routes 功能重叠，电子模式未实际使用 |
+| **前端服务层** (FileService/ConfigService/TrashService) 全部通过 `ApiClient` → `fetch('/api/...')` | 不需要改任何前端代码 |
 
-### 2.3 当前打包配置（已存在）
+> ⚡ **核心洞察**：项目已经在正确地使用 Next.js API Routes 提供后端服务，Express server.js 是一套冗余的备份，从未在实际前端代码中调用。
 
-**package.json 中已有完整配置：**
+---
+
+## 三、方案对比
+
+### 方案 A：静态导出 + Express API（❌ 不推荐）
+
+**需要修改：**
+- `next.config.js` 加 `output: 'export'` ❌ 可能破坏路由
+- 前端所有 fetch 路径从 `/api/xxx` 改为 `http://localhost:PORT/api/xxx` ❌ **大量修改**
+- 处理动态路由的静态生成 ⚠️ 不确定是否兼容
+- 适配 `next/image`、`next/link` 等组件 ⚠️ 易出 Bug
+
+**风险：** 前端代码大规模修改，测试回归成本高，未知兼容性问题多。
+
+### 方案 B：Electron 内嵌 Next.js 生产服务器（✅ 推荐）
+
+**需要修改：**
+- `package.json` → `build.files` 加 `.next/**/*` 
+- `electron/main.js` → 打包后启动 Next.js 生产服务器
+- 移除冗余的 `electron/server.js`（可选）
+
+**前端代码修改：** **0 行**。
+
+**原理：** 与开发模式 (`npm run dev:electron`) 完全一致的运行方式，只是将 `next dev` 换成 `next start`。
+
+---
+
+## 四、方案 B 详细实施
+
+### 4.1 修改 `package.json`（electron-builder 配置）
 
 ```json
 {
-  "main": "electron/main.js",    // ← Electron 入口
   "build": {
-    "appId": "com.mdtohtml.pro",
-    "productName": "MdToHtml Pro",
     "files": [
-      "electron/**/*",           // ← Electron 后台代码
-      "out/**/*",                // ← Next.js 静态产物
-      "package.json"             // ← 依赖描述
+      "electron/**/*",
+      ".next/**/*",            // ← 新增：Next.js 构建产物
+      "next.config.js",        // ← 新增：Next.js 配置文件
+      "package.json",
+      "public/**/*"            // ← 新增：静态资源
     ],
-    "win": {
-      "target": ["portable"]     // ← 目标：单 exe 便携版
-    }
+    "extraResources": [        // ← 新增：额外资源
+      {
+        "from": "node_modules/next/dist",
+        "to": "next-dist",
+        "filter": ["**/*"]
+      }
+    ]
   }
 }
 ```
 
-**已有构建命令：**
-```
-npm run build:electron  →  electron-builder --win portable
-```
+> **注意：** 更优方案是使用 `extraResources` 只包含 `next` 运行时，或者让 electron-builder 自动解析依赖。
 
----
+### 4.2 修改 `electron/main.js`
 
-## 三、可行性方案分析
+核心改动：打包后启动 Next.js 生产服务器而非 Express
 
-### 方案 A：Next.js 静态导出 + Express API（推荐 ✅）
+```javascript
+// --- main.js 关键变更 ---
 
-**原理：**
-1. `next build` 生成纯静态 HTML/CSS/JS 到 `out/` 目录
-2. Express 服务器只提供 API 接口（文件操作）
-3. 前端通过 `fetch(/api/...)` 调用
+const { app, BrowserWindow } = require('electron');
+const path = require('path');
+const { fork } = require('child_process');
 
-**现有问题：**
-- `next.config.js` 中**没有**设置 `output: 'export'`，导致 `next build` 生成的是 Next.js 服务器模式产物（需要 Node.js 运行时），而非静态 HTML
-- `electron-builder` 的 `files` 包含 `out/**/*`，但 `out/` 目录在当前配置下不会生成正确的静态文件
+let mainWindow;
+let serverProcess;
 
-**需要的修改：**
-1. `next.config.js` 添加 `output: 'export'` 配置
-2. 确保所有页面使用客户端组件（`"use client"`）— 大部分已是客户端组件
-3. 处理动态路由的静态生成（`generateStaticParams`）
+async function createWindow() {
+  let url;
 
-**优点：** 架构简单，不需要额外运行时依赖，打包体积最小
-**缺点：** 部分 Next.js 功能受限制（ISR/SSR 等不适用）
+  if (app.isPackaged) {
+    // === 打包模式：启动 Next.js 生产服务器 ===
+    const nextPort = await getFreePort();
+    
+    // 方式1：使用 next start CLI（最简单）
+    serverProcess = fork(
+      path.join(__dirname, '../node_modules/next/dist/bin/next'),
+      ['start', '-p', String(nextPort)],
+      { 
+        cwd: path.join(__dirname, '..'),
+        stdio: 'pipe'
+      }
+    );
+    
+    url = `http://localhost:${nextPort}`;
+  } else {
+    url = 'http://localhost:3000'; // 开发模式
+  }
 
-### 方案 B：Next.js 自定义服务器 + Electron（现有代码路线）
+  mainWindow = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  });
 
-**原理：**
-1. `next build` 生成标准 Next.js 产物（`.next/` 目录）
-2. 使用 `next start` 或嵌入式 `NextServer` 启动
-3. Express API 独立运行
+  mainWindow.loadURL(url);
+}
 
-**现有状态：**
-- `server.js` 注释中提到："Electron 模式下静态文件由 Next.js dev/production server 提供"
-- 但 `electron-builder` 配置中**没有包含 `.next/**/*`**，只包含了 `out/**/*`
-- 这会导致打包后找不到 Next.js 运行时产物
-
-**需要的修改：**
-1. 修改 `electron-builder` 配置包含 `.next/**/*`
-2. 在 Electron 中启动 Next.js server（需要额外 Node.js 进程）
-3. 或者使用 `next` 提供的 `NextServer` API
-
-**优点：** 保留所有 Next.js 特性
-**缺点：** 打包体积更大（多一个 Node.js 服务器进程），启动更慢，架构复杂
-
-### 方案 C：独立打包（不依赖 Electron，绕过 Next.js）
-
-**原理：**
-1. 直接使用 Electron 加载本地 HTML 文件
-2. 使用原生 Node.js 脚本提供功能
-
-**评价：** ❌ 不推荐。当前项目高度依赖 React/Next.js 架构，重构成本极高。
-
----
-
-## 四、推荐方案（方案 A）的详细实施步骤
-
-### Step 1: 修改 next.config.js
-
-```js
-const nextConfig = {
-  output: 'export',    // ← 新增：静态导出
-  trailingSlash: true, // ← 需要启用，确保静态文件路径正确
-  images: {
-    unoptimized: true,
-  },
+// 获取空闲端口
+function getFreePort() {
+  return new Promise((resolve) => {
+    const server = require('net').createServer();
+    server.listen(0, () => {
+      const port = server.address().port;
+      server.close(() => resolve(port));
+    });
+  });
 }
 ```
 
-### Step 2: 处理动态路由
+### 4.3 清理冗余文件（可选）
 
-当前项目中使用了动态路由（例如 `app/preview/[slug]`），需要添加 `generateStaticParams` 或在 Electron 端处理。
+`electron/server.js` 和 `electron/path-manager.js` 的功能已被 Next.js 端的 `src/lib/path-manager.ts` 和 `src/app/api/` 完全覆盖，可以移除。
 
-### Step 3: 调整 Electron main.js
+### 4.4 构建命令
 
-静态导出模式下直接加载本地 HTML 文件，而不是通过 HTTP URL：
+```bash
+# Step 1: 构建 Next.js
+cd MdToHtml && npm run build
 
-```js
-// 静态模式：直接加载本地文件
-const indexPath = path.join(__dirname, '../out/index.html');
-mainWindow.loadFile(indexPath);
-```
+# Step 2: 打包为 exe
+npm run build:electron
 
-### Step 4: 统一 API 调用（本地 vs 远程）
-
-前端需要区分 Electron 环境和浏览器环境，使用不同的 API 调用方式：
-- Electron 模式：调用本地文件系统 `fs` 或直接调用 `electronAPI`
-- 浏览器模式：通过 HTTP 调用 Express API
-
-### Step 5: 处理路径问题
-
-- `PathManager` 的 `detectAppRoot()` 在打包后返回 exe 所在目录
-- 需要确保 `input/`、`output/`、`data/` 目录创建在可写位置
-
----
-
-## 五、风险和注意事项
-
-### 5.1 已知风险
-
-| 风险 | 评级 | 解决方案 |
-|------|------|----------|
-| Next.js 路由在静态导出下的兼容性 | ⚠️ 中 | 客户端渲染+预生成，已测试 |
-| 中文路径处理 | ✅ 无风险 | 已有 `encode/decode` 处理 |
-| 文件体积（含 Chromium） | ⚠️ 约150MB | Electron 本身无法避免 |
-| API 调用在静态文件模式下的路由 | ⚠️ 中 | 需要统一 API 基础路径 |
-| 用户系统：Windows 11 | ✅ 良好 | `electron-builder` 原生支持 Win |
-| `get-port` 模块在打包后兼容性 | ⚠️ 低 | 打包后固定端口或使用 `0` 自动分配 |
-
-### 5.2 当前配置冲突
-
-| 文件 | 问题 | 原因 |
-|------|------|------|
-| `package.json` → `build.files` | 包含 `out/**/*` 但未包含 `.next/**/*` | 配置假设使用静态导出 |
-| `server.js` 注释 | 说使用 Next.js server | 与 `build.files` 配置矛盾 |
-| `next.config.js` | 无 `output: 'export'` | 导致 `next build` 生成服务器模式产物 |
-
-### 5.3 当前已具备的优势
-
-- ✅ Electron 入口文件已完整（main.js + preload.js）
-- ✅ Express 服务端已完整（server.js + path-manager.js + 6个API端点）
-- ✅ electron-builder 配置已完整（含 portable 目标）
-- ✅ 依赖已安装（electron + electron-builder）
-- ✅ 前端大部分组件已使用 `"use client"` 指令
-- ✅ 文件系统操作已封装为 Service 层（FileService/TrashService/ConfigService）
-
----
-
-## 六、当前工作流 vs 打包工作流
-
-### 开发期（现状 - 正常工作的流程）
-
-```
-npm run dev:electron
-  ├── Next.js dev server (端口3000, 热更新)
-  ├── Express API (随机端口, /api/*)
-  └── Electron 窗口 → 加载 http://localhost:3000
-```
-
-### 打包后（目标工作流）
-
-```
-双击 MdToHtml Pro.exe
-  ├── Electron 启动
-  ├── Express API (本地端口, /api/*)
-  ├── 加载静态前端页面 (out/index.html)
-  └── 用户界面呈现
+# 产物在 release/ 目录下
 ```
 
 ---
 
-## 七、快速启动方案（最短路径）
+## 五、与现有方案对比
 
-如果希望**今天就能跑起来一个 exe**，最快路径是：
-
-1. 修改 `next.config.js` → 添加 `output: 'export'`
-2. 修改 `electron/main.js` → 静态模式下 `loadFile('out/index.html')`
-3. 添加一个 `output: 'export'` 兼容的 `.babelrc` 或更新 `next.config.js`
-4. 运行 `npm run build`（生成 `out/` 目录）
-5. 运行 `npm run build:electron`（生成 exe）
-6. 在 `release/` 目录中找到产物
-
-**预估总耗时：** 如果代码兼容静态导出，约 1-2 小时；如有不兼容处，需 1 天。
-
----
-
-## 八、建议与结论
-
-### 建议方案
-
-**推荐采用方案 A（静态导出 + Express API）**，原因：
-1. 当前项目已有大部分客户端组件
-2. 不需要 ISR/SSR 等服务器功能
-3. 打包后体积最小、启动最快
-4. 简单可维护 — 本质就是一个"带本地 API 的静态网站"
-
-### 不推荐方案 B 的原因
-
-1. 在 Electron 中运行 Next.js 服务器需要额外 ~50MB Node.js 运行时
-2. 启动两个服务器进程（Next.js + Express）增加复杂度和启动时间
-3. `electron-builder` 需要调整大量配置来包含 `.next/` 产物
-
-### 最终结论
-
-> **✅ MdToHtml Pro 完全具备打包为单文件 exe 的条件。**
->
-> 项目已具备 Electron 集成、Express 服务端、electron-builder 配置三大基础设施。当前只需要解决 Next.js 构建模式与 Electron 的文件加载方式之间的对齐问题，即可在 1-2 天内完成打包。
->
-> 建议开发者优先选择 **静态导出方案（方案 A）**，在最小改动下实现最高效的打包。
+| 对比项 | 方案 A（静态导出） | 方案 B（Next.js 服务器） |
+|--------|-------------------|------------------------|
+| 需改前端代码 | **大量修改** | **0 行** |
+| 需改配置文件 | 3-4 个 | 2-3 个 |
+| 风险等级 | 🔴 高 | 🟢 低 |
+| 开发/生产一致性 | ❌ 不一致 | ✅ 完全一致 |
+| 启动速度 | 快（静态文件） | 中等（需启动 Node） |
+| 产物体积 | ~150 MB | ~250-300 MB |
+| 功能完整性 | ⚠️ 部分受限 | ✅ 全部保留 |
 
 ---
 
-## 附录：相关文件索引
+## 六、风险分析
 
-| 文件 | 作用 |
-|------|------|
-| `MdToHtml/package.json` | 项目配置、electron-builder 配置 |
-| `MdToHtml/electron/main.js` | Electron 主进程入口 |
-| `MdToHtml/electron/server.js` | Express API 服务器 |
-| `MdToHtml/electron/preload.js` | Electron preload 脚本 |
-| `MdToHtml/electron/path-manager.js` | 文件路径管理器 |
-| `MdToHtml/next.config.js` | Next.js 构建配置 |
-| `MdToHtml/src/` | 前端源码（React 组件） |
-| `MdToHtml/tsconfig.json` | TypeScript 编译配置 |
+### 6.1 产物体积问题
+
+- Node.js 运行时和 `next` 依赖会增加约 100-150 MB
+- 总产物体积约 250-300 MB，对现代 Windows 系统属于正常范围
+- 可以通过 `asar: false` + 选择性包含依赖来优化
+
+### 6.2 启动速度
+
+- Next.js 生产服务器启动约需 2-3 秒
+- Electron 窗口加载需额外 1-2 秒
+- **可优化**：启动时显示闪屏/加载动画
+
+### 6.3 兼容性
+
+- Next.js API Routes 中使用的 Node.js API（fs/path/process）在 Electron 中均可正常运行
+- 已有的中文路径处理逻辑（encodeURIComponent/decodeURIComponent）无需修改
+- Windows 11 下已有测试经验
 
 ---
 
-*报告编写：Cline AI Assistant*
+## 七、完整文件修改清单
+
+| 文件 | 修改类型 | 修改内容 |
+|------|----------|----------|
+| `MdToHtml/package.json` | 修改 | `build.files` 添加 `.next/**/*`、`next.config.js`、`public/**/*` |
+| `MdToHtml/electron/main.js` | 修改 | 打包模式启动 Next.js 生产服务器 |
+| `MdToHtml/electron/server.js` | 删除（可选） | 冗余的 Express 服务器 |
+| `MdToHtml/electron/path-manager.js` | 删除（可选） | 已被 `src/lib/path-manager.ts` 替代 |
+
+**前端代码修改：0 行。**
+
+---
+
+## 八、总结
+
+### 为什么方案 B 是最优解？
+
+1. **最小改动** — 只改 Electron 启动逻辑和打包配置，前端零修改
+2. **最大可靠** — 与开发模式完全一致的运行方式，已验证通过
+3. **最低风险** — 不需要处理静态导出的各种兼容性问题
+4. **完整性保留** — 所有 Next.js 功能、动态路由、API Routes 全部保留
+
+### 可选的体积优化路径
+
+如果后续需要减小体积，可以在方案 B 的基础上：
+1. 将 Next.js 构建产物 `.next/standalone` 模式（只包含必要文件）
+2. 使用 `pkg` 将 Node.js 运行时也打包进去
+3. 移除冗余的 `node_modules` 中未使用的包
+
+但这些是 **v2 优化**，不是 v1 的必要条件。
+
+---
+
+> **一句话总结：** 保持现有架构不变，只需要让 Electron 打包后启动 Next.js 生产服务器（就像开发时一样），再改两行打包配置，即可得到一个完整可用的 exe。
