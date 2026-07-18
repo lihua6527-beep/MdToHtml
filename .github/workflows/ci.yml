@@ -1,50 +1,86 @@
-name: CI/CD Pipeline
+name: CI Pipeline
 
 on:
   push:
-    branches: [ "main", "master" ]
-  pull_request:
-    branches: [ "main", "master" ]
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
 
 jobs:
-  build-and-test:
+  build:
+    name: Build & Test
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ./MdToHtml
+        working-directory: MdToHtml
 
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - uses: actions/checkout@v4
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        cache-dependency-path: MdToHtml/package-lock.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: MdToHtml/package-lock.json
 
-    - name: Install Dependencies
-      run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-    - name: Run Unit Tests
-      run: npm run test:ci
+      - name: Type Check
+        run: npx tsc --noEmit
 
-    - name: Build and E2E Verify
-      # This runs the build and then checks the static output
-      run: npm run test:e2e
-      
-    - name: Upload Test Coverage
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: coverage-report
-        path: MdToHtml/coverage/
-        
-    - name: Upload Static Output
-      if: success()
-      uses: actions/upload-artifact@v4
-      with:
-        name: static-site
-        path: MdToHtml/out/
+      - name: Lint
+        run: npm run lint -- --max-warnings 0
+
+      - name: Unit Tests
+        run: npm run test -- --coverage --ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-build
+          path: MdToHtml/.next/
+
+  e2e:
+    name: E2E Tests
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: MdToHtml
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: MdToHtml/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests
+        run: npx playwright test
+
+      - name: Upload Playwright Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: MdToHtml/playwright-report/
+
+      - name: Upload Test Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-failure-screenshots
+          path: MdToHtml/test-results/
