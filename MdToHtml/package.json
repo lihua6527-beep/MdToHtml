@@ -39,7 +39,9 @@
       "target": [
         "portable"
       ],
-      "artifactName": "${productName}-Portable-${version}.${ext}"
+      "artifactName": "${productName}-Portable-${version}.${ext}",
+      "sign": false,
+      "signAndEditExecutable": false
     },
     "portable": {
       "artifactName": "${productName}-Portable-${version}.${ext}"
