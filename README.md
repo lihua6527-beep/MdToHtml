@@ -157,6 +157,22 @@ npm start
 
 构建产物位于 `MdToHtml/.next/` 目录，运行时需要 Node.js 环境。
 
+### 源码获取与离线包说明
+
+```bash
+# 方式一：直接克隆（推荐）
+git clone https://gitee.com/njustzjh/md-to-html.git
+cd md-to-html
+npm install
+start.bat
+```
+
+> **关于完整离线包 `MdToHmtl.rar`**：
+> 该压缩包内含 `node_modules/`、`.next/`、历史备份 `.zip` 等全部内容，体积约 **853 MB**，
+> 已超出 Git 托管平台的单文件大小限制（Gitee 为 **100 MB**），且其中绝大部分内容可由
+> `npm install` 与 `npm run build` 重新生成，因此**不纳入版本库**（`.gitignore` 中已屏蔽 `*.rar`/`*.zip`/`*.exe`）。
+> 如需完整离线包请另行索取，请勿使用 `git add -f` 强行提交大文件。
+
 ---
 
 ## 📁 目录结构
