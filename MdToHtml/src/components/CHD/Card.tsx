@@ -12,7 +12,7 @@ import { twMerge } from 'tailwind-merge';
 import {
   Maximize2, Palette, MoreHorizontal, LayoutGrid, ArrowLeft, ArrowRight,
   ArrowUp, ArrowDown, Edit, Check, Trash2, Minus, Plus, AlignLeft, AlignCenter,
-  AlignRight, Send, Type as TypeIcon
+  AlignRight, Send, Type as TypeIcon, Sparkles
 } from 'lucide-react';
 import { getShapeClass, CardShape } from '../../lib/shapes';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -275,6 +275,13 @@ export const Card: React.FC<CardProps> = ({
   const isWide = colSpan && colSpan >= 2;
   const isWideAndShort = isWide && content.length < 100 && style === 'normal';
 
+  // 修复 Bug：当卡片被取消选中时（用户点击了其他卡片），自动关闭当前卡片的右键菜单
+  useEffect(() => {
+    if (!isSelected && contextMenu) {
+      setContextMenu(null);
+    }
+  }, [isSelected]);
+
   // Resolve effective style: If legacy color style is used, map it to normal + color (logic only for display)
   // Actually, we keep the style as is, but if it matches a color name, we might want to treat it?
   // For now, let's rely on explicit 'card-color'.
@@ -299,18 +306,37 @@ export const Card: React.FC<CardProps> = ({
             style={{ top: contextMenu.y, left: contextMenu.x }}
             onClick={(e) => e.stopPropagation()}
         >
-            <button 
-                className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete?.();
-                    setContextMenu(null);
-                }}
-            >
-                <Trash2 size={16} />
-                删除卡片
-            </button>
-        </div>
+                {/* AI 润色 */}
+                <button 
+                    className="w-full text-left px-4 py-2.5 text-sm text-purple-600 hover:bg-purple-50 flex items-center gap-2 transition-colors"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setContextMenu(null);
+                        // 选中该卡片的内容（触发 AI 工具栏）
+                        // 实际调用 AI 需要父组件传递 handler，这里触发自定义事件
+                        window.dispatchEvent(new CustomEvent('ai-context-card', {
+                            detail: { content: title + '\n' + content.slice(0, 200) }
+                        }));
+                    }}
+                >
+                    <Sparkles size={16} />
+                    AI 润色（选中文本）
+                </button>
+
+                <div className="w-px h-4 bg-slate-200 mx-2" />
+
+                <button 
+                    className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete?.();
+                        setContextMenu(null);
+                    }}
+                >
+                    <Trash2 size={16} />
+                    删除卡片
+                </button>
+            </div>
     )}
 
     <div 
@@ -333,6 +359,8 @@ export const Card: React.FC<CardProps> = ({
       onClick={handleCardClick}
       onContextMenu={handleContextMenu}
       style={gridStyle}
+      data-card-style={style}
+      data-card-color={forcedCardColor}
     >
       {/* Floating Badge (Visual) */}
       {shape === 'floating' && attributes.badge && (
@@ -457,18 +485,11 @@ export const Card: React.FC<CardProps> = ({
                 </button>
             </div>
         ) : (
+            // 注意：不要在这里加 onClick → setIsEditingContent！
+            // 这会导致选中文本时鼠标弹起误触发 textarea 切换（选中变文本闪烁）
             <div 
-                onClick={(e) => {
-                    if (editMode && isSelected) {
-                        e.stopPropagation();
-                        setIsEditingContent(true);
-                    }
-                }}
                 className={clsx(
                     "w-full h-full",
-                    editMode && isSelected && "hover:bg-primary/5 cursor-text border border-transparent hover:border-primary/20 rounded p-1 -m-1 transition-colors",
-                    // Fix: Remove max-w-3xl constraint for wide cards to allow full width usage
-                    // isWide && !isWideAndShort && "max-w-3xl w-full" 
                     isWide && "w-full"
                 )}
             >

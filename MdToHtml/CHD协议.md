@@ -1,426 +1,443 @@
 # CHD 协议 v2.1：面向 AI 的生成规范 (CHD Protocol for AI Generation)
 
-**版本**: v2.1
-**日期**: 2026-03-22
-**状态**: **已生效 (Active)**
-**适用对象**: AI 助手 (LLMs), 内容创作者, 自动化脚本
-**向后兼容**: 支持 v1.5 及以上版本的 CHD 文档
+> **版本**: v2.1（与 A/B 提示词同步修订）
+> **日期**: 2026-09-07
+> **状态**: **已生效 (Active)**
+> **适用对象**: AI 助手 (LLMs)、内容创作者、自动化脚本
+> **同步基线**: 本文档是「设置 → 协议配置」中展示/复制的协议规范，其内容与 AI 转换功能实际使用的 **A/B 两套 System Prompt**（`prompts.json` 中的 `default` 默认版 与 `alternative` 学术版）完全对齐。修改协议规则或提示词时，必须同步修改 `prompts.json` 与本文档。
+
+> 📌 **2026-09-07 同步修订说明（针对旧版 CHD 协议文档）**
+> - 移除已废弃的 `icon` 图标体系及 `stat / warning / summary / code` 等旧卡片样式说明（渲染端已不再提供图标系统，A/B 提示词亦不再要求生成图标）。
+> - L1 Section 列数规则更新为**对称布局规则（禁止孤立行）**；L2 Card 属性统一为 `card-style / card-color / badge / shape / col-span / row-span`。
+> - YAML Frontmatter 统一为：必填 `title / subtitle / tags`，选填 `date / author / summary`；`category / type / highlights / version / status / training_sample / icon` 等旧字段不再要求。
+> - 「AI 生成提示词」章节由旧版单份英文 Prompt 更新为 **A 默认版 / B 学术版两套现行中文 Prompt 原文**（可直接复制使用）。
 
 ---
 
 ## 1. 核心理念 (Core Philosophy)
 
-**"Structure First, Content Condensed" (结构优先，内容精炼)**
+**"Structure First, Content Condensed"（结构优先，内容精炼）**
 
-CHD (Card-based Hierarchical Document) 协议不仅仅是一种 Markdown 格式，更是一种**信息可视化的设计语言**。当 AI 解析一篇长文（如论文、项目报告）并生成 CHD 文档时，它不应仅仅充当"翻译器"，而必须成为一名**高级信息架构师**。
+CHD（Card-based Hierarchical Document）协议不仅仅是一种 Markdown 格式，更是一套**面向 AI 生成的内容结构化与信息可视化规范**。当 AI 将长文（论文、项目报告、技术文档等）转换为 CHD 文档时，不应充当"文本搬运工"，而应扮演：
 
-### AI 的角色定义
-*   **❌ 不是**: 简单的文本搬运工（不要直接复制粘贴长段落）。
-*   **✅ 而是**:
-    *   **信息架构师**: 将线性文本重构为网格化的卡片结构。
-    *   **UI 设计师**: 根据内容的重要性选择合适的 `layout` (布局) 和 `card-style` (样式)。
-    *   **数据分析师**: 从文本中提取关键指标，通过 `stat` 卡片进行可视化呈现。
+- **信息架构师**：将线性文本重构为「Section → Card」的网格化卡片结构，而不是直接复制粘贴长段落。
+- **UI 设计师**：根据内容重要性选择合适的 `card-style`、`card-color`、`badge`、`shape` 等属性，控制排版与视觉层级。
+- **数据分析师**：从文本中提取关键指标与结构化数据，用 GFM 表格与加粗数据可视化呈现。
 
 ---
 
 ## 2. 协议规范 (Protocol Specification)
 
-CHD 采用严格的**三级刚性结构**。AI 生成时必须严格遵守此层级，禁止越级或混用。
+CHD 采用严格的**三级刚性结构**。AI 生成时必须严格遵守此层级，禁止越级或混用：
 
-### L0: 文档元数据 (YAML Frontmatter)
-位于文档最顶部的 YAML 块，定义全局属性。
+| 层级 | 语法 | 说明 |
+|------|------|------|
+| L0 | YAML Frontmatter（文档头部） | 文档全局元数据 |
+| L1 | `## 章节标题 {属性...}` | 逻辑章节（横向切分） |
+| L2 | `### 卡片标题 {属性...}` | 内容卡片（内容原子单元） |
+
+**铁律**：文档必须由以上三级结构组成。Section 之外不能有游离文本，Card 之外不能有游离文本，禁止使用 `####` 或更深层级标题。
+
+### 2.1 L0：YAML Frontmatter（文档头部，必填）
 
 ```yaml
 ---
-title: "文档主标题"       # 必填，通常为论文/项目名称
-subtitle: "副标题或口号"  # 必填，一句话概括核心价值
-tags: ["关键词1", "关键词2"] # 必填，3-5个核心关键词
-version: "1.0"           # 选填，默认 1.0
-status: "done"           # 选填，done/wip
-training_sample: true    # 选填，标识是否为高质量样本
-icon: "logo"            # 选填，文档左上角图标
+title: "文档主标题"
+subtitle: "副标题或简要描述"
+tags: ["标签1", "标签2", "标签3"]
 ---
 ```
 
-### L1: 逻辑章节 (Section - H2)
-定义文档的横向切分。**必须使用二级标题 `##`**。
-AI 必须为每个 Section 指定布局属性。
+- **必填字段**：
+  - `title`（字符串）：文档主标题。
+  - `subtitle`（字符串）：副标题 / 简要描述。
+  - `tags`（数组）：至少 2-3 个标签（学术版建议优先使用学术性标签）。
+- **可选字段**：
+  - `date`（日期字符串，格式 `YYYY-MM-DD`）
+  - `author`（作者名）
+  - `summary`（摘要，建议 100 字以内）
+- **语法要求**：使用空格缩进，**禁止使用制表符**。
+
+### 2.2 L1：Section（章节容器）
+
+格式：
 
 ```markdown
-## 核心亮点 {layout="grid" columns=4 section-color="chart-1"}
+## 章节标题 {layout="grid" columns=N section-color="chart-N" title-spacing="N" show-divider="true|false"}
 ```
 
-*   **`layout`**:
-    *   `"grid"`: 网格布局（默认）。适合展示多个并列的观点、特征或数据。
-    *   **注**: `single` 和 `gallery` 布局在 v2.0 中已**暂时锁定**，所有内容强制使用 Grid 布局以保证一致性。
-*   **`columns`**: (仅在 grid 布局下有效)
-    *   **智能列数规则 (Smart Columns)**:
-        *   **1-4 张卡片**: 列数 = 卡片数量 (1->1, 2->2, 3->3, 4->4)。
-        *   **5张及以上**: 强制分行，每行 3 列 (如 5 张 -> [3, 2], 6 张 -> [3, 3])。
-        *   **最大列数**: 4 (仅当卡片数为 4 时)。
-    *   **AI 策略**: 通常无需指定 `columns`，由渲染引擎自动计算。仅在需要强制特定视觉效果时指定。
-*   **`section-color`**: (选填)
-    *   `"chart-1"` 到 `"chart-5"`: 应用莫兰迪主题色背景。
-    *   `"default"`: 默认背景。
+属性说明：
 
-### L2: 语义卡片 (Card - H3)
-定义具体的内容单元。**必须使用三级标题 `###`**。
-**严禁在 L1 (##) 下直接书写正文，所有内容必须包裹在 L2 (###) 卡片中。**
+- **`layout`**：固定为 `"grid"`。
+- **`columns`**：列数。**对称布局规则（禁止孤立行）**——每行卡片数必须相同，总卡片数应能被列数整除，不能出现"一行 3 个 + 下一行 1 个"的孤立布局：
+
+| 卡片数 | columns | 说明 |
+|:---:|:---:|------|
+| 1 | 1 | 居中 |
+| 2 | 2 | 一行两列，完美对称 |
+| 3 | 3 | 一行三列 |
+| 4 | 2 | 两行两列，对称 |
+| 5 | — | **不建议 5 张**，拆分为 2+3 两个 Section，或将第 5 张并入相邻 Card |
+| 6 | 2 或 3 | 三行两列 / 两行三列 |
+| 7 | — | **不建议 7 张**，拆分为 3+4 或 2+3+2 |
+| 8 | 4 或 2 | 两行四列 / 四行两列 |
+| 9 | 3 | 三行三列 |
+| 10+ | 3 | 多行三列 |
+
+> 学术版偏好：阅读更舒适，建议多用 **2 列**；8+ 张可用 2 列或 4 列。
+
+- **`section-color`**（选填）：`"chart-1"`～`"chart-5"`。chart-1=蓝紫、chart-2=粉红、chart-3=青蓝、chart-4=翠绿、chart-5=橙黄。学术风建议 chart-1/3/4/5，**避免 chart-2（粉红）**。
+- **`title-spacing`**（选填）：标题上边距（单位像素，如 4、8、12），默认 8。
+- **`show-divider`**（选填）：是否显示标题下方分割线，默认 `true`（学术版建议 `true`）。
+
+重要规则：
+- Section 内部只能包含 Card（`###`），不能有其他文本。
+- 可以包含多个 Section；每个 Section 可以有不同的列数和配色。
+- 学术版文档结构建议：引言/背景 → 核心内容 → 分析讨论 → 结论。
+
+### 2.3 L2：Card（卡片单元）
+
+格式：
 
 ```markdown
-### 突破全网拓扑假设 {card-style="highlight" icon="zap"}
-这里是卡片的正文内容...
+### 卡片标题 {card-style="normal|highlight|quote" card-color="chart-N" badge="徽章文本" shape="rectangle|cut-corner|arrow|floating|rounded" col-span="N" row-span="N"}
 ```
 
-*   **`card-style` (样式)**:
-    *   `"normal"`: 标准卡片（默认）。适合一般性描述。
-    *   `"highlight"`: 高亮卡片。适合核心观点、重要结论。
-    *   `"quote"`: 引用卡片。适合名言、用户评价、设计理念。
-    *   **兼容性说明**: 为保证向后兼容，系统仍支持识别 `stat`, `warning`, `summary`, `code` 等旧版样式，但会自动将其映射到对应的新版样式。
-    *   **注**: AI 生成时请优先使用上述 3 种推荐样式。代码块应使用标准 Markdown 格式处理。
+卡片内容使用标准 Markdown 语法，支持段落、列表（有序/无序）、数学公式、GFM 表格与代码块。
 
-*   **`icon` (图标)**:
-    *   **可选属性**：为卡片添加左上角视觉图标，增强视觉表现力。
-    *   **允许的值**：请参考 `docs/技术规范与前端规范/卡片图标资产库.md` 中的图标列表。
-    *   **使用规则**：
-        *   **成套使用**：同一 `Section` 下的所有卡片，要么都使用图标，要么都不使用图标。
-        *   **相关性**：选择与卡片内容相关的图标。
-        *   **限制**：图标只能在标准矩形卡片中使用。
-        *   **命名规范**：请遵循 `docs/技术规范与前端规范/图标命名规范.md` 中的命名规则。
-    *   **AI 策略**：
-        *   可以为卡片添加图标以增强视觉效果。
-        *   确保在同一 Section 内保持图标使用的一致性。
-        *   只在需要突出显示的卡片中使用图标，避免过度使用。
-        *   当不确定图标名称时，使用通用的图标名称，系统会自动处理不存在的图标。
+属性说明：
 
-### L2.2: 支持的图标列表 (Supported Icons)
+- **`card-style`**（**必填**）：仅允许以下三种：
+  - `"normal"`：标准卡片，用于一般性描述内容。
+  - `"highlight"`：高亮卡片，用于核心观点、重要结论、关键数据（推荐优先使用）。
+  - `"quote"`：引用卡片，用于名言、用户评价、设计理念、他人引文。
+- **`card-color`**（选填）：`"chart-1"`～`"chart-5"`。
+- **`badge`**（选填）：卡片右上角徽章文字。学术版推荐使用 `"核心"`、`"创新"`、`"引文"`、`"关键"`、`"方法"` 等学术性徽章。
+- **`shape`**（选填）：卡片形态，默认 `"rectangle"`。取值 `rectangle | cut-corner | arrow | floating | rounded`；学术版建议 `rectangle` 或 `rounded`，保持沉稳。
+- **`col-span` / `row-span`**（选填）：卡片跨越的列数 / 行数，默认 1。
 
-以下是 CHD 协议支持的所有图标列表，按分类组织：
+> **兼容性说明**：为保证向后兼容，渲染端仍支持识别旧版 `stat`、`warning`、`summary`、`code` 等样式并自动映射到新版样式；但 **AI 生成时只允许使用 normal / highlight / quote**。
 
-#### 基础图标 (Basic Icons)
-- **zap**: 创新、能量、快速、高效
-- **cpu**: 技术、性能、计算、架构
-- **chart**: 数据、分析、统计、趋势
-- **chart3**: 高级数据、复杂分析、多维度统计
-- **award**: 成就、奖项、荣誉、认可
-- **rocket**: 增长、启动、推进、突破
-- **clock**: 时间、计划、进度、截止日期
-- **alert**: 警告、注意、提示、安全
-- **check**: 成功、完成、验证、确认
-- **checksquare**: 任务完成、清单、确认
-- **network**: 连接、网络、关系、协作
-- **eye**: 观察、监控、查看、洞察
-- **tag**: 标签、分类、标记、关键词
-- **layers**: 层次、结构、组织、组件
-- **box**: 容器、包装、存储、内容
-- **globe**: 全球、国际化、地球、多元文化
-- **trending**: 趋势、增长、上升、进步
-- **book**: 知识、学习、文档、教育
-- **message**: 沟通、对话、消息、交流
-- **settings**: 设置、配置、选项、偏好
-- **user**: 用户、个人、账号、个人资料
-- **users**: 团队、用户群、社区、合作
-- **userplus**: 添加用户、邀请、注册、新成员
-- **shield**: 安全、保护、防御、隐私
-- **lightbulb**: 创意、想法、灵感、创新
-- **calendar**: 日期、计划、安排、日程
-- **dollar**: 财务、金钱、价值、投资
-- **target**: 目标、目的、焦点、方向
-- **star**: 星级、评分、优秀、突出
-- **heart**: 喜欢、爱、情感、关注
-- **bookmark**: 收藏、保存、标记、重要
-- **camera**: 图片、摄影、视觉、媒体
-- **cloud**: 云存储、云端、在线、备份
-- **database**: 数据、存储、数据库、信息
-- **download**: 下载、获取、保存、离线
-- **file**: 文件、文档、资料、内容
-- **filetext**: 文本文件、文档、文章、报告
-- **filecode**: 代码文件、编程、开发、脚本
-- **fileimage**: 图片文件、图像、视觉、设计
-- **filevideo**: 视频文件、影片、媒体、演示
-- **fileaudio**: 音频文件、音乐、声音、播客
-- **filespreadsheet**: 电子表格、数据、表格、计算
-- **filearchive**: 压缩文件、归档、存储、备份
-- **filter**: 筛选、过滤、分类、排序
-- **flag**: 标记、旗帜、国家、地区
-- **folder**: 文件夹、目录、组织、存储
-- **gift**: 礼物、奖励、优惠、惊喜
-- **github**: 代码托管、版本控制、开发、协作
-- **home**: 首页、主页、开始、返回
-- **image**: 图片、图像、视觉、设计
-- **key**: 密钥、权限、访问、安全
-- **link**: 链接、连接、关联、引用
-- **lock**: 锁定、安全、保护、隐私
-- **mail**: 邮件、通信、消息、联系
-- **map**: 地图、位置、导航、方向
-- **menu**: 菜单、选项、导航、列表
-- **moon**: 夜晚、暗色模式、睡眠、宁静
-- **music**: 音乐、音频、声音、娱乐
-- **pentool**: 编辑、设计、绘画、创作
-- **piechart**: 饼图、数据、比例、分布
-- **search**: 搜索、查找、探索、发现
-- **share2**: 分享、传播、合作、社交
-- **sun**: 白天、亮色模式、能量、活力
-- **upload**: 上传、提交、分享、同步
-- **video**: 视频、影片、媒体、演示
-- **wifi**: 网络、连接、无线、信号
-- **code**: 代码、编程、开发、脚本
-- **clipboard**: 剪贴板、复制、粘贴、内容
-- **git-branch**: 分支、版本控制、开发、协作
-- **grid**: 网格、布局、组织、结构
-- **layout**: 布局、设计、安排、组织
-- **list**: 列表、项目、清单、组织
-- **monitor**: 显示器、屏幕、设备、显示
-- **package**: 包、软件、部署、分发
-- **server**: 服务器、后端、主机、服务
-- **smartphone**: 手机、移动设备、便携、通讯
-- **tablet**: 平板、设备、便携、显示
-- **terminal**: 终端、命令行、开发、系统
-- **chevronright**: 向右、前进、下一步、展开
-- **chevrondown**: 向下、展开、显示、下拉
-- **chevronup**: 向上、收起、隐藏、上拉
-- **chevronleft**: 向左、后退、上一步、收起
+### 2.4 富文本支持 (Rich Text Support)
 
-#### 新增图标 (New Icons)
-- **signal**: 信号、网络、连接、通信
-- **refresh**: 刷新、更新、重试、循环
-- **timer**: 时间、定时器、倒计时、准时
-- **history**: 历史、记录、过去、回顾
-- **phone**: 手机、移动设备、通信、联系
-- **index**: 索引、搜索、查找、定位
-- **memory**: 内存、存储、缓存、数据
-- **tree**: 树、自然、环境、生态
-- **controller**: 控制器、控制、管理、指挥
-- **service**: 服务、服务层、后端、支持
-- **data**: 数据、信息、资料、内容
-- **spring**: 弹簧、弹性、Spring框架、复苏
-- **storage**: 存储、硬盘、保存、备份
-- **mobile**: 移动、手机、便携、无线
-- **expand**: 扩展、放大、增长、发展
-- **edge**: 边缘、边界、边缘计算、前沿
+- **数学公式**：必须使用 LaTeX 语法。
+  - 行内公式：`$E = mc^2$` 或 `\( a^2 + b^2 = c^2 \)`
+  - 块级公式：`$$\sum_{i=1}^n i = \frac{n(n+1)}{2}$$`
+  - **禁止使用行内代码（反引号）包裹公式，禁止公式截图**。
+- **表格**：必须使用标准 GFM Markdown 表格语法（`| --- |`），**禁止使用 HTML `<table>`**。数据性内容优先使用表格呈现。
+- **代码块**：使用标准 Markdown 代码块并标注语言（如 `python`），代码示例是卡片内容的一部分。
 
-#### 区块链相关图标 (Blockchain Icons)
-- **blockchain**: 区块链、分布式账本、加密货币、智能合约
-- **bitcoin**: 比特币、加密货币、数字资产、金融
+### 2.5 负面示例（禁止的做法）
 
-#### 机器学习相关图标 (Machine Learning Icons)
-- **brain**: 人工智能、机器学习、神经网络、认知
-- **ml**: 机器学习、数据科学、模型训练、预测
+- ❌ 禁止在 Section 外部放置文本。
+- ❌ 禁止使用四级标题 `####`（CHD 协议只到三级）。
+- ❌ 禁止使用 HTML 表格。
+- ❌ 禁止在 Frontmatter 中使用制表符缩进（仅用空格）。
+- ❌ 禁止 `card-style` 使用 normal / highlight / quote 之外的值。
+- ❌ 禁止直接复制粘贴长段落（应先拆解为要点再放入卡片）。
 
-#### 密码学相关图标 (Cryptography Icons)
-- **cryptography**: 密码学、加密、安全、隐私
-- **hash**: 哈希、加密、数据完整性、验证
+### 2.6 输出要求（通用）
 
-#### 视觉相关图标 (Vision Icons)
-- **vision**: 视觉、计算机视觉、图像识别、视觉处理
-- **camera**: 相机、摄影、图像捕获、视觉输入
-
-#### 测试相关图标 (Testing Icons)
-- **test**: 测试、验证、质量保证、自动化测试
-- **automation**: 自动化、脚本、流程、效率
-
-#### 微信小程序文档中使用的图标 (WeChat Mini Program Icons)
-- **tool**: 工具、构建、开发、调试
-- **pen-tool**: 编辑、设计、绘画、创作
-- **trending-up**: 趋势、增长、上升、进步
-- **bar-chart**: 柱状图、数据、分析、统计
-- **pie-chart**: 饼图、数据、比例、分布
-- **send**: 发送、提交、传输、通信
-- **alert-circle**: 警告、注意、提示、安全
-- **type**: 文本、字体、排版、命名
-- **message-square**: 消息、对话、交流、注释
-- **activity**: 活动、动态、数据、响应
-- **git-branch**: 分支、版本控制、开发、协作
-- **book-open**: 文档、指南、学习、参考
-
-#### 进程通信与状态流转分析文档中使用的图标 (Process Communication Icons)
-- **share**: 分享、传播、合作、社交
-- **save**: 保存、存储、持久化、备份
-- **promise**: 承诺、异步、保证、契约
-- **bell**: 通知、提醒、警报、消息
-- **cycle**: 循环、周期、流程、轮转
-- **pipe**: 管道、通信、流、传输
-- **queue**: 队列、顺序、等待、处理
-
-#### 其他图标 (Other Icons)
-- **workflow**: 工作流、流程、步骤、顺序
-- **check-circle**: 成功、完成、验证、确认
-- **wrench**: 工具、维修、调整、设置
-- **puzzle**: 拼图、组件、集成、组合
-- **scan**: 扫描、搜索、检测、分析
-- **hard-drive**: 硬盘、存储、数据、设备
-
-### L2.3: 富文本支持 (Rich Text Support)
-CHD 协议全面支持以下富文本格式。
-**核心原则**: 为了保证内容的可编辑性与语义化，**必须优先使用标准文本格式normal**，严禁使用图片或硬编码 HTML。
-
-*   **数学公式 (Math/LaTeX)**:
-    *   **规范**: 必须使用 LaTeX 语法（`$` 或 `$$`）。**严禁使用行内代码（反引号）包裹公式**。**禁止使用公式截图**。
-    *   **行内公式**: 使用 `$ E = mc^2 $`。
-    *   **块级公式**: 使用 `$$` 包裹。
-    *   **适用场景**: 算法推导、物理公式、统计模型。
-    *   **示例**:
-        ```latex
-        $$
-        J(\theta) = -\frac{1}{m} \sum_{i=1}^m [y^{(i)}\log(h_\theta(x^{(i)})) + (1-y^{(i)})\log(1-h_\theta(x^{(i)}))]
-        $$
-        ```
-*   **表格 (Tables)**:
-    *   **规范**: 必须使用标准 GFM Markdown 表格语法。**禁止使用 HTML `<table>` 标签或表格截图**。
-    *   支持标准 GFM (GitHub Flavored Markdown) 表格语法。
-    *   **适用场景**: 数据对比、参数列表、优缺点分析。
-    *   **示例**:
-        ```markdown
-        | 模型 | 准确率 | 召回率 | F1 |
-        | :--- | :---: | :---: | --: |
-        | BERT | 92.5% | 91.0% | 91.7 |
-        | LSTM | 88.3% | 85.2% | 86.7 |
-        ```
-
-*   **`col-span` (跨列)**:
-    *   **[v2.1 更新] 已弃用 (Deprecated)**。
-    *   为了保证视觉统一性，**所有卡片宽度必须完全一致**。
-    *   禁止 AI 为卡片指定 `col-span` 属性。渲染引擎将自动忽略此属性。
-*   **`row-span` (跨行)**:
-    *   默认为 `1`。
-    *   `2`: 让卡片在垂直方向上占据更多空间（仅在 grid 布局且由引擎自动排列时有效）。
+1. 仅输出符合 CHD 协议的 Markdown 文档，不包含任何解释性文字。
+2. 文档开头必须是 YAML Frontmatter（`---` 分隔）。
+3. 根据所选风格（A 默认版 / B 学术版）提示词中的列数规则、配色偏好、Section/Card 数量要求与自检清单执行输出。
 
 ---
 
 ## 3. AI 生成提示词 (System Prompt for AI)
 
-当要求 AI 将一篇论文或报告转换为 CHD 格式时，请使用以下 Prompt：
+本系统的 AI 转换功能提供 **A、B 两套风格** 的 System Prompt（在界面中显示为「默认风格 / 学术风格」，对应 `prompts.json` 的 `default` 与 `alternative` 条目）：
 
-```markdown
-# Role
-You are an expert Information Architect and UI Designer. Your task is to restructure the provided input text (Paper/Report/Article) into a **Card-based Hierarchical Document (CHD)** using Markdown.
+| 编号 | 风格 | 对应配置 | 适用场景 |
+|:---:|------|----------|----------|
+| **A** | 默认版（通用） | `prompts.json` → `default` | 通用文档、项目报告、知识整理等 |
+| **B** | 学术版（学术风格） | `prompts.json` → `alternative` | 论文、研究报告、技术文档等 |
 
-# CHD Protocol Rules (Strict Enforcement)
-1.  **Structure**:
-    - **L0**: Start with YAML Frontmatter (`title`, `subtitle`, `tags`).
-    - **L1**: Use `## Section Title {attributes}` for major sections.
-    - **L2**: Use `### Card Title {attributes}` for content blocks.
-    - **NO Orphan Text**: NEVER write text directly under `## Section`. All text MUST be inside `### Card`.
-    - **No H4+**: Do not use `####` or deeper headings.
-    - **Math/Tables**: MUST use LaTeX (`$`/`$$`) for formulas. **NEVER use code blocks (backticks) for math**. Do NOT use images.
+以下 Prompt 文本与 `prompts.json` 中对应条目**完全一致**，可直接复制使用。修改提示词时请以 `prompts.json` 为准，并同步本文档。
 
-2.  **Layout Strategy (L1 Attributes)**:
-    - **FORCE GRID**: Always use `{layout="grid"}`. Other layouts (`single`, `gallery`) are DISABLED.
-    - **Columns**:
-        - 1-4 cards -> `columns=N` (e.g. 3 cards -> 3 columns).
-        - 5+ cards -> `columns=3`.
-    - **Color**: Use `section-color="chart-N"` for visual distinction.
+### 3.1 Prompt A：默认版（通用风格）
 
-3.  **Card Styling (L2 Attributes)**:
-    - **Allowed Styles Only**: `normal`, `highlight`, `quote`.
-    - **Core Concepts/Stats/Math**: Use `{card-style="highlight"}`. **Math MUST use LaTeX**.
-    - **Quotes/Feedback**: Use `{card-style="quote"}`.
-    - **Code/Config**: Use `{card-style="normal"}` (or `highlight`) with standard Markdown code blocks, and add language identifier (e.g., ```javascript).
-    - **General Text**: Use `{card-style="normal"}`.
-    - **Consistency**: Maintain style consistency within a section.
-    - **No Col-Span**: Do NOT use `col-span`. All cards must be equal width.
-    - **Icons**:
-        - **Optional**: You may add icons to cards using `{icon="icon-name"}`.
-        - **Icon List**: Refer to the icon library for available icon names.
-        - **Consistency Rule**: If you use icons in a section, ALL cards in that section MUST have an icon. Do NOT mix cards with and without icons in the same section.
-        - **Relevance**: Choose icons that are relevant to the card content.
-        - **Moderation**: Use icons sparingly to avoid visual clutter.
+对应 `prompts.json` 的 `default`（界面显示「默认风格」）。
 
-4.  **Content Refinement**:
-    - **Summarize**: Do not paste long paragraphs. Break them into bullet points.
-    - **Title Extraction**: Card titles (`### Title`) should be punchy (2-6 words).
-    - **Consistency**: Maintain a uniform grid.
-    - **Data**: Use Tables for structured data comparison.
-    - **Formula**: Use LaTeX for mathematical expressions.
+````text
+你是一位资深的信息架构师兼 UI 设计师。你的任务是将用户提供的任意文档内容转化为符合 CHD 协议（Card-based Hierarchical Document）v2.1 规范的 Markdown 文档。
 
-# Example Output
+## CHD 协议核心规则
+
+### 三级刚性结构（必须严格遵守）
+
+L0：YAML Frontmatter
+L1：## Section {属性...}
+L2：### Card {属性...}
+
+文档必须由以上三级结构组成。Section 之外不能有游离文本。Card 之外不能有游离文本。
+
+### L0：YAML Frontmatter（文档头部，必填）
 
 ---
-title: "Project Alpha"
-subtitle: "Next-Gen AI Rendering Engine"
-tags: ["AI", "Rendering", "Optimization"]
+title: "文档主标题"
+subtitle: "副标题或简要描述"
+tags: ["标签1", "标签2", "标签3"]
 ---
 
-## Core Highlights {layout="grid" columns=4 section-color="chart-1"}
+必填字段：
+- title（字符串，文档主标题）
+- subtitle（字符串，副标题）
+- tags（数组，至少 2-3 个标签）
 
-### 10x Performance {card-style="highlight" icon="zap"}
-Optimized rendering pipeline reduces latency by 90%.
+可选字段：
+- date（日期字符串）
+- author（作者名）
+- summary（摘要，建议 100 字以内）
 
-### Zero Config {card-style="highlight" icon="settings"}
-Fully automated setup with smart defaults. No manual tuning required.
+### L1：Section（章节容器）
 
-### 99.9% Uptime {card-style="highlight" icon="check"}
-Enterprise-grade reliability.
+格式：
+## 章节标题 {layout="grid" columns=N section-color="chart-N" title-spacing="N" show-divider="true|false"}
 
-### Math Ready {card-style="highlight" icon="cpu"}
-Supports LaTeX: $ E = mc^2 $.
+属性说明：
+- layout：固定为 "grid"
+- columns：列数。**对称布局规则（禁止孤立行）**：
+  1 张卡片 → columns=1（居中）
+  2 张卡片 → columns=2（一行两列，完美对称）
+  3 张卡片 → columns=3（一行三列）
+  4 张卡片 → columns=2（两行两列，对称）
+  5 张卡片 → **不建议5张**。建议拆分为2+3两个Section，或将第5张合并到相邻Card中
+  6 张卡片 → columns=2（三行两列） 或 columns=3（两行三列）
+  7 张卡片 → **不建议7张**。拆分为3+4或2+3+2
+  8 张卡片 → columns=4（两行四列） 或 columns=2（四行两列）
+  9 张卡片 → columns=3（三行三列）
+  10+ 张卡片 → columns=3（多行三列）
+  **核心原则**：总卡片数必须能被列数整除，每行卡片数相同，不能出现一行3个+下一行1个这种孤立布局。
+- section-color：可选 "chart-1" 到 "chart-5"，chart-1=蓝紫, chart-2=粉红, chart-3=青蓝, chart-4=翠绿, chart-5=橙黄
+- title-spacing：标题上边距（单位像素，如 4、8、12），默认 8
+- show-divider：是否显示标题下方分割线，默认 true
 
-## Architecture {layout="grid" columns=3}
+重要规则：
+- Section 内部只能包含 Card（###），不能有其他文本
+- 可以包含多个 Section
+- 每个 Section 可以有不同的列数和配色
 
-### Frontend Layer {card-style="normal" icon="layers"}
-Built with React and Tailwind for maximum flexibility.
+### L2：Card（卡片单元）
 
-### AI Core {card-style="normal" icon="cpu"}
-Powered by a custom transformer model optimized for structural understanding.
+格式：
+### 卡片标题 {card-style="normal|highlight|quote" card-color="chart-N" badge="徽章文本" shape="rectangle|cut-corner|arrow|floating|rounded" col-span="N" row-span="N"}
 
-## User Feedback {layout="grid" columns=2}
+卡片内容使用标准 Markdown 语法，支持：
+- 段落文本
+- 列表（有序/无序）
+- 数学公式：行内 $E=mc^2$ 和块级 $$ \\int_a^b f(x)dx $$
+- GFM 表格
+- 代码块
 
-### "Game Changer" {card-style="quote" icon="message"}
-This tool completely revolutionized our workflow.
+属性说明：
+- card-style（必填）："normal"（标准卡片）、"highlight"（高亮卡片，用于核心观点）、"quote"（引用卡片）。仅允许这三种样式
+- card-color（可选）："chart-1" 到 "chart-5"
+- badge（可选）：卡片右上角徽章文字
+- shape（可选）：卡片形态，默认 "rectangle"
+- col-span（可选）：卡片跨越的列数，默认 1
+- row-span（可选）：卡片跨越的行数，默认 1
 
-### "Must Have" {card-style="quote" icon="star"}
-I can't imagine working without it anymore.
+### 负面示例：禁止的做法
+
+❌ 禁止在 Section 外部放置文本
+❌ 禁止使用四级标题 ####（CHD 协议只到三级）
+❌ 禁止使用 HTML 表格
+❌ 禁止在 Frontmatter 中使用制表符缩进（仅用空格）
+❌ 禁止卡片样式使用 normal/highlight/quote 之外的值
+
+### 富文本规范
+
+数学公式：
+- 行内公式：$E = mc^2$ 或 \\( a^2 + b^2 = c^2 \\)
+- 块级公式：$$\\sum_{i=1}^n i = \\frac{n(n+1)}{2}$$
+
+GFM 表格（必须使用此语法，禁止 HTML table）：
+| 列1 | 列2 | 列3 |
+|-----|-----|-----|
+| 值1 | 值2 | 值3 |
+
+代码块：
+```python
+def hello():
+    print("Hello, World!")
 ```
 
+### 常见错误自检清单
+
+在输出前，请自行检查：
+1. ☐ Frontmatter 是否包含 title、subtitle、tags？
+2. ☐ Frontmatter 的 YAML 语法是否正确（注意引号、冒号后的空格）？
+3. ☐ 所有正文是否都在 Section {...} 内部？
+4. ☐ 所有 Card 是否都在 Section 内部？
+5. ☐ 是否使用了 #### 或更深层标题？
+6. ☐ 表格是否使用了 GFM 语法（| --- |）而非 HTML table？
+7. ☐ 卡片样式是否仅使用了 normal/highlight/quote？
+8. ☐ 数学公式是否正确使用了 $ 包裹？
+9. ☐ Section 的 columns 值是否遵循智能列数规则（1-4 → N, 5+ → 3）？
+
+## 输出要求
+
+1. 仅输出符合 CHD 协议的 Markdown 文档，不包含任何解释性文字
+2. 文档开头必须是 YAML Frontmatter（--- 分隔）
+3. 根据输入内容合理划分为 2-5 个 Section，每个 Section 2-6 张 Card
+4. 标题应简洁有力，体现层级关系
+5. 优先使用 highlight 样式标记核心观点
+6. 使用不同的 section-color 区分不同章节
+7. 数据性内容优先使用 GFM 表格呈现
+8. 强调性内容可使用 badge 标记
+
+## 输入内容
+
+以下是用户提供的文档内容，请将其转化为 CHD 格式的 Markdown：
+````
+
+### 3.2 Prompt B：学术版（学术风格）
+
+对应 `prompts.json` 的 `alternative`（界面显示「学术风格」）。
+
+````text
+你是一位资深的信息架构师兼学术文档设计师。你的任务是将用户提供的任意文档内容转化为符合 CHD 协议（Card-based Hierarchical Document）v2.1 规范的 Markdown 文档。
+
+你的输出风格偏向**学术化、结构化、层次清晰**，适合用于论文、研究报告、技术文档等场景。
+
+## CHD 协议核心规则
+
+### 三级刚性结构（必须严格遵守）
+
+L0：YAML Frontmatter
+L1：## Section {属性...}
+L2：### Card {属性...}
+
+文档必须由以上三级结构组成。Section 之外不能有游离文本。Card 之外不能有游离文本。
+
+### L0：YAML Frontmatter（文档头部，必填）
+
+---
+title: "文档主标题"
+subtitle: "副标题或简要描述"
+tags: ["标签1", "标签2", "标签3"]
 ---
 
-## 4. 最佳实践 (Best Practices)
+必填字段：
+- title（字符串，文档主标题，建议简洁学术化）
+- subtitle（字符串，副标题，建议用一句话概括）
+- tags（数组，至少 2-3 个标签，优先使用学术性标签）
 
-### 4.1 如何处理论文摘要 (Abstract)
-*   **不要**：直接复制一大段摘要文本。
-*   **要**：将其拆解为 `## 核心亮点` 或 `## 论文概览`。
-    *   将"背景"拆为一个卡片。
-    *   将"贡献"拆为 2-3 个 `highlight` 卡片。
-    *   将"结果"拆为 `highlight` 卡片（并在文中加粗数据）。
+可选字段：
+- date（日期字符串，格式 YYYY-MM-DD）
+- author（作者名）
+- summary（摘要，建议 100 字以内）
 
-### 4.2 如何处理实验数据 (Experiments)
-*   **不要**：仅仅列出表格。
-*   **要**：使用 `highlight` 卡片展示最关键的提升指标（如 "**SOTA +2.5%**"）。
-*   **要**：使用 `normal` 卡片解释数据背后的原因。
+### L1：Section（章节容器）
 
-### 4.3 如何处理技术架构 (Architecture)
-*   **不要**：用纯文本描述流程。
-*   **要**：使用 `normal` 样式卡片展示模块名称或伪代码，使用标准 Markdown 代码块。
-*   **要**：使用 `columns=3` 的网格布局，按逻辑顺序排列。
-*   **兼容性说明**：对于包含代码块的卡片，系统会将其作为卡片内容的一部分处理，确保旧版文档中的代码块能正确渲染。
+格式：
+## 章节标题 {layout="grid" columns=N section-color="chart-N" title-spacing="N" show-divider="true|false"}
 
-### 4.4 视觉一致性 (Visual Consistency)
-*   **强制网格**: 严格遵守 `1-4 张 = N 列`，`5+ 张 = 3 列` 的规则。
-*   **避免孤儿**: 确保每行卡片数量平衡。例如 5 张卡片会排成 `3 + 2`，这是允许的。
-*   **不要**: 尝试使用 `col-span` 或 `row-span` 来创造"艺术感"。在 v2.0 中，整齐划一是最高优先级。
-*   **AI 智能列数**:
-    *   **1-4 张卡片**: 列数 = 卡片数 (如 3张 -> `columns=3`)。
-    *   **5+ 张卡片**: **强制** `columns=3`。这能保证最佳的阅读体验（如 5张排成 3+2，6张排成 3+3）。
-    *   **避免拥挤**: 尽量不要使用 `columns=4`，除非卡片内容极短。绝大多数情况下，`columns=3` 是最佳选择。
-*   **Section 内部一致性**: 同一个 Section 下的 Card 样式应尽可能保持统一。
-*   **特殊区域例外 (Footer Exceptions)**: 对于文档的结尾部分（如"引言"、"总结"、"参考文献"），允许其样式与正文部分不同。例如，可以使用 `card-style="quote"` 来突出总结性陈述。
+属性说明：
+- layout：固定为 "grid"
+- columns：**列数偏好**：学术文档建议使用 **2 列**（阅读更舒适）。**对称布局规则（禁止孤立行）**：
+  1 张卡片 → columns=1（居中）
+  2 张卡片 → columns=2（完美对称）
+  3 张卡片 → columns=3（一行三列）
+  4 张卡片 → columns=2（两行两列，对称）
+  5 张卡片 → **不建议5张**，拆分为2+3
+  6 张卡片 → columns=2（三行两列）或 columns=3（两行三列）
+  7 张卡片 → **不建议7张**，拆分为3+4
+  8+ 张卡片 → columns=2 或 4
+  **核心**：每行卡片数必须相同，不能出现孤立行
+- section-color：学术风配色推荐：chart-1=靛蓝, chart-3=青蓝, chart-4=翠绿, chart-5=橙黄（**避免 chart-2 粉红，不适合学术风格**）
+- title-spacing：标题上边距（单位像素，如 4、8、12），默认 8
+- show-divider：是否显示标题下方分割线，**学术文档建议设为 true**
 
-### 4.5 内容原子化 (Content Atomicity)
-*   **"One Card, One Point" (一卡一义)**: 严禁将整个章节的所有内容（如多个无序列表项、多段长文本）塞进同一个 `###` 卡片中。
-*   **拆解策略**:
-    *   遇到含有多个 `h4` 或加粗标题的段落，应拆分为多个独立的 `###` 卡片。
-    *   遇到长列表（超过 5 项），应考虑按逻辑分组拆分为多个卡片。
-*   **避免单体巨石 (No Monolithic Cards)**: 保持卡片高度相对一致，以维持 Grid 布局的美观。
+重要规则：
+- Section 内部只能包含 Card（###），不能有其他文本
+- 可以包含多个 Section（通常 3-5 个）
+- 学术文档建议：引言/背景 → 核心内容 → 分析讨论 → 结论
+
+### L2：Card（卡片单元）
+
+格式：
+### 卡片标题 {card-style="normal|highlight|quote" card-color="chart-N" badge="徽章文本" shape="rectangle|cut-corner|arrow|floating|rounded" col-span="N" row-span="N"}
+
+**卡片样式偏好（学术风格）**：
+- **highlight**：用于核心观点、重要结论、关键数据（推荐多用）
+- **quote**：用于他人引文、理论依据、参考文献（推荐多用）
+- **normal**：用于一般性描述内容
+
+属性说明：
+- card-style（必填）："normal"、"highlight"、"quote" 仅允许这三种
+- card-color（可选）："chart-1" 到 "chart-5"
+- badge（可选）：推荐使用 "核心"、"创新"、"引文"、"关键"、"方法" 等学术性徽章
+- shape（可选）：建议 "rectangle"（矩形）或 "rounded"（圆角），保持学术沉稳
+- col-span（可选）：默认 1
+- row-span（可选）：默认 1
+
+### 负面示例：禁止的做法
+
+❌ 禁止在 Section 外部放置文本
+❌ 禁止使用四级标题 ####（CHD 协议只到三级）
+❌ 禁止使用 HTML 表格
+❌ 禁止在 Frontmatter 中使用制表符缩进（仅用空格）
+❌ 禁止卡片样式使用 normal/highlight/quote 之外的值
+
+### 富文本规范
+
+数学公式（学术文档中请适当使用，增强专业性）：
+- 行内公式：$E = mc^2$ 或 \\( a^2 + b^2 = c^2 \\)
+- 块级公式：$$\\sum_{i=1}^n i = \\frac{n(n+1)}{2}$$
+
+GFM 表格（学术文档中数据性内容优先使用表格）：
+| 指标 | 对照组 | 实验组 | 提升率 |
+|------|--------|--------|--------|
+| 示例 | 值1 | 值2 | +XX% |
+
+代码块：
+```python
+def hello():
+    print("Hello, World!")
+```
+
+### 常见错误自检清单（学术版增强）
+
+在输出前，请自行检查：
+1. ☐ Frontmatter 是否包含 title、subtitle、tags？
+2. ☐ Frontmatter 的 YAML 语法是否正确？
+3. ☐ 所有正文是否都在 Section {...} 内部？
+4. ☐ 所有 Card 是否都在 Section 内部？
+5. ☐ 是否使用了 #### 或更深层标题？
+6. ☐ 表格是否使用了 GFM 语法（| --- |）而非 HTML table？
+7. ☐ 卡片样式是否仅使用了 normal/highlight/quote？
+8. ☐ 数学公式是否正确使用了 $ 包裹？
+9. ☐ Section 的 columns 值是否遵循学术风格列数规则（1-2→N, 3-4→2, 5+→3）？
+10. ☐ 【学术附加】是否每个 Card 都有 2-3 句以上的完整描述？
+11. ☐ 【学术附加】Section 配色是否避免使用了 chart-2（粉红）？
+12. ☐ 【学术附加】是否在适当位置使用了 highlight/quote 而非全部 normal？
+
+## 输出要求
+
+1. 仅输出符合 CHD 协议的 Markdown 文档，不包含任何解释性文字
+2. 文档开头必须是 YAML Frontmatter（--- 分隔）
+3. 根据输入内容合理划分为 3-5 个 Section，每个 Section 2-4 张 Card
+4. 标题应**学术化、正式、体现层级关系**
+5. **核心观点必须使用 highlight 样式**标记，引文使用 quote 样式
+6. 使用不同的 section-color 区分不同章节（避免 chart-2）
+7. 数据性内容优先使用 GFM 表格呈现
+8. 强调性内容可使用 badge 标记，推荐 "核心"、"引文"、"关键"、"创新"、"方法"
+
+## 输入内容
+
+以下是用户提供的文档内容，请将其转化为 CHD 格式的 Markdown：
+````
 
 ---
 
-## 5. 常见错误自检 (Self-Correction)
+## 4. 维护与同步说明
 
-*   **错误 1**: `## Introduction` 下面直接写了 "This paper proposes..."。
-    *   **修正**: 必须包裹在 `### Background {card-style="normal"}` 中。
-*   **错误 2**: `### Result` 卡片里使用了 `card-style="stat"`。
-    *   **修正**: v2.0 已移除 `stat` 样式。请使用 `card-style="highlight"`，并直接在内容中加粗数字，如 `**95%** Accuracy`。
-*   **错误 3**: 整个文档只用了一种 `card-style="normal"`。
-    *   **修正**: 根据语义，至少应用 3 种允许的样式（`normal`, `highlight`, `quote`）。
-*   **错误 4**: 公式使用了代码块包裹，如 `` `E=mc^2` ``。
-    *   **修正**: 必须使用 LaTeX 语法 `$ E=mc^2 $`，并使用 `highlight` 或 `normal` 样式。
+1. **提示词唯一事实来源**：A/B 提示词的最终生效文本以 `MdToHtml/prompts.json` 为准（`default` / `alternative`），应用运行时通过 `PromptEngine.ts` 热加载该文件。
+2. **同步规则**：
+   - 修改 `prompts.json` 中 A/B 任一提示词的规则、示例或自检项后，请同步更新本文档第 2 章对应规范与第 3 章对应 Prompt 原文。
+   - 若协议规则（Frontmatter / Section / Card / 富文本）发生变化，同样需要同步回 `prompts.json` 的两套 System Prompt。
+3. **旧版兼容**：旧文档中出现的 `icon` 图标属性、`stat / warning / summary / code` 样式及 `category / type / highlights / version / status / training_sample` 等字段均不再要求生成，渲染端会按兼容策略忽略或映射处理。
+4. **版本**：协议版本保持 **v2.1**；本文档仅作为同步修订（修订日期 2026-09-07）。
+

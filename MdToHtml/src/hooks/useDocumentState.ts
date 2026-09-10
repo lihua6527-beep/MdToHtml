@@ -21,6 +21,9 @@ interface UseDocumentStateReturn {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  getCheckpoints: () => { id: string; label: string; timestamp: number }[];
+  goToCheckpoint: (checkpointId: string) => string | null;
+  setCheckpoint: (label: string) => void;
   
   // Edit state
   isEditing: boolean;
@@ -76,7 +79,10 @@ export const useDocumentState = ({
     undo, 
     redo, 
     canUndo, 
-    canRedo 
+    canRedo,
+    getCheckpoints,
+    goToCheckpoint,
+    setCheckpoint,
   } = useHistory(initialContent, { sessionId: decodedSlug });
   
   // Edit state
@@ -113,16 +119,18 @@ export const useDocumentState = ({
   }, [setContent]);
   
   // Markdown interaction
+  // updateAttribute/batchUpdateAttributes 内部通过 handleContentUpdate → setContent(pushState)
+  // → diffToOperation 自动生成 Operation，已无感接入撤销引擎
   const { 
-    updateAttribute, 
+    updateAttribute,
     updateContent, 
     updateTitle, 
     updateFrontmatter, 
     moveCard, 
     deleteCard, 
     addCard, 
+    batchUpdateAttributes,
     operationLog, 
-    batchUpdateAttributes 
   } = useMarkdownInteraction(content, handleContentUpdate);
   
   // Parse Frontmatter for Global Settings
@@ -314,6 +322,9 @@ export const useDocumentState = ({
     redo,
     canUndo,
     canRedo,
+    getCheckpoints,
+    goToCheckpoint,
+    setCheckpoint,
     
     // Edit state
     isEditing,

@@ -21,14 +21,14 @@ jest.mock('../ExportButton', () => {
 import ExportButton from '../ExportButton';
 
 describe('ExportButton', () => {
-  test('renders export button', () => {
+  test('renders export button when not exporting', () => {
     const setIsExporting = jest.fn();
     
     render(
       <ExportButton
         content="# Test"
         decodedSlug="test"
-        theme="light"
+        theme={"light" as any}
         isExporting={false}
         setIsExporting={setIsExporting}
       />
@@ -37,14 +37,14 @@ describe('ExportButton', () => {
     expect(screen.getByText('导出 HTML')).toBeInTheDocument();
   });
   
-  test('renders exporting state', () => {
+  test('renders exporting state when isExporting is true', () => {
     const setIsExporting = jest.fn();
     
     render(
       <ExportButton
         content="# Test"
-        decodedSlug="test"
-        theme="light"
+        decodedSlug="test-2"
+        theme={"light" as any}
         isExporting={true}
         setIsExporting={setIsExporting}
       />
@@ -60,7 +60,7 @@ describe('ExportButton', () => {
       <ExportButton
         content="# Test"
         decodedSlug="test"
-        theme="light"
+        theme={"light" as any}
         isExporting={false}
         setIsExporting={setIsExporting}
       />

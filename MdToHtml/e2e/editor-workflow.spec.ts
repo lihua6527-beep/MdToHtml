@@ -16,14 +16,14 @@ test.describe('核心编辑工作流', () => {
     await typeInEditor(page, SAMPLE_CHD_DOC);
 
     // 4. 验证预览卡片数量（3 张普通卡片）
-    const cards = page.locator('.chd-card-normal');
+    const cards = page.locator('[data-card-style="normal"]');
     await expect(cards).toHaveCount(3);
 
     // 5. 验证引用卡片
-    await expect(page.locator('.chd-card-quote')).toBeVisible();
+    await expect(page.locator('[data-card-style="quote"]')).toBeVisible();
 
     // 6. 验证代码卡片
-    await expect(page.locator('.chd-card-code')).toBeVisible();
+    await expect(page.locator('[data-card-style="code"]')).toBeVisible();
 
     // 7. 验证内容正确渲染
     await expect(page.locator('text=核心概念')).toBeVisible();
@@ -47,7 +47,7 @@ test.describe('核心编辑工作流', () => {
     await typeInEditor(page, ['## 测试章节', '', '### 初始卡片', '', '初始内容']);
 
     // 记录初始卡片数
-    const initialCardCount = await page.locator('.chd-card-normal').count();
+    const initialCardCount = await page.locator('[data-card-style="normal"]').count();
 
     // 新增一个卡片
     const editor = page.locator('.cm-content');
@@ -62,7 +62,7 @@ test.describe('核心编辑工作流', () => {
     await page.waitForTimeout(500);
 
     // 验证卡片数 +1
-    await expect(page.locator('.chd-card-normal')).toHaveCount(initialCardCount + 1);
+    await expect(page.locator('[data-card-style="normal"]')).toHaveCount(initialCardCount + 1);
     await expect(page.locator('text=新增卡片')).toBeVisible();
   });
 });

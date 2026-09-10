@@ -13,6 +13,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
+    "clean": "node scripts/clean-artifacts.js",
     "lint": "next lint",
     "test": "jest",
     "test:watch": "jest --watch",
