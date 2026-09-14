@@ -50,9 +50,9 @@ ci.yml   build job = ① ② ③ + npm run build          → 必须全绿
 ci.yml   e2e   job = ④（needs: build）                → 必须全绿（硬门禁）
 pr-check.yml       = ① ② ③ + 上传 coverage/           → PR 必须全绿
 
-Gitee 侧（方案 B，.workflow/ci.yml，Gitee 不执行上面的 GitHub Actions）：
-gates          阶段 = ① ② ③                          → 必须全绿
-build-and-e2e  阶段 = npm run build + ④（Chromium）    → 必须全绿
+Gitee 侧（Gitee 流水线，.workflow/流水线-*.yml；Gitee 不执行上面的 GitHub Actions）：
+门禁          阶段 = ① ② ③                              → 必须全绿
+构建与E2E     阶段 = npm run build + ④（Chromium）        → 必须全绿
 ```
 
 ---

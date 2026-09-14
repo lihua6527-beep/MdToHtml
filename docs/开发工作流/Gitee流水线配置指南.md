@@ -109,23 +109,20 @@ triggers:
 
 | 阶段 | 步骤 | 期望日志 |
 |------|------|----------|
-| `gates` | `环境自检` | `v20.x`（Node 20）。若为 `command not found` → 见 Step 7-① |
-| `gates` | `安装依赖` | `npm ci` 正常结束（约 1–3 分钟） |
-| `gates` | `类型检查 + Lint + 单测` | `✔ No ESLint warnings or errors`、`Test Suites: 25 passed`、`Tests: 213 passed`、`All files | 20.5 | 15.82 | 14.03 | 21.25` |
-| `build-and-e2e` | `生产构建` | `✓ Compiled successfully` |
-| `build-and-e2e` | `E2E 测试` | `7 passed`（首次需先下载 Chromium） |
-| `build-and-e2e` | `保留失败证据` | 打印 `playwright-report/`、`test-results/` 路径 |
+| 门禁 | 类型检查 + Lint + 单测（含覆盖率阈值 19/14/13/20） | `npm ci` 完成 → `✔ No ESLint warnings or errors` → `Test Suites: 25 passed`、`Tests: 213 passed`、`All files | 20.5 | 15.82 | 14.03 | 21.25` |
+| 构建与E2E | 生产构建 + E2E | `✓ Compiled successfully` → `7 passed`（首次会先下载 Chromium） |
 
 全部通过 → **流水线变绿，远端验收完成**。
 任一阶段失败 → 见 Step 7 与 `SOP_测试与CI门禁规范.md` §6。
 
-### Step 7：首次运行最可能的 3 个问题与处置
+### Step 7：首次运行最可能遇到的问题与处置（均为 2026-09-14 实际遇到并已解决）
 
-| # | 现象 | 原因 | 处置 |
-|:-:|------|------|------|
-| ① | `node: command not found` / Node 版本过低 | 执行镜像未预装 Node 20 | 在流水线里把 `install` 步骤替换为页面步骤库中的 **Node/npm 步骤**（选择 Node 20），或在流水线设置中指定带 Node 20 的镜像；`环境自检` 步骤保留用于确认 |
-| ② | 保存 YAML 时报 **配置结构错误** | 已处理过一例：`位置: stages[0].steps` → 原因是 `steps` 被嵌在 `stage:` 子键里；现改为 `stages[i].steps` 扁平写法。若仍有报错，多半是 **step 条目写法**或 `stage` 层缺失 `stage:` 键（见 §五） | 按报错位置改对应层级；**步骤内要执行的命令无需改动**。把报错原文贴回即可一次性校正 |
-| ③ | `playwright install --with-deps` 失败 | 镜像缺少 apt/sudo 权限 | 改为 `npx playwright install chromium`，并确认镜像已含 Chromium 运行所需系统库；或在镜像中预装依赖 |
+| # | 现象 | 原因 | 处置（已采用的做法） |
+|:-:|------|------|----------------------|
+| ① | `node: command not found` / Node 版本过低 | 执行镜像未预装目标 Node | 插件字段 `nodeVersion: "20"` 指定版本；若页面报「不支持的版本」，按报错列出的可选值调整 |
+| ② | `[配置结构错误] 位置: stages[0].steps` | `steps` 被嵌在 `stage:` 子键里 | 改为 **`stages[i].steps` 扁平写法**（stage 下直接 `name`/`displayName`/`strategy`/`trigger`/`steps`） |
+| ③ | `[插件类型不存在] 不支持的插件类型: shell@1` | Gitee 没有通用 shell 插件 | 用**插件 id**：`step: build@nodejs`，命令放 **`commands:`** 列表（不是 `inputs.run`） |
+| ④ | E2E 因 Chromium 系统库缺失失败 | 镜像缺少浏览器依赖 | 先用 `npx playwright install chromium`；仍失败则改 `--with-deps` 或换带浏览器依赖的镜像 |
 
 ### Step 8：绑定后续自动化（可选）
 
@@ -135,13 +132,13 @@ triggers:
 
 ### 2.1 与既有定义的等价关系（命令完全一致，不能各写各的）
 
-| 目标 | 本地命令 | GitHub Actions | Gitee Go（`.workflow/ci.yml`） |
-|------|----------|----------------|-------------------------------|
-| 类型检查 | `npm run typecheck` | `ci.yml` build job | `gates` 阶段 `verify` 步骤 |
+| 目标 | 本地命令 | GitHub Actions | Gitee 流水线（`.workflow/流水线-*.yml`） |
+|------|----------|----------------|----------------------------------------|
+| 类型检查 | `npm run typecheck` | `ci.yml` build job | 「门禁」阶段（`build@nodejs` 的 `commands`） |
 | 代码规范 | `npm run lint:strict` | 同上 | 同上 |
 | 单测+覆盖率 | `npm run test:ci` | 同上 | 同上 |
-| 生产构建 | `npm run build` | 同上 | `build-and-e2e` 阶段 `build` 步骤 |
-| E2E | `npx playwright test` | `ci.yml` e2e job | `build-and-e2e` 阶段 `e2e` 步骤 |
+| 生产构建 | `npm run build` | 同上 | 「构建与E2E」阶段 |
+| E2E | `npx playwright test` | `ci.yml` e2e job | 「构建与E2E」阶段 |
 
 > 约定：**命令集只允许在 `package.json` 里定义一次**，三套编排（本地 / GitHub / Gitee）都只做"调用"。新增门禁时先加 `package.json` 脚本，再同步三处。
 
@@ -160,15 +157,17 @@ triggers:
 
 ## 四、首次启用的核对清单
 
-- [ ] `.workflow/ci.yml` 已被推送到远端（本文件由本次提交引入）—— 已确认：`feat/exe-package-ready` / `test/ci-green` 上存在；`master` 上**尚未**存在
-- [ ] **代码源分支选择正确**：走路径 A 选 `feat/exe-package-ready`；走路径 B 先把该文件带入 `master` 再选 `master`（否则页面下拉里找不到流水线文件）
-- [ ] 流水线页面以 **YAML 模式** 创建（非可视化模式），并选中该文件
-- [ ] 页面语法校验无报错（若报字段名错误，按页面模板调整顶部结构 —— 步骤内命令不需要改）
-- [ ] 首次运行的 `环境自检` 步骤输出 `v20.x`（否则按第三节处理 Node 版本）
-- [ ] `gates` 阶段输出 `Test Suites: 25 passed`、`Tests: 213 passed`、`All files 20.5 ...`
-- [ ] `build-and-e2e` 阶段输出 `Compiled successfully`、`7 passed`
-- [ ] 流水线触发条件符合预期：`master` / `feat/**` / `test/**` 的 push 与面向 `master` 的 PR
-- [ ] **数据隔离自检**：远端流水线跑完后，仓库内 `MdToHtml/input/`、`MdToHtml/.trash/`、`MdToHtml/config.json` 无新增 diff（E2E 写入的是 `.e2e-tmp/`，且该目录已被 `.gitignore` 忽略）
+### 四、启用核对结果（2026-09-14）
+
+| 核对项 | 结果 |
+|--------|------|
+| `.workflow/` 下流水线文件 | ✅ `流水线-202609142049.yml`、`流水线-202609142107.yml`、`ci.yml`；三分支（`master` / `feat/exe-package-ready` / `test/ci-green`）同 SHA |
+| 页面创建流水线（Gitee 自动生成同名文件） | ✅ 已创建（仓库顶部 **「流水线」** 入口） |
+| 页面语法校验 | ✅ 通过（此前两轮报错已按页面模板修正：`stages[i].steps` 扁平化、`shell@1` → `build@nodejs`） |
+| 运行结果 | ✅ 已跑通（用户确认；**运行日志未归档**，如需作为证据请导出日志/截图） |
+| 本地等价门禁 | ✅ `npm run verify` EXITCODE=0（25 套件 / 213 用例）；`npx playwright test` 7 passed |
+| 数据隔离 | ✅ 真实 `MdToHtml/input/` 保持 27 篇，写入仅落 `.e2e-tmp/` |
+| 触发条件 | ✅ `triggers.push.branches.prefix: [master, feat/, test/]`（未做 paths 过滤，纯文档提交也会触发） |
 
 ---
 
