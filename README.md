@@ -1,5 +1,9 @@
 # MdToHtml Pro — 本地 Markdown 文档工程系统
 
+[![CI](https://github.com/lihua6527-beep/MdToHtml/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/lihua6527-beep/MdToHtml/actions/workflows/ci.yml)
+[![Release](https://github.com/lihua6527-beep/MdToHtml/actions/workflows/release.yml/badge.svg)](https://github.com/lihua6527-beep/MdToHtml/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 > **系统版本**: v1.0.0 | **毕业设计**: 南京理工大学 软件工程  
 > **技术栈**: Next.js 14 + TypeScript + Tailwind CSS + CodeMirror 6 + Electron
 

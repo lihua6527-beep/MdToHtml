@@ -1,16 +1,35 @@
 name: CI Pipeline
 
+# =============================================================================
+# 触发说明（2026-09-14 修正）
+#   仓库已迁移到 GitHub（origin = git@github.com:lihua6527-beep/MdToHtml.git），
+#   默认分支为 main（由本地 master 推送而来），本地主线仍叫 master。
+#   此前只监听 "master" —— 而 GitHub 上并不存在该分支，导致推送后 CI 从不触发。
+#   现同时监听 main 与 master，两者等价（当前同一提交），任一侧推送都会跑门禁。
+#   workflow_dispatch 预留手动触发：可在 Actions 页面选任意分支跑一次。
+# =============================================================================
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main", "master" ]
     paths-ignore:
       - 'docs/**'
       - '**.md'
+  workflow_dispatch:
 
 # 同一分支连续推送时取消上一次运行
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # CI 门禁不需要 Electron 二进制：只需 next build / jest / playwright。
+  # 跳过后 npm ci 少下载约 90MB，也避免 electron 镜像不可达拖垮门禁。
+  # 真正需要 Electron 的是 release.yml（Windows runner 打包便携 exe）。
+  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
 
 jobs:
   build:
@@ -41,6 +60,13 @@ jobs:
 
       - name: Unit Tests
         run: npm run test:ci
+
+      # 覆盖率看板：把四项覆盖率写进本次运行的 Summary（无需 Codecov 账号）。
+      # continue-on-error：看板本身不允许影响门禁结果。
+      - name: Publish Coverage Summary
+        if: always()
+        continue-on-error: true
+        run: node scripts/coverage-summary.js
 
       - name: Build
         run: npm run build

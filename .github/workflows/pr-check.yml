@@ -1,15 +1,25 @@
 name: PR Check
 
+# 触发说明（2026-09-14 修正）：默认分支为 main（本地主线名 master），
+# 此前仅监听 "master"（GitHub 上不存在）导致 PR 门禁从不触发，现两者都监听。
 on:
   pull_request:
-    branches: [ "master" ]
+    branches: [ "main", "master" ]
     paths-ignore:
       - 'docs/**'
       - '**.md'
+  workflow_dispatch:
 
 concurrency:
   group: pr-check-${{ github.ref }}
   cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+  NEXT_TELEMETRY_DISABLED: '1'
 
 jobs:
   quality:
@@ -40,6 +50,12 @@ jobs:
 
       - name: Unit Tests with Coverage
         run: npm run test:ci
+
+      # 覆盖率看板：写入本次 PR 运行的 Summary（无需 Codecov 账号）
+      - name: Publish Coverage Summary
+        if: always()
+        continue-on-error: true
+        run: node scripts/coverage-summary.js
 
       - name: Upload Coverage Report
         if: always()

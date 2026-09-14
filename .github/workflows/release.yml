@@ -1,0 +1,83 @@
+name: Release
+
+# =============================================================================
+# 发布流水线（2026-09-14 落地；设计稿见
+#   plans/测试工程/01_CI缺口补全计划_2026-09-14.md §6.2）
+#
+# 触发方式：
+#   ① 打 tag 并推送：git push origin v1.0.0  → 打包 + 自动创建 GitHub Release（挂载 exe）
+#   ② Actions 页面手动运行（workflow_dispatch）→ 只打包并上传 artifact（无 tag，不创建 Release）
+#
+# 为什么 runs-on 必须是 windows-latest：
+#   electron-builder 的 win/portable 目标在 Linux runner 上需要 wine，
+#   在 Windows runner 上是原生能力，产物也是 Windows 便携版 exe。
+#
+# 版本号唯一来源：MdToHtml/package.json 的 version（发版用 npm version patch|minor）。
+# =============================================================================
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write          # 创建 Release 需要
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+  # 打包场景必须让 electron 与 electron-builder 正常取二进制，故此处**不设**
+  # ELECTRON_SKIP_BINARY_DOWNLOAD（与 ci.yml 相反，理由见 ci.yml 的 env 注释）。
+  CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+jobs:
+  package:
+    name: Package Portable EXE
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: MdToHtml
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: MdToHtml/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # 打包前再跑一次门禁：防止把红灯代码打成包
+      - name: Verify gates
+        run: npm run verify
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Build Portable EXE
+        run: npm run build:electron
+
+      # 日志内留下产物证据（名称 + 体积），便于核对与排障
+      - name: List artifacts
+        run: Get-ChildItem release/*.exe | Select-Object Name, @{n='SizeMB';e={[math]::Round($_.Length/1MB,1)}}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: portable-exe
+          path: MdToHtml/release/*.exe
+          if-no-files-found: error
+
+      # 仅在 tag 推送时创建 Release（手动运行时没有 tag，跳过）
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: MdToHtml/release/*.exe
+          generate_release_notes: true

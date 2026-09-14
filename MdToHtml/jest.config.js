@@ -34,6 +34,12 @@ const customJestConfig = {
   // 2026-09-14 全量口径实测基线：Stmts 20.5 / Branch 15.82 / Funcs 14.03 / Lines 21.25
   // 取 阈值 = floor(实测) - 1 作为安全边际，仅用于防止回退；
   // 覆盖率目标见 plans/测试工程/00_CI全绿计划书_2026-09-14.md（P2 后续逐步抬升）
+  // 覆盖率报告格式：
+  //   text         → 终端明细（保留原有阅读习惯）
+  //   json-summary → 供 scripts/coverage-summary.js 生成 Actions 运行摘要（质量看板）
+  //   lcov         → 供 coverage/ artifact 与后续接入 Codecov 使用
+  // 注意：json-summary 被 .github/workflows/*.yml 的覆盖率看板步骤依赖，不要删除。
+  coverageReporters: ['text', 'json-summary', 'lcov'],
   coverageThreshold: {
     global: {
       statements: 19,
