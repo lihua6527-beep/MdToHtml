@@ -620,8 +620,8 @@ src/services/ai/
 | `.github/workflows/pr-check.yml` | Code Quality | `npm ci` → typecheck → lint:strict → test:ci → 上传 `coverage/` | `pull_request: [master]` |
 
 > ✅ 远端为 **Gitee**（`origin` = `https://gitee.com/njustzjh/md-to-html.git`），**Gitee 不执行 GitHub Actions**，因此远端门禁由 **Gitee 流水线**承担：
-> - 生效文件：`.workflow/流水线-202609142049.yml`、`.workflow/流水线-202609142107.yml`（`name`/`displayName` = 流水线名，内容一致，均含「门禁」与「构建与E2E」两阶段）
-> - 备份副本：`.workflow/ci.yml`（规范命名版）
+> - 生效文件：`.workflow/ci.yml`（**唯一流水线**，`name: ci`，含「门禁」与「构建与E2E」两阶段。2026-09-14 收敛：删除另两份内容重复的时间戳文件，避免每次推送跑 3 遍）
+> - 备份副本：无（原先的 `.workflow/ci.yml` 已成为唯一生效文件）
 > - 步骤为插件式：`step: build@nodejs` + `commands:` 列表（Gitee 无通用 `shell@1`）
 > - 状态：**2026-09-14 已启用并跑通**；schema 结论、启用步骤、自检结论见 `docs/开发工作流/Gitee流水线配置指南.md`
 > - 本地等价验证：`npm run verify`（EXITCODE=0，25 套件/213 用例）+ `npx playwright test`（7 passed）
