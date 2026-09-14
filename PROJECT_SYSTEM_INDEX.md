@@ -1,6 +1,8 @@
 # MdToHtml Pro — 系统架构完整索引 (System Index)
 
 > **生成日期**: 2026-07-11（前端UI优化与容量管理重构）
+> **最后更新**: 2026-09-14（测试与 CI 门禁对齐：Jest 25 套件/213 用例、Playwright 7 用例、覆盖率全量口径）
+
 > **用途**: 为 AI 助手提供完整的项目概览，支持语义化导航与上下文理解。
 > **系统版本**: v1.0.0 | **技术栈**: Next.js 14 + TypeScript + Tailwind CSS + CodeMirror 6
 
@@ -62,7 +64,7 @@ MdToHmtl/                          # 项目根目录
 │   │   │   └── ...                # 业务服务（ConfigService, FileService, TrashService）
 │   │   ├── lib/                   # 工具库（16 个文件 + 子模块）
 │   │   │   ├── export/            # 导出模块（HtmlBundler, CssExtractor, template）
-│   │   │   └── __tests__/         # 工具库测试（4 个文件）
+│   │   │   └── __tests__/         # 工具库测试（10 个文件）
 │   │   ├── types/                 # TypeScript 类型定义（3 个文件）
 │   │   ├── config/                # 配置
 │   │   ├── constants/             # 常量定义
@@ -70,12 +72,12 @@ MdToHmtl/                          # 项目根目录
 │   ├── public/                    # 静态资源
 │   ├── posts/                     # 文档存储目录
 │   ├── scripts/                   # 构建/运维脚本（11 个文件）
-│   ├── tests/                     # 测试文件（Python 集成/单元测试）
-│   │   ├── unit/                  # 单元测试
-│   │   └── integration/           # 集成测试
+│   ├── tests/                     # 仅保留测试体系说明 README.md（Python 历史遗留已于 2026-09-14 归档）
+│   │   └── README.md              # ★ 三层测试体系说明（Jest / Playwright / 手工验证）
+│   ├── e2e/                       # ★ Playwright 端到端测试（3 spec / 7 用例 + test-helpers.ts）
 │   ├── electron/                  # Electron 桌面端（4 个文件）
 │   ├── portable_ml_package/       # 可移植 ML 包
-│   ├── archive/                   # 归档文件
+│   ├── archive/                   # 归档文件（archive/legacy_python_tests_2026-09-14/ = 早期 Python 测试）
 │   ├── recycle/                   # 回收站
 │   └── 配置文件 (11 个)
 ├── docs/                          # 文档目录
@@ -314,11 +316,28 @@ lib/export/               # 导出模块（5 个文件）
 
 lib/simple-frontmatter.ts  # 简化版 Frontmatter 解析
 
-lib/__tests__/             # 工具库测试（4 个文件）
-├── chdParser.test.ts
-├── posts.test.ts
-├── data-collector.test.ts
-└── env-hot-loader.test.ts
+lib/__tests__/             # 工具库测试（10 个文件）
+├── chdParser.test.ts            # CHD 解析器主路径
+├── chdParser.edge.test.ts       # 解析器边界（代码块内标题、CRLF、未闭合块等）
+├── attributeParser.test.ts      # 属性解析主路径
+├── attributeParser.edge.test.ts # 属性解析边界（中文花括号、最后 { 规则）
+├── operation.test.ts            # 操作引擎（13 种操作类型）
+├── OperationBuilder.test.ts     # 操作工厂方法
+├── posts.test.ts                # 文档读取与列表
+├── trash-manager.test.ts        # 回收站管理
+├── data-collector.test.ts       # 数据采集
+└── env-hot-loader.test.ts       # 环境变量热加载
+
+lib/validator.test.ts      # 校验器（同目录单文件测试）
+
+lib/export/HtmlBundler.test.tsx  # 导出主路径 / 降级路径 / 转义
+
+# 其余单元测试分布（见「十七、测试与 CI 门禁」）
+src/components/**/__tests__/     # Card / CHDRenderer / DocumentItem / ExportButton / NavigationHeader
+src/hooks/__tests__/             # useMarkdownInteraction / useSearch
+src/types/__tests__/             # invertOperation（逆操作不变量）
+src/services/__tests__/          # FileService
+src/app/**/__tests__/            # /api/ai/generate、/editor/[slug]、generateStaticParams
 ```
 
 > **说明**：此前引用的 `lib/icon-system/` 目录（含 icon-config.ts / icon-manager.ts / icon-renderer.ts）及 `lib/icon-manager.ts`、`lib/document-icon-mapping.ts`、`lib/icon-components.ts`、`lib/icon-map.ts`、`lib/cache-manager-optimized.ts` 等文件已在重构中移除，相关图标测试文件亦已同步删除。
@@ -573,6 +592,65 @@ src/services/ai/
 | 回收站管理 | ✅ 完整生命周期 | `lib/trash-manager.ts` + API |
 | 多格式导出 | ❌ **已放弃** | PDF/PPT 已验证与 CHD 流式编辑不兼容（2026-07-11 最终决策） |
 | AI 实时建议 | 🔜 未来 | 编辑器内 AI 辅助 |
+
+---
+
+## 十七、测试与 CI 门禁 (Testing & CI Gates)
+
+> 详细规范见 `docs/开发工作流/SOP_测试与CI门禁规范.md`；完成度与缺口见 `docs/自动化测试与CI流水线_完成度分析报告_2026-09-14.md`。
+
+### 17.1 三层测试体系
+
+| 层 | 工具 | 位置 | 规模（2026-09-14 实测） | 命令 |
+|----|------|------|------------------------|------|
+| 单元 / 组件 | Jest 30 + RTL（jsdom） | `src/**/__tests__/`、`src/**/*.test.ts(x)` | 25 套件 / 213 用例 | `npm run test:ci` |
+| 端到端 | Playwright 1.61（Chromium） | `e2e/*.spec.ts` + `e2e/test-helpers.ts` | 3 spec / 7 用例 | `npm run test:e2e` |
+| 手工验证 | — | — | 拖拽排序 / AI 真实调用 / Electron 打包 / 导出视觉保真 | — |
+
+一键门禁：`cd MdToHtml && npm run verify`（= `typecheck && lint:strict && test:ci`，等同 CI `build` job）。
+
+### 17.2 CI 工作流
+
+| 文件 | Job | 步骤 | 触发 |
+|------|-----|------|------|
+| `.github/workflows/ci.yml` | Build & Test | `npm ci` → typecheck → lint:strict → test:ci → build → 上传 `.next/` | `push: [master]` |
+| 同上 | E2E Tests（needs: build） | `npm ci` → `playwright install chromium` → test:e2e → 上传报告/失败截图 | 同上（**硬门禁**，无 `continue-on-error`） |
+| `.github/workflows/pr-check.yml` | Code Quality | `npm ci` → typecheck → lint:strict → test:ci → 上传 `coverage/` | `pull_request: [master]` |
+
+> ⚠️ 远端已于 2026-09-14 配置为 **Gitee**（`origin`）：Gitee **不执行 GitHub Actions**，且本地与远端 `feat/exe-package-ready` 分叉 2/2。因此上述工作流至今仍未真实触发；平台方案（GitHub 镜像 / Gitee Go / 仅本地门禁）见 `plans/测试工程/01_CI缺口补全计划_2026-09-14.md` §6.0。本地等价验证：`npm run verify` + `npx playwright test`。
+
+### 17.3 E2E 数据隔离
+
+```
+playwright.config.ts → webServer.env.MDTOHTML_CONFIG=config.e2e.json
+                     → reuseExistingServer: false（强制自拉起隔离服务器）
+config.e2e.json      → paths.input/output/data/trash 全部指向 .e2e-tmp/
+config-manager.ts    → 读取 process.env.MDTOHTML_CONFIG（默认 config.json，线上行为不变）
+```
+
+- `.e2e-tmp/` 已在根 `.gitignore`；E2E 运行不会改动真实 `input/`、`posts/`、`.trash/`、`config.json`。
+- 稳定选择器：`[data-testid="doc-item"][data-slug]`、`[data-testid="trash-item"][data-file-name]`、`[data-testid="trash-restore"]`、`[data-card-style]`。
+
+### 17.4 覆盖率门禁
+
+| 指标 | 实测（2026-09-14） | 阈值 | 计划目标 |
+|------|:------------------:|:----:|:--------:|
+| Statements | 20.5 | 19 | ≥60 |
+| Branches | 15.82 | 14 | ≥50 |
+| Functions | 14.03 | 13 | ≥70 |
+| Lines | 21.25 | 20 | ≥60 |
+
+口径为**全量 `src`**（`collectCoverageFrom`），阈值标定规则 `floor(实测)−1`（防回退）。重点目录现状：`lib/` 43.55%（`chdParser.ts` 100%）、`types/` 77.27%、`services/` 44.26%、`hooks/` 33.9%、`components/` 7.36%、`app/` 0%。
+
+### 17.5 测试相关文件清单（配置层）
+
+| 文件 | 职责 |
+|------|------|
+| `MdToHtml/jest.config.js` / `jest.setup.ts` | Jest 配置（testMatch 排除 e2e、全量覆盖率口径、阈值）与测试环境底座 |
+| `MdToHtml/playwright.config.ts` | E2E 配置（webServer 隔离、并行策略、报告与截图） |
+| `MdToHtml/config.e2e.json` | E2E 隔离路径定义 |
+| `MdToHtml/.eslintrc.json` | `next/core-web-vitals`（配合 `--max-warnings 0`） |
+| `MdToHtml/tests/README.md` | 测试体系说明（含历史遗留清单：`src/app/test/page.tsx`、`tests/*.py`） |
 
 ---
 

@@ -120,16 +120,16 @@ src/lib/config-manager.ts → 读取 process.env.MDTOHTML_CONFIG（默认仍为 
 
 ---
 
-## 5. 历史遗留（不在 CI 中运行）
+## 5. 历史遗留（已归档，不在 CI 中运行）
 
-以下内容保留在仓库中，但**不属于当前测试体系，CI 不会执行它们**：
+以下内容**已不属于当前测试体系，CI 不会执行它们**；其中 Python 测试脚本已于 2026-09-14 移入 `archive/legacy_python_tests_2026-09-14/`：
 
-| 文件 | 说明 |
-|------|------|
-| `src/app/test/page.tsx` | 早期的"浏览器内测试页"（访问 `/test` 查看 PASS/FAIL），已被 Jest 取代 |
-| `tests/integration_test.py` | Python 集成脚本，依赖 Windows 专用的 `start.bat`，跨平台不可用 |
-| `tests/integration/test_workflow.py`、`tests/unit/test_migration.py` | 早期生成的 Python 用例，与 TS 技术栈无关 |
+| 原路径 | 现位置 / 状态 | 说明 |
+|--------|---------------|------|
+| `tests/integration_test.py` | `archive/legacy_python_tests_2026-09-14/` | Python 集成脚本，依赖 Windows 专用的 `start.bat`，跨平台不可用 |
+| `tests/integration/test_workflow.py`、`tests/unit/test_migration.py` | `archive/legacy_python_tests_2026-09-14/{integration,unit}/` | 早期生成的 Python 用例，与 TS 技术栈无关 |
+| `src/app/test/page.tsx` | 仍在原位（源码） | 早期的"浏览器内测试页"（访问 `/test` 查看 PASS/FAIL），已被 Jest 取代；是否删除待定 |
 
-> 是否归档/删除上述文件待定；在清理前请勿把它们当作有效测试依据。
+> 归档目录仅作历史留存，**请勿把它们当作有效测试依据**。
 > （此前 `MdToHtml/.github/workflows/ci.yml` 曾误引用 `tests/unit/test_migration.py`，
 > 该嵌套路径的 workflow GitHub 永远不会执行，已删除。）
