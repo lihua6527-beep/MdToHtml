@@ -296,6 +296,7 @@ test.describe('<场景分组>', () => {
 - [ ] 若动了 UI / 交互 / 导出：`npx playwright test` → 全通过
 - [ ] 若动了 E2E：按 §5.1 做隔离自检（`input/` 计数、`config.json` mtime、`git status`）
 - [ ] 覆盖率有提升 → 按 §4.2 抬阈值并单独记录
+- [ ] **（推荐，一次安装长期生效）** 运行 `scripts\install-git-hooks.bat` → 之后每次 `git push` 会自动跑上述门禁，失败时**在本地就阻断推送**（报错不必等远端流水线）；跳过用 `git push --no-verify`
 
 **收尾（按 `.cursorrules` 第 6 条）**
 - [ ] 归档计划书到 `docs/归档/计划书/`（`scripts\archive_and_record.bat --plan <文件名>`）
