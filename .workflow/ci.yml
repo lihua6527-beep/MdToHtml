@@ -18,27 +18,42 @@
 #   ⚠️ 截至 2026-09-14，Gitee 帮助中心的流水线语法文档在本环境不可达（HTTP 404），
 #      因此本文件的顶部结构与页面模板的一致性**尚未在真实流水线中验证过**。
 #
+# 语法说明（2026-09-14 已用官方模板校正）：
+#   Gitee Go 的流水线文件由页面创建时生成（路径 .workflow/<流水线名>.yml，**文件名 = 流水线名**），
+#   其官方模板为：
+#       version: "1.0"
+#       name: <流水线名>
+#       displayName: <流水线名>
+#       triggers:
+#         push:
+#           branches:
+#             prefix:
+#               - ''
+#   据此本文件已做两处校正：
+#     ① 补 `version: "1.0"`（官方模板必填项，此前缺失）
+#     ② 分支过滤由 `branches.include` 改为 `branches.prefix`（**前缀匹配**，故写 `feat/` 而非 `feat/**`）
+#     ③ 暂时去掉 `pull_request` 触发段（官方模板未出现该键，避免校验失败）；若页面模板支持，
+#        可按其写法补回 `pullRequest` / `pull_request` 并恢复 PR 门禁
+#   `stages` / `steps` 段在官方模板中未出现，仍是按 Azure-Pipelines 风格编写，首次保存时以页面校验为准。
+#
 # 运行环境提示：
 #   - 若执行镜像未预装 Node 20，请用页面上的「Node」步骤替换 install 步骤，
-#     或在流水线设置中指定带 Node 20 的镜像（`sync-node` 步骤会先打印版本以便排查）。
+#     或在流水线设置中指定带 Node 20 的镜像（`环境自检` 步骤会先打印版本以便排查）。
 #   - E2E 需要 Chromium，步骤中已包含 `npx playwright install --with-deps chromium`；
 #     若镜像缺少 apt/sudo 权限，可改为 `npx playwright install chromium` 并预装系统依赖。
 # =============================================================================
 
+version: "1.0"
 name: ci
 displayName: 'CI — 类型检查 / Lint / 单测 / 构建 / E2E'
 
 triggers:
   push:
     branches:
-      include:
+      prefix:
         - master
-        - 'feat/**'
-        - 'test/**'
-  pull_request:
-    branches:
-      include:
-        - master
+        - feat/
+        - test/
 
 variables:
   MDTOHTML_DIR: 'MdToHtml'
