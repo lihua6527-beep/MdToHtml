@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Layout } from 'lucide-react';
 import { CHDRenderer } from '@/components/CHD/CHDRenderer';
 import { useVisitHistory } from '@/hooks/useVisitHistory';
@@ -16,6 +16,12 @@ import { useDocumentState } from '@/hooks/useDocumentState';
 import NavigationHeader from '@/components/ui/NavigationHeader';
 import { clsx } from 'clsx';
 import { ConfigService } from '@/services/ConfigService';
+import { AIInlineToolbar } from '@/components/AIInlineToolbar';
+import type { AIActionType } from '@/components/AIInlineToolbar';
+import { AIInlineResultDialog } from '@/components/AIInlineResultDialog';
+import { AIService } from '@/services/ai/AIService';
+import { OperationBuilder } from '@/lib/OperationBuilder';
+import { OperationType } from '@/types/operation';
 
 interface InteractivePostProps {
   initialContent: string;
@@ -35,10 +41,14 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
   // Use custom hook for document state management
   const {
     content,
+    setContent,
     undo,
     redo,
     canUndo,
     canRedo,
+    getCheckpoints,
+    goToCheckpoint,
+    setCheckpoint,
     isEditing,
     setIsEditing,
     selectedBlockIndex,
@@ -135,6 +145,110 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
     isSavingRef.current = isSaving;
   }, [isSaving]);
 
+  // ── AI 内联编辑状态 ──
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiDialogOpen, setAiDialogOpen] = useState(false);
+  const [aiOriginalText, setAiOriginalText] = useState('');
+  const [aiResultText, setAiResultText] = useState('');
+
+  // 获取选中文本（从浏览器 DOM Selection）
+  const getEditorSelection = useCallback((): string => {
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      return sel.toString().trim();
+    }
+    return '';
+  }, []);
+
+  // 占位函数：通过 AIInlineToolbar 的 replaceSelection prop
+  // 当前流程使用 onAIAction + 弹窗替换，不走直接替换路径
+  const replaceEditorSelection = useCallback((_text: string) => {
+    // 无操作 — 替换通过 AIInlineResultDialog 的 onReplace 回调完成
+  }, []);
+
+  // 处理 AI 操作：调用 AI 服务并显示结果弹窗
+  const handleAIAction = useCallback(async (action: AIActionType, selectedText: string, customPrompt?: string) => {
+    setAiOriginalText(selectedText);
+    setAiDialogOpen(true);
+    setAiLoading(true);
+
+    try {
+      // 构建 prompt
+      let promptText = '';
+      switch (action) {
+        case 'polish':
+          promptText = `请润色以下文本，修正语法和表达：\n\n${selectedText}`;
+          break;
+        case 'expand':
+          promptText = `请扩充以下文本，补充更多细节：\n\n${selectedText}`;
+          break;
+        case 'summarize':
+          promptText = `请总结以下文本，提取要点：\n\n${selectedText}`;
+          break;
+        case 'to_card':
+          promptText = `请将以下文本转为 CHD 卡片格式：\n\n${selectedText}`;
+          break;
+        case 'custom':
+          promptText = `${customPrompt}\n\n${selectedText}`;
+          break;
+      }
+
+      const result = await AIService.generate({
+        text: promptText,
+        config: {
+          model: 'deepseek-chat',
+          promptVariant: 'default',
+        },
+      });
+
+      if (result.error) {
+        setAiResultText(`错误：${result.error}`);
+      } else {
+        setAiResultText(result.markdown);
+      }
+    } catch (err: any) {
+      setAiResultText(`AI 调用失败：${err.message || '未知错误'}`);
+    } finally {
+      setAiLoading(false);
+    }
+  }, []);
+
+  // 处理替换操作：直接调用 setContent 推入撤销引擎
+  const handleAIReplace = useCallback((newText: string) => {
+    const selectedText = aiOriginalText;
+    if (!selectedText) return;
+
+    // 在 content 中查找选中文本的位置
+    const idx = content.indexOf(selectedText);
+    if (idx === -1) return;
+
+    // 构建新内容
+    const newContent = content.slice(0, idx) + newText + content.slice(idx + selectedText.length);
+
+    // 创建 AI 操作（用于日志记录，后续可通过扩展 useHistory 接入完整撤销链）
+    const aiOp = OperationBuilder.aiOperation({
+      type: OperationType.AI_REPLACE,
+      prompt: `AI 替换：${selectedText.slice(0, 30)}...`,
+      tokensUsed: 0,
+      diff: {
+        before: selectedText,
+        after: newText,
+        position: idx,
+      },
+      producer: 'ai',
+      description: `AI 内联编辑：替换文本`,
+    });
+    console.log('[AI] Operation created:', aiOp.id);
+
+    // 使用 useDocumentState 暴露的 setContent 直接推入撤销引擎
+    setContent(newContent);
+
+    // 关闭弹窗并清空状态
+    setAiDialogOpen(false);
+    setAiOriginalText('');
+    setAiResultText('');
+  }, [content, aiOriginalText, setContent]);
+
   return (
     <div className="flex flex-col min-h-screen">
        {/* Navigation Header */}
@@ -156,13 +270,40 @@ const InteractivePost: React.FC<InteractivePostProps> = ({ initialContent, slug,
 
        {/* Floating Undo/Redo */}
        {isEditing && (
-          <FloatingUndoRedo 
-            onUndo={undo} 
-            onRedo={redo} 
-            canUndo={canUndo} 
-            canRedo={canRedo} 
+          <FloatingUndoRedo
+            onUndo={undo}
+            onRedo={redo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            getCheckpoints={getCheckpoints}
+            goToCheckpoint={goToCheckpoint}
+            setCheckpoint={setCheckpoint}
           />
        )}
+
+       {/* AI 内联编辑工具栏 */}
+       {isEditing && (
+          <AIInlineToolbar
+            getSelection={getEditorSelection}
+            replaceSelection={replaceEditorSelection}
+            onAIAction={handleAIAction}
+            isLoading={aiLoading}
+          />
+       )}
+
+       {/* AI 结果对比弹窗 */}
+       <AIInlineResultDialog
+         open={aiDialogOpen}
+         onClose={() => {
+           setAiDialogOpen(false);
+           setAiOriginalText('');
+           setAiResultText('');
+         }}
+         originalText={aiOriginalText}
+         aiResult={aiResultText}
+         isLoading={aiLoading}
+         onReplace={handleAIReplace}
+       />
 
        {/* Content */}
        <div className={clsx("flex-1 relative", isEditing && "pb-[180px]")}>

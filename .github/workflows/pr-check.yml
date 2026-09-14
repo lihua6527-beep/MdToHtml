@@ -2,15 +2,20 @@ name: PR Check
 
 on:
   pull_request:
-    branches: [main]
+    branches: [ "master" ]
     paths-ignore:
       - 'docs/**'
       - '**.md'
+
+concurrency:
+  group: pr-check-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   quality:
     name: Code Quality
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: MdToHtml
@@ -20,7 +25,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
           cache-dependency-path: MdToHtml/package-lock.json
 
@@ -28,13 +33,13 @@ jobs:
         run: npm ci
 
       - name: TypeScript Type Check
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: ESLint
-        run: npm run lint -- --max-warnings 0
+        run: npm run lint:strict
 
       - name: Unit Tests with Coverage
-        run: npm run test -- --coverage --ci
+        run: npm run test:ci
 
       - name: Upload Coverage Report
         if: always()

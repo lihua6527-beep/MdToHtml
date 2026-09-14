@@ -1,78 +1,67 @@
 import { test, expect } from '@playwright/test';
+import {
+  seedDoc,
+  removeDoc,
+  docItem,
+  makeImportFixture,
+  ensureDocListed,
+  resetTrash,
+} from './test-helpers';
+
+const IMPORT_SLUG = 'e2e-imported-doc';
+const TRASH_SLUG = 'e2e-trash-cycle';
 
 test.describe('文档管理', () => {
-  test('新建 → 保存 → 刷新 → 内容持久化', async ({ page }) => {
-    await page.goto('/');
-    await page.click('text=新建文档');
-    await page.waitForSelector('.cm-editor');
-    await page.waitForTimeout(500);
-
-    // 输入内容
-    const editor = page.locator('.cm-content');
-    await editor.type('## 持久化测试', { delay: 5 });
-    await editor.press('Enter');
-    await editor.type('### 验证卡片', { delay: 5 });
-
-    // 等待自动保存
-    await page.waitForTimeout(3500);
-
-    // 记录当前 URL
-    const currentUrl = page.url();
-
-    // 刷新页面
-    await page.reload();
-    await page.waitForSelector('.cm-editor');
-    await page.waitForTimeout(1000);
-
-    // 验证内容持久化
-    await expect(page.locator('text=持久化测试')).toBeVisible();
-
-    // 验证 URL 一致（同一文档）
-    expect(page.url()).toBe(currentUrl);
+  test.afterAll(() => {
+    removeDoc(IMPORT_SLUG);
+    removeDoc(TRASH_SLUG);
   });
 
-  test('删除 → 回收站 → 恢复 完整周期', async ({ page }) => {
+  test('导入本地文件 → 出现在文档列表', async ({ page }) => {
+    const fixturePath = makeImportFixture(`${IMPORT_SLUG}.md`);
+
     await page.goto('/');
-    await page.waitForSelector('.document-list-item');
+    // 等待首页渲染出隐藏的 file input
+    await expect(page.locator('input[type="file"]')).toBeAttached();
 
-    // 获取第一篇文档标题
-    const firstDocTitle = await page.locator('.document-list-item').first().textContent();
+    // 首页隐藏的 file input（accept=".md,.markdown"）
+    await page.locator('input[type="file"]').setInputFiles(fixturePath);
 
-    // 右键菜单删除
-    await page.locator('.document-list-item').first().click({ button: 'right' });
-    await page.waitForTimeout(300);
+    // 上传完成后列表异步刷新（CacheManager 后台重扫），等待最终一致
+    await ensureDocListed(page, IMPORT_SLUG);
+  });
 
-    // 点击删除（可能通过菜单或按钮）
-    const deleteBtn = page.locator('button:has-text("删除"), button:has-text("移至回收站")');
-    if (await deleteBtn.isVisible()) {
-      await deleteBtn.click();
-    } else {
-      // 尝试用键盘快捷键或直接删除
-      await page.keyboard.press('Delete');
-    }
+  test('右键删除 → 进入回收站 → 恢复回列表（完整周期）', async ({ page }) => {
+    // 保证可重复执行：清掉上一轮可能残留的回收站文件
+    resetTrash();
+    seedDoc(TRASH_SLUG);
+    await page.goto('/');
+    await ensureDocListed(page, TRASH_SLUG);
 
-    // 进入回收站
-    await page.click('text=回收站');
-    await page.waitForTimeout(500);
+    const item = docItem(page, TRASH_SLUG);
+    await item.click({ button: 'right' });
 
-    // 确认文档在回收站
-    if (firstDocTitle) {
-      await expect(page.locator(`text=${firstDocTitle.trim()}`)).toBeVisible();
-    }
+    // 右键菜单中的删除按钮（text-red-600），应用会弹出原生 confirm，
+    // 必须先注册 dialog 处理并接受，否则 confirm() 返回 false 会取消删除
+    page.once('dialog', (dialog) => dialog.accept());
+    await page.locator('button.text-red-600', { hasText: '删除' }).click();
 
-    // 点击恢复
-    const restoreBtn = page.locator('button:has-text("恢复")');
-    if (await restoreBtn.isVisible()) {
-      await restoreBtn.click();
-    }
+    await expect(item).toHaveCount(0, { timeout: 15000 });
 
-    // 返回文档列表
-    await page.click('text=返回, a:has-text("返回")');
-    await page.waitForTimeout(500);
+    // 打开回收站，确认文件已进入
+    await page.locator('button[title^="回收站"]').click();
+    const trashItem = page.locator(
+      `[data-testid="trash-item"][data-file-name*="${TRASH_SLUG}"]`
+    );
+    await expect(trashItem).toBeVisible({ timeout: 15000 });
 
-    // 验证文档已恢复
-    if (firstDocTitle) {
-      await expect(page.locator(`text=${firstDocTitle.trim()}`)).toBeVisible();
-    }
+    // 选中 → 恢复（用 testid 精确定位工具栏上的恢复按钮：
+    // 页面中还有右键菜单的「恢复」入口，按名称匹配会产生歧义）
+    await trashItem.click();
+    await page.getByTestId('trash-restore').click();
+
+    // 返回文档列表，确认已恢复
+    await page.locator('button[title^="返回文档列表"]').click();
+    await expect(docItem(page, TRASH_SLUG)).toBeVisible({ timeout: 15000 });
   });
 });

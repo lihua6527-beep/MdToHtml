@@ -7,8 +7,10 @@
     "titleSpacing": "2"
   },
   "paths": {
-    "input": "",
-    "output": ""
+    "input": ".e2e-tmp/input",
+    "output": ".e2e-tmp/output",
+    "data": ".e2e-tmp/data",
+    "trash": ".e2e-tmp/trash"
   },
   "capacityLimit": 200,
   "system": {}

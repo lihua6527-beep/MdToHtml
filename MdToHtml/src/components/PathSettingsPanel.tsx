@@ -590,7 +590,7 @@ export const PathSettingsPanel: React.FC<PathSettingsPanelProps> = ({ isOpen, on
                     </div>
                     <div className="relative">
                         <div className="absolute top-2 right-2 z-10 bg-bg-card/80 backdrop-blur-sm px-2 py-1 rounded text-[10px] text-text-muted">
-                            CHD协议 v2.0
+                            CHD协议 v2.1
                         </div>
                         <div className="bg-bg-card p-4 rounded border border-border-soft max-h-64 overflow-auto">
                             <div className="text-xs font-mono whitespace-pre-wrap">

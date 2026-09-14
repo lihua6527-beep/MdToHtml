@@ -2,7 +2,9 @@ import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: true,
+  // 顺序执行：E2E 共享同一个隔离数据目录（.e2e-tmp/input），并行会互相干扰。
+  // 各用例仍使用各自唯一的 fixture 文件名，互不覆盖。
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
@@ -24,7 +26,13 @@ export default defineConfig({
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    // 固定为 false：确保 E2E 始终由 Playwright 自己拉起带隔离配置的服务器。
+    // 若复用已在运行（未加 MDTOHTML_CONFIG）的服务器，测试会直接操作真实文档目录。
+    reuseExistingServer: false,
     timeout: 30000,
+    env: {
+      // 数据隔离：加载 config.e2e.json，把 input / output / data / trash 指向 .e2e-tmp/
+      MDTOHTML_CONFIG: 'config.e2e.json',
+    },
   },
 });

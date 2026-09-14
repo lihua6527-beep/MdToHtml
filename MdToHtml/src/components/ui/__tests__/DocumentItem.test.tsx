@@ -4,7 +4,7 @@ import DocumentItem from '../DocumentItem';
 
 const mockPost = {
   slug: 'test-document',
-  status: 'incomplete',
+  status: 'incomplete' as const,
   mtime: Date.now(),
   birthtime: Date.now() - 3600000,
   isFavorited: false,

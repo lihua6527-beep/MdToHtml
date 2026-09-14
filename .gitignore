@@ -5,6 +5,8 @@ node_modules/
 
 # Testing
 coverage/
+# E2E 隔离数据目录（Playwright 运行 config.e2e.json 时生成，勿提交）
+.e2e-tmp/
 
 # Next.js
 .next/
@@ -89,3 +91,12 @@ MdToHtml/release_v2/
 # Kept local-only (duplicate / temp)
 docs/归档/系统配置与路径管理方案.md
 temp_filelist.txt  
+# ===== 2026-09-06 工程清理规范（见 docs/工程目录与版本规范.md） =====
+# 测试/CI 自动产物（可再生，勿提交）
+test-results/
+playwright-report/
+MdToHtml/test-results/
+MdToHtml/playwright-report/
+# 编译临时目录
+**/.swc/
+**/temp/

@@ -351,7 +351,13 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
         </div>
         {selectedFiles.size > 0 && (
             <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => handleRestore(Array.from(selectedFiles))}>
+                <Button
+                    data-testid="trash-restore"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs gap-1"
+                    onClick={() => handleRestore(Array.from(selectedFiles))}
+                >
                     <RotateCcw className="w-3 h-3" /> 恢复
                 </Button>
                 <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1 text-red-500 hover:text-red-600" onClick={() => handleDelete(Array.from(selectedFiles))}>
@@ -379,6 +385,8 @@ export const RecycleBin: React.FC<RecycleBinProps> = ({ onClose, className, docu
                     <div 
                         key={file.name}
                         draggable={true}
+                        data-testid="trash-item"
+                        data-file-name={file.name}
                         onDragStart={(e) => handleDragStart(e, file.name)}
                         className={clsx(
                             "group flex items-center justify-between px-4 py-3 border-b border-border-soft hover:bg-bg-hover cursor-pointer transition-colors",

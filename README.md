@@ -25,7 +25,7 @@
 | 创新点 | 说明 | 技术实现 |
 |--------|------|---------|
 | **CHD 协议** | 自研卡片式层级文档标记协议 | DFA 状态机解析器，O(n) 时间复杂度 |
-| **AI 原生集成** | 双模板 + 三级 Token 预算控制 | DeepSeek API + SSE 流式输出 |
+| **AI 原生集成** | 双模板 + 三级 Token 预算控制 | DeepSeek API + 本地代理收口（整包返回，Key 不出前端） |
 | **离线优先架构** | 零网络依赖的完整功能 | LRU-500 缓存 + 本地文件系统 + SWR |
 | **首屏加速 85%** | 从 1.85s 优化到 280ms | SSR + 惰性编译 + 缓存预热 组合策略 |
 
@@ -91,7 +91,7 @@
 | Markdown | react-markdown + remark-gfm + KaTeX | 原生 GFM 支持 + 数学公式 |
 | 搜索 | Fuse.js | 模糊搜索质量最佳，包体积 ~8KB |
 | 桌面 | Electron 28 | 原生桌面体验 + Windows 打包 |
-| AI | DeepSeek API + SSE | 流式输出 + 重试机制 + Token 预算控制 |
+| AI | DeepSeek API + 本地 API Route 代理 | 整包返回 + 重试机制 + Token 预算控制 |
 
 ### 架构设计原则
 

@@ -5,7 +5,7 @@ import { validateContent, ValidationResult } from '@/lib/validator';
 import { useAutoSave, loadFromStorage } from '@/hooks/useAutoSave';
 import { useEditorDragDrop } from '@/hooks/editor/useEditorDragDrop';
 import { useEditorIO } from '@/hooks/editor/useEditorIO';
-import { useEditorScroll, MarkdownEditorHandle } from '@/hooks/editor/useEditorScroll';
+import { useEditorScroll, type MarkdownEditorHandle } from '@/hooks/editor/useEditorScroll';
 import { 
   FileText,
   AlertCircle,
@@ -28,7 +28,14 @@ interface MarkdownEditorProps {
 
 export type { MarkdownEditorHandle };
 
-export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(({
+/** 扩展的编辑器句柄，增加选中文本获取 */
+export interface ExtendedMarkdownEditorHandle extends MarkdownEditorHandle {
+  getSelection: () => string;
+  replaceSelection: (text: string) => void;
+  getCursorLine: () => number;
+}
+
+export const MarkdownEditor = forwardRef<ExtendedMarkdownEditorHandle, MarkdownEditorProps>(({
   value,
   onChange,
   onScroll,
@@ -69,7 +76,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
   });
 
   const { textareaRef, handleScroll } = useEditorScroll({
-    ref,
+    ref: ref as any,
     onScroll
   });
 
@@ -99,12 +106,13 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
   }, [content]);
 
   // 4. Handlers
-  const updateActiveLine = () => {
-    if (!textareaRef.current || !onCursorChange) return;
+  const updateActiveLine = (): number | undefined => {
+    if (!textareaRef.current) return undefined;
     const cursor = textareaRef.current.selectionStart;
     const textBefore = textareaRef.current.value.slice(0, cursor);
     const line = textBefore.split('\n').length;
-    onCursorChange(line);
+    if (onCursorChange) onCursorChange(line);
+    return line;
   };
 
   // Smart Insert: Inserts at cursor position

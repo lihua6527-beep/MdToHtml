@@ -39,7 +39,10 @@ class ConfigManager {
   private constructor() {
     // Detect root same way as PathManager or just use process.cwd() for now as it works in Next.js
     // For Electron, we might need adjustments, but let's stick to process.cwd() or similar logic
-    this.configPath = path.join(process.cwd(), 'config.json');
+    // 默认读取 appRoot/config.json；允许通过 MDTOHTML_CONFIG 指定其它配置文件名，
+    // 供 E2E 测试加载 config.e2e.json 以把数据目录隔离到 .e2e-tmp/（不污染真实文档）
+    const configFileName = process.env.MDTOHTML_CONFIG || 'config.json';
+    this.configPath = path.join(process.cwd(), configFileName);
     this.config = this.loadConfig();
     this.migrateLegacyConfig();
   }
