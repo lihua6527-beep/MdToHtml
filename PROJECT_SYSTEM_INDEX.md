@@ -619,10 +619,12 @@ src/services/ai/
 | 同上 | E2E Tests（needs: build） | `npm ci` → `playwright install chromium` → test:e2e → 上传报告/失败截图 | 同上（**硬门禁**，无 `continue-on-error`） |
 | `.github/workflows/pr-check.yml` | Code Quality | `npm ci` → typecheck → lint:strict → test:ci → 上传 `coverage/` | `pull_request: [master]` |
 
-> ⚠️ 远端为 **Gitee**（`origin` = `https://gitee.com/njustzjh/md-to-html.git`），**Gitee 不执行 GitHub Actions**。因此：
-> - 远端门禁由 **方案 B** 承担：`.workflow/ci.yml`（Gitee Go），阶段 `gates`（typecheck+lint+单测）与 `build-and-e2e`（build+Playwright）
-> - 启用方式与核对清单：`docs/开发工作流/Gitee流水线配置指南.md`（需在 Gitee 网页以 YAML 模式创建流水线）
-> - 2026-09-14 已完成：远端配置、分叉合并入库（`10f9e2b`）、方案 B 文件入库；本地等价验证 `npm run verify` + `npx playwright test` 均通过
+> ✅ 远端为 **Gitee**（`origin` = `https://gitee.com/njustzjh/md-to-html.git`），**Gitee 不执行 GitHub Actions**，因此远端门禁由 **Gitee 流水线**承担：
+> - 生效文件：`.workflow/流水线-202609142049.yml`、`.workflow/流水线-202609142107.yml`（`name`/`displayName` = 流水线名，内容一致，均含「门禁」与「构建与E2E」两阶段）
+> - 备份副本：`.workflow/ci.yml`（规范命名版）
+> - 步骤为插件式：`step: build@nodejs` + `commands:` 列表（Gitee 无通用 `shell@1`）
+> - 状态：**2026-09-14 已启用并跑通**；schema 结论、启用步骤、自检结论见 `docs/开发工作流/Gitee流水线配置指南.md`
+> - 本地等价验证：`npm run verify`（EXITCODE=0，25 套件/213 用例）+ `npx playwright test`（7 passed）
 
 ### 17.3 E2E 数据隔离
 

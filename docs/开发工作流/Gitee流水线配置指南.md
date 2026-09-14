@@ -172,17 +172,36 @@ triggers:
 
 ---
 
-## 五、本方案的已知不确定点（2026-09-14 更新）
+## 五、Gitee 流水线 schema（2026-09-14 最终确认）
 
-| 项 | 状态 |
-|----|------|
-| ✅ **已确认**（依据 Gitee 页面生成的官方模板 `.workflow/流水线-202609142049.yml`，见 §二 Step 2） | ① `version: "1.0"` 为必填项；② `name` / `displayName` = 流水线名 = 文件名（不含扩展名）；③ `triggers.push.branches.prefix` 为**前缀匹配**列表 |
-| ✅ **已修正**（依据页面运行报错） | **`steps` 必须直接位于 stage 对象下**（`stages[i].steps`）；原先写成 `stages[i].stage.steps` 被拒：<br>`[配置结构错误] 位置: stages[0].steps - stages[0] 的 steps 配置缺失或格式错误` |
-| ⚠️ **仍未确认** | step 条目本身的写法（`- step: shell@1` + `inputs.run`）是否被接受；stage 层是否**还需要** `stage:` 键（当前不加）；`pull_request` 触发键名（当前不含） |
-| 已做的校验 | ① js-yaml 解析通过（`version`、`name`、2 个 stage、`stages[0].steps` 存在且为数组、无 `stage:` 包裹层、无 `variables`）；② 步骤内命令与本地实测命令逐条一致 |
-| 建议动作 | 在页面**保存**时看是否还有报错；若有，把报错原文贴回：按提示改结构，**命令不动** |
-| 规避手段 | 文件中**只使用最通用的 `shell@1` 步骤**（不依赖版本相关的内置步骤名），因此即便顶部字段名需要微调，**步骤内的命令与业务逻辑无需改动** |
-| 建议动作 | 首次在页面 YAML 模式保存时如报错，请把报错信息贴回，即可按模板一次性校正 |
+> 唯一权威来源：**Gitee 流水线页面自带的模板**。下表全部结论均由「页面模板 + 页面报错」实测得出，不再是推测。
+
+| 层级 | 结论 | 来源 |
+|------|------|------|
+| 文件位置 | `.workflow/<流水线名>.yml`，**文件名 = 流水线名**（不含扩展名） | 页面创建流水线时自动生成 |
+| 顶层必填 | `version: "1.0"`、`name`、`displayName`、`triggers`、`stages` | 页面模板 |
+| 顶层可带 | `notify: []`、`strategy: { blocking: true }` | 页面模板 |
+| 触发 | `triggers.push.branches.prefix: [master, feat/, test/]`（**前缀匹配**，不是 `include`） | 页面生成的最小模板 |
+| stage 写法 | **扁平**：`name` / `displayName` / `strategy: naturally` / `trigger: auto` / `steps` | 页面模板 + 报错校正 |
+| step 写法 | **插件 id 形式 `<动作>@<工具>`**：`ut@maven`、`build@maven`、`publish@general_artifacts`、`publish@release_artifacts`、`deploy@agent` … 本流水线用 **`build@nodejs`** | 页面模板 + 实测 |
+| step 字段 | `step` / `name` / `displayName` / `nodeVersion` / **`commands:` 列表** / `checkpoints: {}` / `settings: []` / `caches: []` / `notify: []` / `strategy(resource.cpu/memory)` | 页面模板 |
+| ❌ 已验证不存在的写法 | ① `shell@1`（报 `[插件类型不存在] 不支持的插件类型: shell@1`）② `stages[i].stage.steps` 嵌套（报 `[配置结构错误] 位置: stages[0].steps`）③ `inputs: { run: ... }`（Gitee 不用这个键，命令走 `commands`） | 页面报错 |
+
+> 因此：**改动流水线时以页面模板为准**；本仓库的 `.workflow/*.yml` 已与该 schema 对齐。
+
+---
+
+## 六、自检结论（2026-09-14）
+
+| 检查项 | 方法 | 结果 |
+|--------|------|------|
+| 仓库状态 | `git status` / 三分支 SHA 对比 | ✅ 工作区干净；`master` = `feat/exe-package-ready` = `test/ci-green` = `b7ad2b1` |
+| 流水线文件结构 | js-yaml 解析 + 结构断言（version/name/displayName/triggers/stages/steps/commands/无 `inputs`/无 `stage:` 包裹） | ✅ `流水线-202609142049.yml`、`流水线-202609142107.yml` 全部 PASS（2 阶段 / 2 步骤，均 `build@nodejs`） |
+| 本地门禁 | `npm run verify` | ✅ EXITCODE=0（typecheck 0 错误 / lint 零警告 / 25 套件 / 213 用例 / 覆盖率 20.5–21.25） |
+| E2E | `npx playwright test` | ✅ 7 passed（数据隔离：真实 `input/` 保持 27 篇，写入仅落 `.e2e-tmp/`） |
+| 文档一致性 | 全文检索过期表述（`shell@1` / `尚无 git remote` / `待你操作` 等）并修正 | ✅ 已修正（详见 `docs/开发记录/历史记录/2026-09-14_开发记录.md` 第五批） |
+
+> `.workflow/ci.yml` 是"规范命名"的备用副本：其 `displayName` 为描述性文字（与文件名不同），因它未与任何已创建流水线绑定，**不影响运行**；若日后新建名为 `ci` 的流水线，请把它的 `displayName` 改为 `ci` 以与平台约定一致。
 
 > **不要**为了让流水线"看起来绿"而删除门禁步骤或加 `continue-on-error` —— 这与 `plans/测试工程/00_CI全绿计划书_2026-09-14.md` §8.1 的既定原则（E2E 为硬门禁）冲突。
 
