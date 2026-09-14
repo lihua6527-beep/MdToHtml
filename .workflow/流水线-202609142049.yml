@@ -37,7 +37,7 @@
 #     ② 分支过滤由 `branches.include` 改为 `branches.prefix`（**前缀匹配**，故写 `feat/` 而非 `feat/**`）
 #     ③ 暂时去掉 `pull_request` 触发段（官方模板未出现该键，避免校验失败）；若页面模板支持，
 #        可按其写法补回 `pullRequest` / `pull_request` 并恢复 PR 门禁
-#   `stages` / `steps` 段在官方模板中未出现，仍是按 Azure-Pipelines 风格编写，首次保存时以页面校验为准。
+#   `stages` / `steps` 段在官方模板中未出现；经页面报错迭代后已确定：steps 直接挂在 stage 对象下（见上方「结构校验进展」）。
 #
 # 运行环境提示：
 #   - 若执行镜像未预装 Node 20，请用页面上的「Node」步骤替换 install 步骤，
