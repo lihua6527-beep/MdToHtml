@@ -1,0 +1,135 @@
+# =============================================================================
+# Gitee Go 流水线定义 —— 方案 B（2026-09-14 选定）
+#
+# 为什么需要这个文件：
+#   远端仓库在 Gitee（https://gitee.com/njustzjh/md-to-html），而 .github/workflows/*.yml
+#   是 GitHub Actions，Gitee 不会执行它们。要让门禁在远端真实运行，必须改用 Gitee Go。
+#
+# 与本地门禁的等价关系（本地已实测通过：25 套件 / 213 用例、E2E 7/7）：
+#   .github/workflows/ci.yml  build job  →  npm run typecheck && npm run lint:strict && npm run test:ci
+#   .github/workflows/ci.yml  e2e   job  →  npm run build（+ npx playwright install chromium）&& npm run test:e2e
+#
+# 语法说明（重要）：
+#   本文件按 Gitee Go 的 Azure-Pipelines 风格 DSL 编写，且**只使用最通用的 shell@1 步骤**，
+#   以避免依赖版本相关的内置步骤名。首次启用时请在
+#   「仓库 → 流水线 → 新建流水线 → YAML 模式」中校验语法（页面会实时报错）。
+#   若你的流水线页面提示字段名不被识别（例如 triggers / stages 的名称差异），
+#   请以页面提供的模板为准调整本文件 —— 步骤内的命令无需改动。
+#   ⚠️ 截至 2026-09-14，Gitee 帮助中心的流水线语法文档在本环境不可达（HTTP 404），
+#      因此本文件的顶部结构与页面模板的一致性**尚未在真实流水线中验证过**。
+#
+# 语法说明（2026-09-14 已用官方模板校正）：
+#   Gitee Go 的流水线文件由页面创建时生成（路径 .workflow/<流水线名>.yml，**文件名 = 流水线名**），
+#   其官方模板为：
+#       version: "1.0"
+#       name: <流水线名>
+#       displayName: <流水线名>
+#       triggers:
+#         push:
+#           branches:
+#             prefix:
+#               - ''
+#   据此本文件已做两处校正：
+#     ① 补 `version: "1.0"`（官方模板必填项，此前缺失）
+#     ② 分支过滤由 `branches.include` 改为 `branches.prefix`（**前缀匹配**，故写 `feat/` 而非 `feat/**`）
+#     ③ 暂时去掉 `pull_request` 触发段（官方模板未出现该键，避免校验失败）；若页面模板支持，
+#        可按其写法补回 `pullRequest` / `pull_request` 并恢复 PR 门禁
+#   `stages` / `steps` 段在官方模板中未出现，仍是按 Azure-Pipelines 风格编写，首次保存时以页面校验为准。
+#
+# 运行环境提示：
+#   - 若执行镜像未预装 Node 20，请用页面上的「Node」步骤替换 install 步骤，
+#     或在流水线设置中指定带 Node 20 的镜像（`环境自检` 步骤会先打印版本以便排查）。
+#   - E2E 需要 Chromium，步骤中已包含 `npx playwright install --with-deps chromium`；
+#     若镜像缺少 apt/sudo 权限，可改为 `npx playwright install chromium` 并预装系统依赖。
+# =============================================================================
+
+version: "1.0"
+name: ci
+displayName: 'CI — 类型检查 / Lint / 单测 / 构建 / E2E'
+
+triggers:
+  push:
+    branches:
+      prefix:
+        - master
+        - feat/
+        - test/
+
+variables:
+  MDTOHTML_DIR: 'MdToHtml'
+
+stages:
+  # ---------------------------------------------------------------------------
+  # 阶段一：四道门禁的等价命令（typecheck + lint:strict + test:ci）
+  # ---------------------------------------------------------------------------
+  - stage:
+      name: gates
+      displayName: '门禁：类型检查 + 代码规范 + 单元测试与覆盖率'
+      steps:
+        - step: shell@1
+          name: print-node-version
+          displayName: '环境自检（Node / npm 版本）'
+          inputs:
+            run: |
+              node -v || echo "[WARN] 镜像未预装 Node，请改用流水线的 Node 步骤或指定带 Node 20 的镜像"
+              npm -v || true
+
+        - step: shell@1
+          name: install
+          displayName: '安装依赖（npm ci）'
+          inputs:
+            run: |
+              cd $MDTOHTML_DIR
+              npm ci
+
+        - step: shell@1
+          name: verify
+          displayName: '类型检查 + Lint + 单测（含覆盖率阈值 19/14/13/20）'
+          inputs:
+            run: |
+              cd $MDTOHTML_DIR
+              npm run typecheck
+              npm run lint:strict
+              npm run test:ci
+
+  # ---------------------------------------------------------------------------
+  # 阶段二：生产构建 + E2E（数据隔离：MDTOHTML_CONFIG → .e2e-tmp/）
+  # ---------------------------------------------------------------------------
+  - stage:
+      name: build-and-e2e
+      displayName: '构建 + 端到端测试（Playwright / Chromium）'
+      steps:
+        - step: shell@1
+          name: install
+          displayName: '安装依赖（npm ci）'
+          inputs:
+            run: |
+              cd $MDTOHTML_DIR
+              npm ci
+
+        - step: shell@1
+          name: build
+          displayName: '生产构建（next build）'
+          inputs:
+            run: |
+              cd $MDTOHTML_DIR
+              npm run build
+
+        - step: shell@1
+          name: e2e
+          displayName: 'E2E 测试（7 用例，数据隔离到 .e2e-tmp/）'
+          inputs:
+            run: |
+              cd $MDTOHTML_DIR
+              npx playwright install --with-deps chromium
+              npm run test:e2e
+
+        - step: shell@1
+          name: upload-artifacts
+          displayName: '保留失败证据（报告与截图）'
+          inputs:
+            run: |
+              echo "[INFO] 失败证据目录："
+              echo "  $MDTOHTML_DIR/playwright-report/"
+              echo "  $MDTOHTML_DIR/test-results/"
+              ls -la $MDTOHTML_DIR/test-results 2>/dev/null || true

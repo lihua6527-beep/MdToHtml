@@ -70,9 +70,12 @@ function makeCardOp(
 // ──────────────────────────────────────────
 
 describe('OperationType Enums', () => {
-  it('should have 14 defined operation types', () => {
+  it('should have 13 defined operation types', () => {
+    // 与 src/types/operation.ts 实际枚举保持一致：3 文本 + 4 卡片 + 3 AI + 3 元操作 = 13
+    // 注：CARD_STYLE_CHANGE 为未来扩展点（见 plans/操作引擎/07_拓展其他生产者_2026-07-12.md），
+    //     当前未实现，故不计入
     const values = Object.values(OperationType);
-    expect(values.length).toBe(14);
+    expect(values.length).toBe(13);
   });
 
   it('should have all text editing types', () => {

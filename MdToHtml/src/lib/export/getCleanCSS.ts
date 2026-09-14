@@ -301,9 +301,9 @@ function extractCSSFromDocument(doc: Document): string {
  */
 function escapeAttr(value: string): string {
   return value
-    .replace(/&/g, '&')
-    .replace(/"/g, '"')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
-    .replace(/</g, '<')
-    .replace(/>/g, '>');
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }

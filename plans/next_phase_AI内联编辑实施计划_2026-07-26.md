@@ -10,7 +10,7 @@
 
 | 阶段 | 已交付 | 文件 |
 |------|--------|------|
-| Phase 0 | 操作类型系统(14种) + 工厂 + 27个测试 | `operation.ts`, `OperationBuilder.ts`, `operation.test.ts` |
+| Phase 0 | 操作类型系统(13种) + 工厂 + 27个测试 | `operation.ts`, `OperationBuilder.ts`, `operation.test.ts` |
 | Phase 0 | E2E 选择器修复 + 预存测试类型修复 | `Card.tsx`, `editor-workflow.spec.ts` |
 | Phase 1 | 操作级撤销/重做引擎 | `useHistory.ts` |
 | Phase 1 | 暂存点引擎 + UI | `CheckpointPanel.tsx`, `FloatingUndoRedo.tsx` |

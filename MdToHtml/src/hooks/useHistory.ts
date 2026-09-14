@@ -408,7 +408,7 @@ export function useHistory(
         });
       }
     },
-    [maxHistory, persistHistory]
+    [maxHistory, persistHistory, pushOperation]
   );
 
   // ── 撤销（跳过 CHECKPOINT）──
@@ -613,12 +613,16 @@ export function useHistory(
 
     fetchHistory();
 
+    // 捕获 ref 当前值：cleanup 执行时 mergerRef.current 可能已变化，
+    // 提前取到局部变量（react-hooks/exhaustive-deps 官方建议写法）
+    const merger = mergerRef.current;
+
     return () => {
       isMounted = false;
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
-      mergerRef.current.cleanup();
+      merger.cleanup();
     };
   }, [sessionId]);
 

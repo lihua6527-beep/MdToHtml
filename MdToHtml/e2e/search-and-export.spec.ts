@@ -1,57 +1,60 @@
 import { test, expect } from '@playwright/test';
+import fs from 'fs';
+import { seedDoc, removeDoc, ensureDocListed, openDoc, docItem } from './test-helpers';
+
+const SEARCH_SLUG = 'e2e-search-marker';
+const EXPORT_SLUG = 'e2e-export-doc';
 
 test.describe('搜索与导出', () => {
-  test('全文搜索功能', async ({ page }) => {
-    await page.goto('/');
-
-    // 打开搜索面板
-    const searchTrigger = page.locator('button:has-text("搜索"), [aria-label="搜索"], button:has-text("🔍")');
-    if (await searchTrigger.isVisible()) {
-      await searchTrigger.click();
-    } else {
-      // 尝试通过快捷键 Ctrl+K
-      await page.keyboard.press('Control+k');
-    }
-
-    // 等待搜索输入框
-    const searchInput = page.locator('input[type="search"], input[placeholder*="搜索"], [role="searchbox"]');
-    await expect(searchInput).toBeVisible({ timeout: 3000 });
-
-    // 输入搜索词
-    await searchInput.fill('测试');
-    await page.waitForTimeout(500);
-
-    // 验证搜索结果区域出现
-    const searchResults = page.locator('.search-results, [data-search-results]');
-    await expect(searchResults).toBeVisible({ timeout: 3000 });
+  test.beforeAll(() => {
+    seedDoc(SEARCH_SLUG);
+    seedDoc(EXPORT_SLUG);
   });
 
-  test('HTML 导出功能', async ({ page }) => {
+  test.afterAll(() => {
+    removeDoc(SEARCH_SLUG);
+    removeDoc(EXPORT_SLUG);
+  });
+
+  test('全文搜索：输入关键词 → 命中结果', async ({ page }) => {
     await page.goto('/');
-    await page.click('text=新建文档');
-    await page.waitForSelector('.cm-editor');
-    await page.waitForTimeout(500);
+    // 搜索面板基于服务端传入的 initialPosts 建索引，先确保列表已包含该文档
+    await ensureDocListed(page, SEARCH_SLUG);
+    await expect(docItem(page, SEARCH_SLUG)).toBeVisible();
 
-    // 输入内容
-    const editor = page.locator('.cm-content');
-    await editor.type('## 导出测试', { delay: 5 });
-    await editor.press('Enter');
-    await editor.type('### 导出卡片', { delay: 5 });
+    // 左侧列表头部工具栏的搜索入口
+    await page.locator('button[title="搜索文档"]').click();
 
-    await page.waitForTimeout(500);
+    const input = page.locator('input[placeholder*="搜索文档"]');
+    await expect(input).toBeVisible();
+    await expect(page.getByText('输入关键词搜索文档')).toBeVisible();
 
-    // 尝试点击导出按钮
-    const exportBtn = page.locator('button:has-text("导出"), button:has-text("Export")');
-    if (await exportBtn.isVisible()) {
-      // 监听下载事件
-      const [download] = await Promise.all([
-        page.waitForEvent('download', { timeout: 5000 }).catch(() => null),
-        exportBtn.click(),
-      ]);
+    await input.fill(SEARCH_SLUG);
 
-      if (download) {
-        expect(download.suggestedFilename()).toContain('.html');
-      }
-    }
+    // 结果统计行只有在有关键词时才渲染
+    const stats = page.locator('text=/找到\\s*\\d+\\s*个结果/');
+    await expect(stats).toBeVisible({ timeout: 10000 });
+
+    const text = (await stats.textContent()) || '';
+    const hitCount = parseInt(text.match(/(\d+)/)![1], 10);
+    expect(hitCount).toBeGreaterThan(0);
+  });
+
+  test('导出 HTML：文件名正确且为自包含单文件', async ({ page }) => {
+    await openDoc(page, EXPORT_SLUG);
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: 30000 }),
+      page.locator('button[title="导出为静态网页 (HTML)"]').click(),
+    ]);
+
+    expect(download.suggestedFilename()).toBe(`${EXPORT_SLUG}.html`);
+
+    // 校验真实产物：模板结构 + 卡片标记 + CSS 已内联（getCleanCSS 在真实浏览器中抽取）
+    const html = fs.readFileSync((await download.path())!, 'utf-8');
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain(`<title>${EXPORT_SLUG}</title>`);
+    expect(html).toContain('data-card-style="normal"');
+    expect(html.length).toBeGreaterThan(5000);
   });
 });

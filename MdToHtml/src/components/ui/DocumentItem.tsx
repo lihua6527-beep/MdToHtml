@@ -53,6 +53,8 @@ const DocumentItem: React.FC<DocumentItemProps> = ({
     <div 
       key={post.slug} 
       draggable={true}
+      data-testid="doc-item"
+      data-slug={post.slug}
       onDragStart={(e) => onDragStart?.(e, post.slug)}
       onContextMenu={(e) => onContextMenu?.(e, post.slug)}
       className="document-item-card px-3 py-3 flex items-start gap-3 group relative"

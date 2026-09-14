@@ -280,7 +280,7 @@ export const Card: React.FC<CardProps> = ({
     if (!isSelected && contextMenu) {
       setContextMenu(null);
     }
-  }, [isSelected]);
+  }, [isSelected, contextMenu]);
 
   // Resolve effective style: If legacy color style is used, map it to normal + color (logic only for display)
   // Actually, we keep the style as is, but if it matches a color name, we might want to treat it?
