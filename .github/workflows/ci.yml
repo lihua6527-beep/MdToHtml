@@ -76,6 +76,11 @@ jobs:
         with:
           name: next-build
           path: MdToHtml/.next/
+          # .next 是隐藏目录（点开头），upload-artifact@v4 默认跳过隐藏文件。
+          # 实测（2026-09-14 run #1）：不写这一行会“上传 0 个文件”且只给警告，
+          # 步骤显示 success 但 artifacts 里没有 next-build。
+          include-hidden-files: true
+          if-no-files-found: error
 
   e2e:
     name: E2E Tests

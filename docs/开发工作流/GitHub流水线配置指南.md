@@ -53,6 +53,11 @@
 | 2 | 构建 | 干净检出中 `npm run build` | ✅ `Compiled successfully` |
 | 3 | E2E | 干净检出中 `CI=true npx playwright test`（= GitHub 的 `workers=1`、`retries=2`） | ✅ **7/7（28.1s）** |
 | 4 | 覆盖率看板 | `node scripts/coverage-summary.js`（本地模式 + 带 `GITHUB_STEP_SUMMARY` 模式） | ✅ 20.5 / 15.82 / 14.03 / 21.25 |
+| 5 | **GitHub 真实运行** | push 到 `main` 后查 Actions API：run #1（2026-09-14 21:54:31 – 21:58:02） | ✅ **`completed / success`**，`Build & Test` 9 步全 success、`E2E Tests` success，总耗时 3 分 31 秒 |
+
+> run #1 地址：`https://github.com/lihua6527-beep/MdToHtml/actions/runs/34852173860`
+> 该轮还暴露了一个只在真实运行中可见的问题：`Upload Build Artifact` 步骤 success，但 artifacts 里**没有** `next-build` —— 原因是 `upload-artifact@v4` 默认跳过隐藏目录（`.next`）。已修（`include-hidden-files: true`），见 §九排错表。
+> 尚未被真实触发过的两条：`pr-check.yml`（需要 PR）、`release.yml`（需要 `v*` tag 或手动运行）。
 
 ---
 
@@ -129,6 +134,7 @@ git push origin master:main --follow-tags    # 按你的分支策略推送（tag
 | e2e 超时等 webServer | runner 首次编译慢 | 已放宽到 120s（CI）；仍超时看 `playwright-report` |
 | Release 步骤报错 | 手动运行没有 tag | 手动运行只出 artifact；要建 Release 必须推 `v*` tag |
 | 覆盖率看板缺失 | `coverageReporters` 丢了 `json-summary` | 恢复 `jest.config.js` 的 `coverageReporters: ['text','json-summary','lcov']` |
+| 步骤 success 但 artifacts 里没有该产物 | `upload-artifact@v4` 默认**跳过隐藏文件/目录**（如 `.next/`） | 该步骤加 `include-hidden-files: true`（本轮已修 `next-build`） |
 
 ---
 
