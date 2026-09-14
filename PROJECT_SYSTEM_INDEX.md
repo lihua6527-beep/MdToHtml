@@ -89,6 +89,8 @@ MdToHmtl/                          # 项目根目录
 │   ├── 错误经验/                  # 错误经验总结
 │   └── 归档/                      # 已归档文档（旧计划书/旧规范/历史分析）
 ├── plans/                         # 当前/计划中的开发任务（取代旧计划书目录）
+├── .github/workflows/             # GitHub Actions（ci.yml / pr-check.yml）—— Gitee 不执行，保留待镜像
+├── .workflow/                     # ★ Gitee Go 流水线（ci.yml，方案 B，2026-09-14 新增）
 ├── PROJECT_SYSTEM_INDEX.md        # 本文件（系统索引）
 ├── README.md                      # 项目说明
 ├── API接口手册.md                 # API 接口文档
@@ -617,7 +619,10 @@ src/services/ai/
 | 同上 | E2E Tests（needs: build） | `npm ci` → `playwright install chromium` → test:e2e → 上传报告/失败截图 | 同上（**硬门禁**，无 `continue-on-error`） |
 | `.github/workflows/pr-check.yml` | Code Quality | `npm ci` → typecheck → lint:strict → test:ci → 上传 `coverage/` | `pull_request: [master]` |
 
-> ⚠️ 远端已于 2026-09-14 配置为 **Gitee**（`origin`）：Gitee **不执行 GitHub Actions**，且本地与远端 `feat/exe-package-ready` 分叉 2/2。因此上述工作流至今仍未真实触发；平台方案（GitHub 镜像 / Gitee Go / 仅本地门禁）见 `plans/测试工程/01_CI缺口补全计划_2026-09-14.md` §6.0。本地等价验证：`npm run verify` + `npx playwright test`。
+> ⚠️ 远端为 **Gitee**（`origin` = `https://gitee.com/njustzjh/md-to-html.git`），**Gitee 不执行 GitHub Actions**。因此：
+> - 远端门禁由 **方案 B** 承担：`.workflow/ci.yml`（Gitee Go），阶段 `gates`（typecheck+lint+单测）与 `build-and-e2e`（build+Playwright）
+> - 启用方式与核对清单：`docs/开发工作流/Gitee流水线配置指南.md`（需在 Gitee 网页以 YAML 模式创建流水线）
+> - 2026-09-14 已完成：远端配置、分叉合并入库（`10f9e2b`）、方案 B 文件入库；本地等价验证 `npm run verify` + `npx playwright test` 均通过
 
 ### 17.3 E2E 数据隔离
 

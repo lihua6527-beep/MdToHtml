@@ -49,6 +49,10 @@ CI 中的对应关系：
 ci.yml   build job = ① ② ③ + npm run build          → 必须全绿
 ci.yml   e2e   job = ④（needs: build）                → 必须全绿（硬门禁）
 pr-check.yml       = ① ② ③ + 上传 coverage/           → PR 必须全绿
+
+Gitee 侧（方案 B，.workflow/ci.yml，Gitee 不执行上面的 GitHub Actions）：
+gates          阶段 = ① ② ③                          → 必须全绿
+build-and-e2e  阶段 = npm run build + ④（Chromium）    → 必须全绿
 ```
 
 ---
@@ -226,7 +230,8 @@ test.describe('<场景分组>', () => {
 
 ```
 ① CI 平台与远端匹配吗？     远端是 Gitee（origin）⇒ .github/workflows/*.yml 不会执行
-                              → 要么加 GitHub 远端，要么改用 Gitee Go（.workflow/*.yml）
+                              → 方案 B：已在仓库内提供 .workflow/ci.yml，需在 Gitee 页面启用
+                                （仓库 → 流水线 → 新建 → YAML 模式）；详见 Gitee流水线配置指南.md
 ② 仓库有 remote 吗？         git remote -v            → 空 ⇒ git remote add origin <url> 并 push
 ③ 推的是 master 吗？         workflow 仅监听分支 master（push / PR）
                               → 在特性分支上 push 不会触发，符合预期
@@ -306,7 +311,8 @@ test.describe('<场景分组>', () => {
 | [`docs/自动化测试与CI流水线_完成度分析报告_2026-09-14.md`](../自动化测试与CI流水线_完成度分析报告_2026-09-14.md) | 完成度、缺口与后续路线（数据来源） |
 | [`MdToHtml/tests/README.md`](../../MdToHtml/tests/README.md) | 测试体系说明（三层结构 + 命令 + 历史遗留清单） |
 | [`plans/测试工程/00_CI全绿计划书_2026-09-14.md`](../../plans/测试工程/00_CI全绿计划书_2026-09-14.md) | P0–P5 执行记录（含 E2E 稳定化的根因分析） |
-| [`plans/测试工程/01_CI缺口补全计划_2026-09-14.md`](../../plans/测试工程/01_CI缺口补全计划_2026-09-14.md) | 后续 P6–P8 任务分解 |
+| [`plans/测试工程/01_CI缺口补全计划_2026-09-14.md`](../../plans/测试工程/01_CI缺口补全计划_2026-09-14.md) | 后续 P6–P8 任务分解（P6 平台决策 = 方案 B） |
+| [`docs/开发工作流/Gitee流水线配置指南.md`](Gitee流水线配置指南.md) | Gitee Go 流水线启用步骤、前提、已知不确定点与回退方案 |
 | [`docs/归档/计划书/CI_CD流水线/00_CI_CD流水线总体计划书_2026-07-12.md`](../归档/计划书/CI_CD流水线/00_CI_CD流水线总体计划书_2026-07-12.md) | 原始四阶段设计（含 release.yml / Codecov 设计稿）· 已于 2026-09-14 归档 |
 | [`docs/工程目录与版本规范.md`](../工程目录与版本规范.md) | 产物目录与"禁止提交可再生产物"铁律 |
 
