@@ -12,14 +12,17 @@
 #   .github/workflows/ci.yml  build job  →  npm run typecheck && npm run lint:strict && npm run test:ci
 #   .github/workflows/ci.yml  e2e   job  →  npm run build（+ npx playwright install chromium）&& npm run test:e2e
 #
-# 结构校验进展（2026-09-14，据 Gitee 页面实际报错迭代）：
-#   ✅ 已确认：version / name / displayName / triggers.push.branches.prefix（依据页面生成的官方模板）
-#   ✅ 已修正：steps 必须**直接位于 stage 对象下**（stages[i].steps）。
-#              此前写成 stages[i].stage.steps，Gitee 报错：
-#              「[配置结构错误] 位置: stages[0].steps - stages[0] 的 steps 配置缺失或格式错误」
-#   ✅ 已加固：run 脚本首行加 `set -e`，任一命令失败即该步骤失败（红/绿才有意义）
-#   ✅ 已简化：去掉 `variables` 层（路径直接内联），减少未知字段带来的校验风险
-#   ⏳ 待验证：step 条目本身（`step: shell@1` + `inputs.run`）以及 stage 层是否仍需 `stage:` 键
+# 结构校验进展（2026-09-14，据 Gitee 页面报错与官方模板迭代）：
+#   ✅ 已确认：version / name / displayName；stage 为扁平写法
+#              （name / displayName / strategy: naturally / trigger: auto / steps）
+#   ✅ 已确认（依据页面 Maven 模板示例）：step 的写法是 `<动作>@<工具>`（ut@maven、build@maven …），
+#              命令放在 `commands:` 列表里，并伴随 checkpoints / settings / caches / notify /
+#              strategy.resource 等字段；顶层另有 notify 与 strategy.blocking
+#   ❌ 已排除：`shell@1` 不是合法的插件类型（Gitee 报「[插件类型不存在] 不支持的插件类型: shell@1」）
+#   ▶ 现用：`build@nodejs`（Gitee Go 的 Node 构建插件；commands 中放 npm 命令）
+#   ⏳ 待验证：`build@nodejs` 是否为本实例支持的插件 id。若报「插件类型不存在」，
+#              请在流水线页面的「插件 / 步骤」选择器里搜索 Node 或 Shell，
+#              把该步骤生成的 `- step: xxx@yyy` 片段贴回 → 一次性对齐（命令部分不用改）
 #
 # 语法说明（2026-09-14 已用官方模板校正）：
 #   Gitee Go 的流水线文件由页面创建时生成（路径 .workflow/<流水线名>.yml，**文件名 = 流水线名**），
@@ -59,46 +62,60 @@ triggers:
         - test/
 
 stages:
-  # ---------------------------------------------------------------------------
-  # 阶段一：四道门禁的等价命令（typecheck + lint:strict + test:ci）
-  # 结构要点：steps 直接位于 stage 对象下（stages[i].steps），不要嵌 `stage:` 子键
-  # ---------------------------------------------------------------------------
-  - name: gates
-    displayName: '门禁：类型检查 + 代码规范 + 单元测试与覆盖率'
-    steps:
-      - step: shell@1
-        name: verify
-        displayName: '环境自检 + 安装依赖 + 四道门禁'
-        inputs:
-          run: |
-            set -e
-            echo "=== 环境自检 ==="
-            node -v
-            npm -v
-            echo "=== 安装依赖 ==="
-            cd MdToHtml
-            npm ci
-            echo "=== 类型检查 ==="
-            npm run typecheck
-            echo "=== 代码规范 ==="
-            npm run lint:strict
-            echo "=== 单元测试 + 覆盖率（阈值 19/14/13/20）==="
-            npm run test:ci
+# ---------------------------------------------------------------------------
+# 阶段一：四道门禁的等价命令（typecheck + lint:strict + test:ci）
+# ---------------------------------------------------------------------------
+- name: 门禁
+  displayName: 类型检查 + 代码规范 + 单元测试与覆盖率
+  strategy: naturally
+  trigger: auto
+  steps:
+  - step: build@nodejs
+    name: verify
+    displayName: 类型检查 + Lint + 单测（含覆盖率阈值 19/14/13/20）
+    nodeVersion: "20"
+    commands:
+    - cd MdToHtml && npm ci
+    - cd MdToHtml && npm run typecheck
+    - cd MdToHtml && npm run lint:strict
+    - cd MdToHtml && npm run test:ci
+    checkpoints: {}
+    settings: []
+    caches: []
+    notify: []
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "4"
 
-  # ---------------------------------------------------------------------------
-  # 阶段二：生产构建 + E2E（数据隔离：MDTOHTML_CONFIG → .e2e-tmp/）
-  # ---------------------------------------------------------------------------
-  - name: build-and-e2e
-    displayName: '构建 + 端到端测试（Playwright / Chromium）'
-    steps:
-      - step: shell@1
-        name: build-and-e2e
-        displayName: '生产构建 + E2E（7 用例）'
-        inputs:
-          run: |
-            set -e
-            cd MdToHtml
-            npm ci
-            npm run build
-            npx playwright install --with-deps chromium
-            npm run test:e2e
+# ---------------------------------------------------------------------------
+# 阶段二：生产构建 + E2E（数据隔离：MDTOHTML_CONFIG → .e2e-tmp/）
+# ---------------------------------------------------------------------------
+- name: 构建与E2E
+  displayName: next build + Playwright E2E（7 用例）
+  strategy: naturally
+  trigger: auto
+  steps:
+  - step: build@nodejs
+    name: e2e
+    displayName: 生产构建 + E2E
+    nodeVersion: "20"
+    commands:
+    - cd MdToHtml && npm ci
+    - cd MdToHtml && npm run build
+    - cd MdToHtml && npx playwright install chromium
+    - cd MdToHtml && npm run test:e2e
+    checkpoints: {}
+    settings: []
+    caches: []
+    notify: []
+    strategy:
+      retry: "0"
+      resource:
+        cpu: "2"
+        memory: "4"
+
+notify: []
+strategy:
+  blocking: true
