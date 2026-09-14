@@ -12,14 +12,14 @@
 #   .github/workflows/ci.yml  build job  →  npm run typecheck && npm run lint:strict && npm run test:ci
 #   .github/workflows/ci.yml  e2e   job  →  npm run build（+ npx playwright install chromium）&& npm run test:e2e
 #
-# 语法说明（重要）：
-#   本文件按 Gitee Go 的 Azure-Pipelines 风格 DSL 编写，且**只使用最通用的 shell@1 步骤**，
-#   以避免依赖版本相关的内置步骤名。首次启用时请在
-#   「仓库 → 流水线 → 新建流水线 → YAML 模式」中校验语法（页面会实时报错）。
-#   若你的流水线页面提示字段名不被识别（例如 triggers / stages 的名称差异），
-#   请以页面提供的模板为准调整本文件 —— 步骤内的命令无需改动。
-#   ⚠️ 截至 2026-09-14，Gitee 帮助中心的流水线语法文档在本环境不可达（HTTP 404），
-#      因此本文件的顶部结构与页面模板的一致性**尚未在真实流水线中验证过**。
+# 结构校验进展（2026-09-14，据 Gitee 页面实际报错迭代）：
+#   ✅ 已确认：version / name / displayName / triggers.push.branches.prefix（依据页面生成的官方模板）
+#   ✅ 已修正：steps 必须**直接位于 stage 对象下**（stages[i].steps）。
+#              此前写成 stages[i].stage.steps，Gitee 报错：
+#              「[配置结构错误] 位置: stages[0].steps - stages[0] 的 steps 配置缺失或格式错误」
+#   ✅ 已加固：run 脚本首行加 `set -e`，任一命令失败即该步骤失败（红/绿才有意义）
+#   ✅ 已简化：去掉 `variables` 层（路径直接内联），减少未知字段带来的校验风险
+#   ⏳ 待验证：step 条目本身（`step: shell@1` + `inputs.run`）以及 stage 层是否仍需 `stage:` 键
 #
 # 语法说明（2026-09-14 已用官方模板校正）：
 #   Gitee Go 的流水线文件由页面创建时生成（路径 .workflow/<流水线名>.yml，**文件名 = 流水线名**），
@@ -58,81 +58,47 @@ triggers:
         - feat/
         - test/
 
-variables:
-  MDTOHTML_DIR: 'MdToHtml'
-
 stages:
   # ---------------------------------------------------------------------------
   # 阶段一：四道门禁的等价命令（typecheck + lint:strict + test:ci）
+  # 结构要点：steps 直接位于 stage 对象下（stages[i].steps），不要嵌 `stage:` 子键
   # ---------------------------------------------------------------------------
-  - stage:
-      name: gates
-      displayName: '门禁：类型检查 + 代码规范 + 单元测试与覆盖率'
-      steps:
-        - step: shell@1
-          name: print-node-version
-          displayName: '环境自检（Node / npm 版本）'
-          inputs:
-            run: |
-              node -v || echo "[WARN] 镜像未预装 Node，请改用流水线的 Node 步骤或指定带 Node 20 的镜像"
-              npm -v || true
-
-        - step: shell@1
-          name: install
-          displayName: '安装依赖（npm ci）'
-          inputs:
-            run: |
-              cd $MDTOHTML_DIR
-              npm ci
-
-        - step: shell@1
-          name: verify
-          displayName: '类型检查 + Lint + 单测（含覆盖率阈值 19/14/13/20）'
-          inputs:
-            run: |
-              cd $MDTOHTML_DIR
-              npm run typecheck
-              npm run lint:strict
-              npm run test:ci
+  - name: gates
+    displayName: '门禁：类型检查 + 代码规范 + 单元测试与覆盖率'
+    steps:
+      - step: shell@1
+        name: verify
+        displayName: '环境自检 + 安装依赖 + 四道门禁'
+        inputs:
+          run: |
+            set -e
+            echo "=== 环境自检 ==="
+            node -v
+            npm -v
+            echo "=== 安装依赖 ==="
+            cd MdToHtml
+            npm ci
+            echo "=== 类型检查 ==="
+            npm run typecheck
+            echo "=== 代码规范 ==="
+            npm run lint:strict
+            echo "=== 单元测试 + 覆盖率（阈值 19/14/13/20）==="
+            npm run test:ci
 
   # ---------------------------------------------------------------------------
   # 阶段二：生产构建 + E2E（数据隔离：MDTOHTML_CONFIG → .e2e-tmp/）
   # ---------------------------------------------------------------------------
-  - stage:
-      name: build-and-e2e
-      displayName: '构建 + 端到端测试（Playwright / Chromium）'
-      steps:
-        - step: shell@1
-          name: install
-          displayName: '安装依赖（npm ci）'
-          inputs:
-            run: |
-              cd $MDTOHTML_DIR
-              npm ci
-
-        - step: shell@1
-          name: build
-          displayName: '生产构建（next build）'
-          inputs:
-            run: |
-              cd $MDTOHTML_DIR
-              npm run build
-
-        - step: shell@1
-          name: e2e
-          displayName: 'E2E 测试（7 用例，数据隔离到 .e2e-tmp/）'
-          inputs:
-            run: |
-              cd $MDTOHTML_DIR
-              npx playwright install --with-deps chromium
-              npm run test:e2e
-
-        - step: shell@1
-          name: upload-artifacts
-          displayName: '保留失败证据（报告与截图）'
-          inputs:
-            run: |
-              echo "[INFO] 失败证据目录："
-              echo "  $MDTOHTML_DIR/playwright-report/"
-              echo "  $MDTOHTML_DIR/test-results/"
-              ls -la $MDTOHTML_DIR/test-results 2>/dev/null || true
+  - name: build-and-e2e
+    displayName: '构建 + 端到端测试（Playwright / Chromium）'
+    steps:
+      - step: shell@1
+        name: build-and-e2e
+        displayName: '生产构建 + E2E（7 用例）'
+        inputs:
+          run: |
+            set -e
+            cd MdToHtml
+            npm ci
+            npm run build
+            npx playwright install --with-deps chromium
+            npm run test:e2e

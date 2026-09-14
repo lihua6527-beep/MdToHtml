@@ -124,7 +124,7 @@ triggers:
 | # | 现象 | 原因 | 处置 |
 |:-:|------|------|------|
 | ① | `node: command not found` / Node 版本过低 | 执行镜像未预装 Node 20 | 在流水线里把 `install` 步骤替换为页面步骤库中的 **Node/npm 步骤**（选择 Node 20），或在流水线设置中指定带 Node 20 的镜像；`环境自检` 步骤保留用于确认 |
-| ② | 保存 YAML 时报 **字段名/结构错误** | 顶部字段中 `version` / `name` / `displayName` / `triggers.push.branches.prefix` 已按官方模板校正；**仍可能不匹配的是 `stages` / `steps` 段**（官方模板未给出这一层，见 §五） | 按页面模板改 `stages` / `steps` 的写法；**步骤内要执行的命令无需改动**。把报错原文贴回即可一次性校正 |
+| ② | 保存 YAML 时报 **配置结构错误** | 已处理过一例：`位置: stages[0].steps` → 原因是 `steps` 被嵌在 `stage:` 子键里；现改为 `stages[i].steps` 扁平写法。若仍有报错，多半是 **step 条目写法**或 `stage` 层缺失 `stage:` 键（见 §五） | 按报错位置改对应层级；**步骤内要执行的命令无需改动**。把报错原文贴回即可一次性校正 |
 | ③ | `playwright install --with-deps` 失败 | 镜像缺少 apt/sudo 权限 | 改为 `npx playwright install chromium`，并确认镜像已含 Chromium 运行所需系统库；或在镜像中预装依赖 |
 
 ### Step 8：绑定后续自动化（可选）
@@ -177,10 +177,10 @@ triggers:
 | 项 | 状态 |
 |----|------|
 | ✅ **已确认**（依据 Gitee 页面生成的官方模板 `.workflow/流水线-202609142049.yml`，见 §二 Step 2） | ① `version: "1.0"` 为必填项；② `name` / `displayName` = 流水线名 = 文件名（不含扩展名）；③ `triggers.push.branches.prefix` 为**前缀匹配**列表 |
-| ⚠️ **仍未确认** | `stages` / `steps` 这一层：官方模板未包含，我们按 Azure-Pipelines 风格编写（`stages[].stage.steps[].step` + 通用 `shell@1`）——**首次保存时以页面校验为准** |
-| ⚠️ **未确认（已临时规避）** | `pull_request` 触发的键名（模板未出现）→ 已在文件中**暂时移除** PR 触发段，待页面模板确认后再补 |
-| 已做的校验 | ① js-yaml 解析通过（`version`/`name`/2 阶段/7 步骤/`triggers.push.branches.prefix` 结构正确）；② 步骤内命令与本地实测命令逐条一致 —— 保证"不是坏 YAML + 命令正确"，**不等于"Gitee 一定接受 `stages` 段"** |
-| 建议动作 | 首次保存/运行时若报错，把**报错原文**贴回：`stages`/`steps` 按模板改，命令不动 |
+| ✅ **已修正**（依据页面运行报错） | **`steps` 必须直接位于 stage 对象下**（`stages[i].steps`）；原先写成 `stages[i].stage.steps` 被拒：<br>`[配置结构错误] 位置: stages[0].steps - stages[0] 的 steps 配置缺失或格式错误` |
+| ⚠️ **仍未确认** | step 条目本身的写法（`- step: shell@1` + `inputs.run`）是否被接受；stage 层是否**还需要** `stage:` 键（当前不加）；`pull_request` 触发键名（当前不含） |
+| 已做的校验 | ① js-yaml 解析通过（`version`、`name`、2 个 stage、`stages[0].steps` 存在且为数组、无 `stage:` 包裹层、无 `variables`）；② 步骤内命令与本地实测命令逐条一致 |
+| 建议动作 | 在页面**保存**时看是否还有报错；若有，把报错原文贴回：按提示改结构，**命令不动** |
 | 规避手段 | 文件中**只使用最通用的 `shell@1` 步骤**（不依赖版本相关的内置步骤名），因此即便顶部字段名需要微调，**步骤内的命令与业务逻辑无需改动** |
 | 建议动作 | 首次在页面 YAML 模式保存时如报错，请把报错信息贴回，即可按模板一次性校正 |
 
