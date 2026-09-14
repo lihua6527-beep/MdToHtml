@@ -30,7 +30,12 @@ MdToHtml/.next/
 *.iso
 
 # Generated Data & Cache
-data/
+# ⚠️ 这里必须写「显式路径」，不能裸写 data/ ：
+#    裸写 data/ 会匹配**任意层级**的同名目录，历史上正是它把源码目录
+#    MdToHtml/src/data/（editor-defaults.ts，被 MarkdownEditor.tsx 引用）
+#    一起屏蔽，导致该源码从未入库 —— 干净检出后 tsc 直接报
+#    TS2307: Cannot find module '@/data/editor-defaults'，CI 必红。
+#    同类受影响的还有 MdToHtml/portable_ml_package/data/（Python 源码，靠 -f 才入库）。
 MdToHtml/data/
 **/__pycache__/
 **/*.pyc
