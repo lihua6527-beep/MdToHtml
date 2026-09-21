@@ -1,0 +1,15 @@
+{
+  "exportOptions": {
+    "emitJson": true
+  },
+  "renderOptions": {
+    "showDivider": true,
+    "titleSpacing": "2"
+  },
+  "paths": {
+    "input": "",
+    "output": ""
+  },
+  "capacityLimit": 200,
+  "system": {}
+}

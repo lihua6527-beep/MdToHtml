@@ -1,0 +1,53 @@
+#!/bin/sh
+# =============================================================================
+# pre-push 钩子：推送前在本地跑一遍 CI 的等价门禁
+#
+# 目的：让"报错"在你本地就暴露，而不是等 Gitee 流水线跑完才知道。
+#   等价命令 = Gitee 流水线「门禁」阶段 / GitHub Actions 的 build job
+#   即：npm run typecheck && npm run lint:strict && npm run test:ci
+#
+# 启用方式（每个克隆仓库各做一次）：
+#   git config core.hooksPath .githooks
+#   或直接运行：scripts\install-git-hooks.bat
+#
+# 紧急情况想跳过（不推荐）：
+#   git push --no-verify
+# =============================================================================
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+cd "$ROOT/MdToHtml" 2>/dev/null || {
+  echo "[pre-push] 未找到 MdToHtml 目录，跳过门禁"
+  exit 0
+}
+
+# 解析 npm（Git Bash 下优先用 npm，其次 npm.cmd）
+NPM="npm"
+if ! command -v npm >/dev/null 2>&1; then
+  if command -v npm.cmd >/dev/null 2>&1; then
+    NPM="npm.cmd"
+  else
+    echo "[pre-push] 未找到 npm，跳过本地门禁（CI 仍会检查）"
+    exit 0
+  fi
+fi
+
+echo ""
+echo "[pre-push] 正在运行本地 CI 等价门禁：typecheck + lint:strict + test:ci"
+echo "[pre-push] 命令：cd MdToHtml && $NPM run verify"
+echo ""
+
+$NPM run verify
+STATUS=$?
+
+if [ "$STATUS" -ne 0 ]; then
+  echo ""
+  echo "==============================================================="
+  echo "[pre-push] ❌ 门禁未通过（EXITCODE=$STATUS），已阻断本次推送。"
+  echo "[pre-push]    先修好上面报错再推送；确需绕过可用：git push --no-verify"
+  echo "==============================================================="
+  exit 1
+fi
+
+echo ""
+echo "[pre-push] ✅ 本地门禁通过（与 Gitee 流水线「门禁」阶段等价），继续推送"
+exit 0

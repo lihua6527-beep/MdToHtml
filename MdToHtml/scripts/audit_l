@@ -1,0 +1,43 @@
+const fs = require('fs');
+const path = require('path');
+
+// 检查所有 icon name 对应的 Lucide 组件是否可从 lucide-react 导入
+try {
+  // 先看看哪些 Lucide 组件真正存在
+  const lucidePath = path.join(__dirname, '..', 'node_modules', 'lucide-react', 'dist', 'cjs', 'lucide-react.js');
+  if (fs.existsSync(lucidePath)) {
+    const lucideContent = fs.readFileSync(lucidePath, 'utf-8');
+    const lucideExports = lucideContent.match(/exports\.(\w+)\s*=/g);
+    const availableComponents = new Set(
+      lucideExports ? lucideExports.map(e => e.replace('exports.', '').replace(' =', '')) : []
+    );
+    console.log('lucide-react 可用组件数: ' + availableComponents.size);
+
+    // 读取 icon-manager.ts 中所有 component 引用
+    const iconContent = fs.readFileSync(path.join(__dirname, '..', 'src', 'lib', 'icon-manager.ts'), 'utf-8');
+    const components = [...iconContent.matchAll(/component:\s*'([^']+)'/g)].map(m => m[1]);
+    const uniqueComponents = [...new Set(components)];
+    
+    console.log('icon-manager.ts 引用的组件数: ' + uniqueComponents.length);
+    
+    const missing = uniqueComponents.filter(c => !availableComponents.has(c));
+    if (missing.length > 0) {
+      console.log('\n❌ 缺失的 Lucide 组件:');
+      missing.forEach(c => console.log('  ' + c));
+    } else {
+      console.log('\n✅ 所有引用的 Lucide 组件都存在');
+    }
+
+    // 输出完整映射表
+    console.log('\n=== 组件映射清单 ===');
+    for (const c of uniqueComponents) {
+      const names = [...iconContent.matchAll(new RegExp("name: '([^']+)'.*component: '" + c + "'", 'g'))].map(m => m[1]);
+      console.log('  ' + c + ' → ' + names.join(', '));
+    }
+  } else {
+    console.log('lucide-react 源文件未找到，跳过组件存在性检查');
+  }
+} catch (e) {
+  console.error('检查出错:', e.message);
+}
+console.log('\n=== 审计完成 ===');

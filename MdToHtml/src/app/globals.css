@@ -1,0 +1,378 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* 默认主题 (Ocean Blue fallback) */
+    --bg-page: 220 100% 97%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 214 100% 99%;
+    
+    --text-primary: 221 52% 8%;
+    --text-secondary: 215 19% 35%;
+    --text-muted: 215 20% 65%;
+    
+    --border-soft: 0 0% 91%;
+    --border-highlight: 212 96% 78%;
+    
+    --primary: 222 100% 59%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 213 100% 94%;
+    --accent: 213 85% 97%;
+    
+    --ring: 213 82% 85%;
+    
+    --chart-1: 214 100% 75%;
+    --chart-2: 220 100% 63%;
+    --chart-3: 158 62% 63%;
+    --chart-4: 200 97% 75%;
+    --chart-5: 221 100% 73%;
+
+    --sidebar-background: 220 100% 99%;
+    --sidebar-foreground: 0 0% 13%;
+    --sidebar-primary: 0 0% 13%;
+    --sidebar-primary-foreground: 0 0% 96%;
+    --sidebar-accent: 0 0% 93%;
+    --sidebar-accent-foreground: 0 0% 13%;
+    --sidebar-border: 0 0% 91%;
+    --sidebar-ring: 0 0% 82%;
+
+    --radius-card: 0.75rem;
+    --shadow-card: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    --font-heading: ui-sans-serif, system-ui, sans-serif;
+    --font-body: ui-sans-serif, system-ui, sans-serif;
+
+    /* Shadcn defaults */
+    --background: 0 0% 100%;
+    --foreground: 221 52% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 221 52% 8%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 221 52% 8%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 213 100% 94%;
+    --muted-foreground: 215 16% 47%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 0 0% 91%;
+    --input: 0 0% 91%;
+    --radius: 0.5rem;
+  }
+
+  /* Theme 1: Ocean Blue (Ocean Professional) */
+  [data-theme="ocean"] {
+    --bg-page: 220 100% 97%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 214 100% 99%;
+    --text-primary: 221 52% 8%;
+    --text-secondary: 215 19% 35%;
+    --text-muted: 215 20% 65%;
+    --primary: 222 100% 59%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 213 100% 94%;
+    --accent: 213 85% 97%;
+    --border-soft: 0 0% 91%;
+    --border-highlight: 212 96% 78%;
+    --ring: 213 82% 85%;
+    
+    --chart-1: 214 100% 75%;
+    --chart-2: 220 100% 63%;
+    --chart-3: 158 62% 63%;
+    --chart-4: 200 97% 75%;
+    --chart-5: 221 100% 73%;
+
+    --sidebar-background: 220 100% 99%;
+    --sidebar-foreground: 0 0% 13%;
+    --sidebar-primary: 0 0% 13%;
+    --sidebar-primary-foreground: 0 0% 96%;
+    --sidebar-accent: 0 0% 93%;
+    --sidebar-accent-foreground: 0 0% 13%;
+    --sidebar-border: 0 0% 91%;
+    --sidebar-ring: 0 0% 82%;
+  }
+
+  /* Theme 2: Mint Fresh */
+  [data-theme="mint"] {
+    --bg-page: 166 76% 97%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 166 80% 99%;
+    --text-primary: 166 42% 12%;
+    --text-secondary: 166 25% 35%;
+    --text-muted: 166 20% 65%;
+    --primary: 166 80% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 166 60% 94%;
+    --accent: 166 50% 96%;
+    --border-soft: 166 20% 90%;
+    --border-highlight: 166 60% 80%;
+    --ring: 166 60% 80%;
+    
+    --chart-1: 166 70% 70%;
+    --chart-2: 150 60% 65%;
+    --chart-3: 180 60% 65%;
+    --chart-4: 140 60% 70%;
+    --chart-5: 160 60% 75%;
+
+    --sidebar-background: 166 76% 98%;
+    --sidebar-foreground: 166 42% 15%;
+    --sidebar-primary: 166 80% 40%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 166 30% 94%;
+    --sidebar-accent-foreground: 166 42% 15%;
+    --sidebar-border: 166 20% 90%;
+    --sidebar-ring: 166 60% 80%;
+  }
+
+  /* Theme 3: Lavender Dream */
+  [data-theme="lavender"] {
+    --bg-page: 265 80% 98%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 265 80% 99%;
+    --text-primary: 265 42% 12%;
+    --text-secondary: 265 25% 35%;
+    --text-muted: 265 20% 65%;
+    --primary: 265 80% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 265 60% 96%;
+    --accent: 265 50% 97%;
+    --border-soft: 265 20% 92%;
+    --border-highlight: 265 60% 85%;
+    --ring: 265 60% 85%;
+    
+    --chart-1: 265 70% 75%;
+    --chart-2: 280 60% 70%;
+    --chart-3: 250 60% 70%;
+    --chart-4: 300 60% 75%;
+    --chart-5: 260 60% 80%;
+
+    --sidebar-background: 265 80% 99%;
+    --sidebar-foreground: 265 42% 15%;
+    --sidebar-primary: 265 80% 60%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 265 30% 96%;
+    --sidebar-accent-foreground: 265 42% 15%;
+    --sidebar-border: 265 20% 92%;
+    --sidebar-ring: 265 60% 85%;
+  }
+
+  /* Theme 4: Earth Organic */
+  [data-theme="earth"] {
+    --bg-page: 140 20% 98%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 140 20% 99%;
+    --text-primary: 140 42% 12%;
+    --text-secondary: 140 25% 35%;
+    --text-muted: 140 20% 65%;
+    --primary: 140 80% 40%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 140 60% 94%;
+    --accent: 140 50% 96%;
+    --border-soft: 140 20% 90%;
+    --border-highlight: 140 60% 80%;
+    --ring: 140 60% 80%;
+    
+    --chart-1: 140 70% 70%;
+    --chart-2: 120 60% 65%;
+    --chart-3: 160 60% 65%;
+    --chart-4: 100 60% 70%;
+    --chart-5: 140 60% 75%;
+
+    --sidebar-background: 140 20% 99%;
+    --sidebar-foreground: 140 42% 15%;
+    --sidebar-primary: 140 80% 40%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 140 30% 94%;
+    --sidebar-accent-foreground: 140 42% 15%;
+    --sidebar-border: 140 20% 90%;
+    --sidebar-ring: 140 60% 80%;
+  }
+
+  /* Theme 5: Caramel Vintage */
+  [data-theme="caramel"] {
+    --bg-page: 30 20% 98%;
+    --bg-card: 0 0% 100%;
+    --bg-card-highlight: 30 20% 99%;
+    --text-primary: 30 42% 12%;
+    --text-secondary: 30 25% 35%;
+    --text-muted: 30 20% 65%;
+    --primary: 30 60% 35%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 30 40% 94%;
+    --accent: 30 30% 96%;
+    --border-soft: 30 20% 90%;
+    --border-highlight: 30 40% 80%;
+    --ring: 30 40% 80%;
+    
+    --chart-1: 30 50% 70%;
+    --chart-2: 45 60% 65%;
+    --chart-3: 15 50% 70%;
+    --chart-4: 60 50% 75%;
+    --chart-5: 30 50% 75%;
+
+    --sidebar-background: 30 20% 99%;
+    --sidebar-foreground: 30 42% 15%;
+    --sidebar-primary: 30 60% 35%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 30 30% 94%;
+    --sidebar-accent-foreground: 30 42% 15%;
+    --sidebar-border: 30 20% 90%;
+    --sidebar-ring: 30 40% 80%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Document Item Card - 浅灰色卡片分隔 */
+  .document-item-card {
+    background: hsla(var(--bg-page) / 0.65);
+    border: 1px solid hsla(var(--border-soft) / 0.6);
+    border-radius: var(--radius-card);
+    transition: all 0.2s ease;
+  }
+
+  .document-item-card:hover {
+    background: hsla(var(--bg-page) / 0.9);
+    border-color: hsla(var(--border-soft) / 0.9);
+  }
+
+  /* Card Shape Utilities */
+  .shape-cut {
+    clip-path: polygon(20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0% 100%, 0% 20px);
+  }
+  
+  .shape-arrow {
+    clip-path: polygon(0% 0%, 85% 0%, 100% 50%, 85% 100%, 0% 100%, 15% 50%);
+  }
+  
+  .shape-circle {
+    clip-path: circle(50% at 50% 50%);
+  }
+
+  .shape-round {
+    clip-path: circle(50% at 50% 50%);
+  }
+  
+  .shape-pill {
+    clip-path: inset(0% 0% 0% 0% round 9999px);
+  }
+
+  .shape-leaf {
+    clip-path: inset(0% 0% 0% 0% round 50% 0% 50% 0%);
+  }
+
+  .shape-diamond {
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  }
+
+  .shape-hexagon {
+    clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%);
+  }
+
+  .shape-message {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 75%, 75% 75%, 75% 100%, 50% 75%, 0% 75%);
+  }
+}
+
+/* ========================================
+   PDF Export Styles (via @media print)
+   利用浏览器原生 window.print() 实现零依赖 PDF 导出
+   ======================================== */
+@media print {
+  @page {
+    margin: 2cm;
+    size: A4;
+  }
+
+  body {
+    font-size: 12pt;
+    line-height: 1.6;
+    color: #000;
+    background: #fff !important;
+  }
+
+  /* 导出容器 */
+  .chd-export-container {
+    max-width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+
+  /* 隐藏所有 UI 控件和交互元素 */
+  nav,
+  .toolbar,
+  .no-print,
+  button,
+  iframe,
+  [class*="debug"],
+  [class*="fixed"],
+  [class*="sticky"] {
+    display: none !important;
+  }
+
+  /* CHD Section 分页控制 */
+  .chd-section {
+    page-break-after: auto;
+    margin-bottom: 1.5cm;
+  }
+
+  .chd-section:last-child {
+    page-break-after: avoid;
+  }
+
+  /* 卡片内容不跨页 */
+  .chd-card {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* 代码块格式优化 */
+  pre, code {
+    font-size: 9pt;
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: #f5f5f5 !important;
+    border: 1px solid #ddd !important;
+  }
+
+  /* 表格样式 */
+  table {
+    font-size: 10pt;
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  th, td {
+    border: 1px solid #ccc;
+    padding: 6px 10px;
+  }
+
+  /* 链接显示完整 URL */
+  a[href^="http"]:after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+    color: #666;
+    word-break: break-all;
+  }
+
+  /* 图片适配 */
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  /* 确保数学公式可读 */
+  .katex {
+    font-size: 11pt !important;
+  }
+}

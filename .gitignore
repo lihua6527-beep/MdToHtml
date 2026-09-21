@@ -1,0 +1,107 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+# E2E 隔离数据目录（Playwright 运行 config.e2e.json 时生成，勿提交）
+.e2e-tmp/
+
+# Next.js
+.next/
+_next/
+MdToHtml/_next/
+out/
+output/
+MdToHtml/output/
+MdToHtml/logs/
+MdToHtml/.next/
+
+# Large Binary/Archives (Avoid version control)
+*.zip
+*.rar
+*.7z
+*.tar.gz
+*.pdf
+*.docx
+*.exe
+*.dll
+*.iso
+
+# Generated Data & Cache
+# ⚠️ 这里必须写「显式路径」，不能裸写 data/ ：
+#    裸写 data/ 会匹配**任意层级**的同名目录，历史上正是它把源码目录
+#    MdToHtml/src/data/（editor-defaults.ts，被 MarkdownEditor.tsx 引用）
+#    一起屏蔽，导致该源码从未入库 —— 干净检出后 tsc 直接报
+#    TS2307: Cannot find module '@/data/editor-defaults'，CI 必红。
+#    同类受影响的还有 MdToHtml/portable_ml_package/data/（Python 源码，靠 -f 才入库）。
+MdToHtml/data/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# User Content
+input/
+MdToHtml/input/
+
+# Dependencies
+node_modules/
+build/
+
+# Misc
+.DS_Store
+*.pem
+
+# Trae AI config (local only)
+.trae
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local env files
+.env*.local
+
+# Vercel
+.vercel
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Electron Build Artifacts
+dist/
+dist_build/
+dist_build_v2/
+release/
+release_v2/
+MdToHtml/dist/
+MdToHtml/dist_build/
+MdToHtml/dist_build_v2/
+MdToHtml/release/
+MdToHtml/release_v2/
+
+# Local metadata caches
+**/.metadata_cache.json
+
+# Kept local-only (duplicate / temp)
+docs/归档/系统配置与路径管理方案.md
+temp_filelist.txt  
+# ===== 2026-09-06 工程清理规范（见 docs/工程目录与版本规范.md） =====
+# 测试/CI 自动产物（可再生，勿提交）
+test-results/
+playwright-report/
+MdToHtml/test-results/
+MdToHtml/playwright-report/
+# 编译临时目录
+**/.swc/
+**/temp/
