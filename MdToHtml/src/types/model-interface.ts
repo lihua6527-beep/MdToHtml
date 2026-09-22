@@ -23,6 +23,77 @@ export interface ScoreDimensions {
   process?: number;
 }
 
+// --- AI 服务类型定义 ---
+
+/** AI 提供商 */
+export type AIProvider = 'openai' | 'ollama' | 'custom';
+
+/** 输出模式 */
+export type AIOutputMode = 'direct' | 'editor';
+
+/** AI 服务配置 */
+export interface AIConfig {
+  provider: AIProvider;
+  apiEndpoint: string;
+  apiKey: string;
+  model: string;
+  temperature: number;
+  maxTokens: number;
+  timeout: number;
+  streamOutput: boolean;
+  defaultMode: AIOutputMode;
+}
+
+/** AI 生成结果 */
+export interface AIResult {
+  markdown: string;
+  rawResponse?: string;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+  validation?: ValidationResult;
+  error?: string;
+}
+
+/** 校验结果 */
+export interface ValidationResult {
+  isValid: boolean;
+  errors: ValidationError[];
+  warnings: ValidationWarning[];
+  autoFixApplied: boolean;
+  fixedMarkdown?: string;
+}
+
+/** 校验错误 */
+export interface ValidationError {
+  line?: number;
+  type: string;
+  message: string;
+  severity: 'error' | 'warning' | 'info';
+}
+
+/** 校验警告 */
+export interface ValidationWarning {
+  line?: number;
+  type: string;
+  message: string;
+}
+
+/** 默认 AI 配置 */
+export const DEFAULT_AI_CONFIG: AIConfig = {
+  provider: 'openai',
+  apiEndpoint: 'https://api.deepseek.com/v1',
+  apiKey: '',
+  model: 'deepseek-chat',
+  temperature: 0.3,
+  maxTokens: 4096,
+  timeout: 60000,
+  streamOutput: false,
+  defaultMode: 'direct',
+};
+
 /**
  * 问题/违规项
  */
@@ -121,19 +192,3 @@ export interface RawPairSubmission {
     comment?: string;
   };
 }
-
-// --- AI 占位类型（实验版：先把本地 mock 链路跑通，待与协作方敲定正式契约后替换） ---
-
-/** 实验用配置：字段尚未与最终契约对齐 */
-export interface AIStubConfig {
-  model: string;
-  promptVariant: 'default' | 'alternative';
-  mockLatencyMs?: number;
-}
-
-/** 实验用默认值 */
-export const DEFAULT_AI_STUB_CONFIG: AIStubConfig = {
-  model: 'deepseek-chat',
-  promptVariant: 'default',
-  mockLatencyMs: 600,
-};
