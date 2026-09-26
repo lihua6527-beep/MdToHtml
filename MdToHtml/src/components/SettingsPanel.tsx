@@ -8,6 +8,7 @@ import { ConfigService } from '@/services/ConfigService';
 import { TrashService } from '@/services/TrashService';
 import { SortMethod } from '@/types/file-system';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { AIConfigPanel } from '@/components/AIConfigPanel';
 
 interface PathInfo {
   inputPath: string;
@@ -22,7 +23,7 @@ interface PathInfo {
 interface SettingsPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  settingsType: 'file' | 'render' | 'protocol';
+  settingsType: 'file' | 'render' | 'protocol' | 'ai';
 }
 
 type PathKey = 'input' | 'output' | 'data' | 'trash' | 'chdProtocol';
@@ -292,6 +293,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
       case 'file': return '文件设置';
       case 'render': return '渲染配置';
       case 'protocol': return '协议配置';
+      case 'ai': return 'AI 服务配置';
       default: return '设置';
     }
   };
@@ -301,6 +303,7 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
       case 'file': return <FileJson className="w-5 h-5" />;
       case 'render': return <Code className="w-5 h-5" />;
       case 'protocol': return <FileText className="w-5 h-5" />;
+      case 'ai': return <Settings className="w-5 h-5" />;
       default: return <Settings className="w-5 h-5" />;
     }
   };
@@ -627,6 +630,11 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ isOpen, onClose, s
                     </div>
                   </div>
                 </div>
+              )}
+
+              {/* AI 服务配置 — 独立面板 */}
+              {settingsType === 'ai' && (
+                <AIConfigPanel onClose={onClose} onBack={() => {}} />
               )}
 
               {/* 协议配置面板 */}

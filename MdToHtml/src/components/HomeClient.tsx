@@ -11,6 +11,7 @@ import { QUERY_KEYS } from '@/constants/query-keys';
 
 // ★ 懒加载重型面板组件：避免首屏打包不必要的 JS
 const SettingsPanel = lazy(() => import('./SettingsPanel').then(m => ({ default: m.SettingsPanel })));
+const AIArea = lazy(() => import('@/components/AI/AIArea').then(m => ({ default: m.AIArea })));
 const SearchPanel = lazy(() => import('@/components/SearchPanel'));
 
 function LazyFallback() {
@@ -28,18 +29,29 @@ interface HomeClientProps {
   initialPosts: FileItem[];
 }
 
-type SettingsType = 'file' | 'render' | 'protocol';
+type SettingsType = 'file' | 'render' | 'protocol' | 'ai';
 
 export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [settingsType, setSettingsType] = useState<SettingsType>('file');
-  const [activeMode, setActiveMode] = useState<'welcome' | 'search'>('welcome');
+  const [activeMode, setActiveMode] = useState<'welcome' | 'ai' | 'search'>('welcome');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 搜索状态
   const { query, results, search, clearSearch } = useSearch(initialPosts);
+
+  // 监听 AIArea 触发的 "打开设置" 自定义事件
+  useEffect(() => {
+    const handler = (e: CustomEvent) => {
+      const type = e.detail?.type || 'ai';
+      setSettingsType(type);
+      setShowSettings(true);
+    };
+    window.addEventListener('open-settings', handler as EventListener);
+    return () => window.removeEventListener('open-settings', handler as EventListener);
+  }, []);
 
   // ===== 拖拽上传逻辑 =====
   const handleDragEnter = (e: React.DragEvent) => {
@@ -136,7 +148,7 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
           </div>
         )}
 
-        <div className={`mx-auto h-full flex flex-col max-w-5xl`}>
+        <div className={`mx-auto h-full flex flex-col ${activeMode === 'ai' ? 'max-w-4xl' : 'max-w-5xl'}`}>
           {activeMode === 'search' ? (
             <Suspense fallback={<LazyFallback />}>
               <SearchPanel
@@ -144,6 +156,12 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
                 results={results}
                 onSearch={search}
                 onClear={clearSearch}
+                onClose={() => setActiveMode('welcome')}
+              />
+            </Suspense>
+          ) : activeMode === 'ai' ? (
+            <Suspense fallback={<LazyFallback />}>
+              <AIArea 
                 onClose={() => setActiveMode('welcome')}
               />
             </Suspense>
@@ -162,19 +180,24 @@ export const HomeClient: React.FC<HomeClientProps> = ({ initialPosts }) => {
                 在左侧文档列表选择已有文档，或通过下方方式开始工作
               </p>
 
-              {/* === AI 编辑器入口（占位：跳转实验页） === */}
+              {/* === AI 编辑按钮（C 位大按钮） === */}
               <button
-                onClick={() => { window.location.href = '/ai-input'; }}
-                title="AI 编辑器（实验中）"
-                className="group w-full max-w-md py-4 px-8 mb-4 border-2 border-dashed border-gray-300 hover:border-indigo-400 hover:bg-indigo-50/50 rounded-2xl cursor-pointer transition-all duration-200 active:scale-[0.98]"
+                onClick={() => setActiveMode('ai')}
+                className="group relative w-full max-w-md py-5 px-8 bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-700 hover:to-blue-700 text-white rounded-2xl shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300 transition-all duration-200 active:scale-[0.98] mb-5"
               >
-                <div className="flex items-center justify-center gap-3">
-                  <Sparkles className="w-5 h-5 text-gray-400 group-hover:text-indigo-500 transition-colors" />
-                  <span className="text-base font-bold text-gray-500 group-hover:text-indigo-700 transition-colors">
-                    AI 编辑器（实验）
-                  </span>
+                <div className="flex items-center justify-center gap-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Sparkles className="w-7 h-7 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-xl font-bold">使用 AI 编辑器</p>
+                    <p className="text-sm text-indigo-100 mt-0.5">智能转换与文档编辑</p>
+                  </div>
                 </div>
+                {/* 右下角小光晕 */}
+                <div className="absolute -bottom-2 -right-2 w-24 h-24 bg-white/5 rounded-full blur-xl" />
               </button>
+
               {/* === 导入本地文件按钮 === */}
               <div
                 onClick={() => fileInputRef.current?.click()}

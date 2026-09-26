@@ -4,7 +4,7 @@ import { Settings, FileText, Code, FileJson, Sparkles } from 'lucide-react';
 interface SettingsMenuProps {
   isVisible: boolean;
   onClose: () => void;
-  onOpenSettings?: (type: 'file' | 'render' | 'protocol') => void;
+  onOpenSettings?: (type: 'file' | 'render' | 'protocol' | 'ai') => void;
 }
 
 const SettingsMenu: React.FC<SettingsMenuProps> = ({
@@ -42,14 +42,17 @@ const SettingsMenu: React.FC<SettingsMenuProps> = ({
         <Code className="w-4 h-4 text-text-secondary" />
         <span>渲染配置</span>
       </button>
-      {/* AI 服务配置（占位：接口尚未接入） */}
+
+      {/* AI 服务配置 */}
       <button 
-        disabled
-        title="AI 配置接口接入中，暂不可用"
-        className="w-full text-left px-3 py-2 rounded-md text-sm flex items-center gap-2 text-text-muted opacity-60 cursor-not-allowed mb-1"
+        onClick={() => {
+          onClose();
+          onOpenSettings?.('ai');
+        }}
+        className="w-full text-left px-3 py-2 rounded-md text-sm hover:bg-bg-page transition-colors flex items-center gap-2 text-text-primary mb-1"
       >
         <Sparkles className="w-4 h-4 text-text-secondary" />
-        <span>AI 服务配置（接入中）</span>
+        <span>AI 服务配置</span>
       </button>
 
       {/* 协议配置 */}

@@ -1,75 +1,293 @@
 'use client';
 
-/**
- * AIArea — AI 区域（实验版）
- *
- * 现状：只把「粘贴文本 → 调 /api/ai/generate（mock）→ 展示结果」跑通，
- *       用于确认交互流程与页面布局是否顺手。
- *
- * 待办（协作阶段）：模型与风格切换、临时文件列表、预览/下载/保存、
- *                   配置面板、编辑器内联编辑。
- */
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { ArrowLeft } from 'lucide-react';
+import { mutate } from 'swr';
+import { AIInputPanel } from './AIInputPanel';
+import { AITempFileList } from './AITempFileList';
+import { AISaveDialog } from './AISaveDialog';
+import { AIService } from '@/services/ai/AIService';
+import { TempFileManager } from '@/services/ai/TempFileManager';
+import { HtmlBundler } from '@/lib/export/HtmlBundler';
+import { FileService } from '@/services/FileService';
+import { ApiClient } from '@/services/core/ApiClient';
+import { ApiKeyManager } from '@/lib/env-hot-loader';
+import { DEFAULT_THEME } from '@/lib/themes';
+import type { TempFileItem } from '@/services/ai/TempFileManager';
 
 export interface AIAreaProps {
   onClose?: () => void;
+  onOpenSettings?: () => void;
 }
 
-export const AIArea: React.FC<AIAreaProps> = () => {
-  const [input, setInput] = useState('');
-  const [output, setOutput] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export const AIArea: React.FC<AIAreaProps> = ({ onClose, onOpenSettings }) => {
+  const [tempFiles, setTempFiles] = useState<TempFileItem[]>([]);
+  const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [currentModel, setCurrentModel] = useState<'deepseek-chat' | 'deepseek-reasoner'>('deepseek-chat');
+  const [currentPrompt, setCurrentPrompt] = useState<'default' | 'alternative'>('default');
+  const [showExitDialog, setShowExitDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hasApiKey, setHasApiKey] = useState<boolean>(!!ApiKeyManager.get());
 
-  const handleGenerate = useCallback(async () => {
-    if (!input.trim()) return;
-    setLoading(true);
-    setError(null);
+  const promptLabel = currentPrompt === 'default' ? '默认风格' : '学术风格';
+
+  useEffect(() => {
+    // 定期检查 API Key 状态（用户可能在设置面板中修改）
+    const checkKey = () => setHasApiKey(!!ApiKeyManager.get());
+    checkKey();
+    const interval = setInterval(checkKey, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const refreshFiles = useCallback(() => {
+    setTempFiles(TempFileManager.listTemps());
+  }, []);
+
+  const handleGenerate = useCallback(async (inputText: string, sourceFileName: string) => {
+    setIsGenerating(true);
+    setErrorMessage(null);
     try {
-      const res = await fetch('/api/ai/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: input, promptVariant: 'default' }),
+      const result = await AIService.generate({
+        text: inputText,
+        config: { model: currentModel, promptVariant: currentPrompt },
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data?.error || '生成失败');
-      setOutput(data.markdown || '');
-    } catch (err: any) {
-      setError(err.message || '生成失败，请重试');
-    } finally {
-      setLoading(false);
+      if (result.error) { setErrorMessage(result.error); return; }
+      TempFileManager.createTemp(sourceFileName, result.markdown, currentPrompt, currentModel);
+      refreshFiles();
+      const files = TempFileManager.listTemps();
+      if (files.length > 0) setSelectedFileId(files[files.length - 1].id);
+    } catch (error: any) {
+      setErrorMessage(error.message || 'AI 生成失败，请重试');
+    } finally { setIsGenerating(false); }
+  }, [currentModel, currentPrompt, refreshFiles]);
+
+  const handleStyleChange = useCallback(() => {
+    setCurrentPrompt(prev => prev === 'default' ? 'alternative' : 'default');
+  }, []);
+
+  /** 🔗 预览：通过服务端临时文件系统传递内容 */
+  const handleOpenPreview = useCallback(async (fileId: string) => {
+    const file = TempFileManager.getTemp(fileId);
+    if (!file || !file.content?.trim()) return;
+    
+    try {
+      // 先保存到服务端临时目录
+      const result = await ApiClient.post<any>('/api/save-temp', { 
+        slug: file.fileName.replace(/\.md$/i, ''),
+        content: file.content 
+      });
+      
+      if (result && result.fileName) {
+        // 打开新预览页面，通过 URL 参数传递文件名
+        window.open(`/preview/__temp__${result.fileName}`, '_blank');
+      } else {
+        // 回退到旧方式
+        localStorage.setItem('ai_preview_content', file.content);
+        localStorage.setItem('ai_preview_filename', file.fileName);
+        window.open(`/preview`, '_blank');
+      }
+    } catch (e) {
+      console.error('预览保存失败，回退到 localStorage 方式:', e);
+      // 回退到旧方式
+      localStorage.setItem('ai_preview_content', file.content);
+      localStorage.setItem('ai_preview_filename', file.fileName);
+      window.open(`/preview`, '_blank');
     }
-  }, [input]);
+  }, []);
+
+  /** ⬇️ 下载：真实调用 HtmlBundler + FileService.saveExport + 浏览器下载 */
+  const handleDownload = useCallback(async (fileId: string) => {
+    const file = TempFileManager.getTemp(fileId);
+    if (!file) return;
+    const title = file.sourceFileName || 'AI生成文档';
+    try {
+      const blob = await HtmlBundler.bundle(file.content, title, DEFAULT_THEME);
+      const htmlContent = await blob.text();
+      await FileService.saveExport({
+        filename: file.fileName.replace('.md', '.html'),
+        content: htmlContent,
+        metadata: {
+          id: file.fileName.replace('.md', ''),
+          type: 'document',
+          title: file.sourceFileName,
+          date: new Date().toISOString().slice(0, 10),
+          tags: [],
+          chdVersion: '2.4',
+          htmlFile: `${file.fileName.replace('.md', '.html')}`,
+        },
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.fileName.replace('.md', '.html');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('HTML 导出失败:', error);
+      alert(`导出失败: ${error.message || '未知错误'}`);
+    }
+  }, []);
+
+  const handleDelete = useCallback((fileId: string) => {
+    TempFileManager.deleteTemp(fileId);
+    refreshFiles();
+    setSelectedFileId(prev => prev === fileId ? null : prev);
+  }, [refreshFiles]);
+
+  /** 💾 保存到左侧文档列表 — 保存后不删除临时文件，仅标记已保存 */
+  const handleSaveOne = useCallback(async (fileId: string) => {
+    const file = TempFileManager.getTemp(fileId);
+    if (!file || !file.content?.trim()) return;
+    const defaultName = file.fileName.replace(/\.md$/i, '').replace(/_标准化.*$/, '');
+    const newName = prompt('保存到左侧文档列表，请输入文件名（不含后缀）:', defaultName);
+    if (!newName) return;
+    try {
+      const success = await FileService.saveFile(newName, file.content);
+      if (success) {
+        mutate('/api/files');
+        // 不再删除临时文件，仅保留在列表中
+      }
+    } catch (error: any) {
+      console.error('保存失败:', error);
+    }
+  }, []);
+
+  /** 保存所有 — 只保存不删除 */
+  const handleSaveAll = useCallback(async () => {
+    const items = TempFileManager.listTemps();
+    for (const item of items) {
+      try {
+        const slug = item.fileName.replace(/\.md$/i, '');
+        await FileService.saveFile(slug, item.content);
+      } catch {}
+    }
+    mutate('/api/files');
+  }, []);
+
+  const handleClearAll = useCallback(() => {
+    TempFileManager.clearAll();
+    refreshFiles();
+    setSelectedFileId(null);
+  }, [refreshFiles]);
+
+  const handleExit = useCallback(() => {
+    if (TempFileManager.getUnsavedCount() > 0) setShowExitDialog(true);
+    else if (onClose) onClose();
+  }, [onClose]);
 
   return (
-    <div className="space-y-3">
-      <p className="text-xs text-text-muted">实验版：生成结果为 mock 数据，真实模型接入中。</p>
+    <div className="h-full flex flex-col px-6 py-5">
+      {/* 🔑 API Key 未配置引导提示条 */}
+      {!hasApiKey && (
+        <div className="shrink-0 mb-4 px-4 py-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-lg">🔑</span>
+            <div>
+              <p className="text-sm font-medium text-amber-800">API Key 未配置</p>
+              <p className="text-xs text-amber-600 mt-0.5">请先配置 DeepSeek API Key 后才能使用 AI 转换功能</p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              // 直接触发打开设置事件，不关闭 AI 区域
+              window.dispatchEvent(new CustomEvent('open-settings', { detail: { type: 'ai' } }));
+            }}
+            className="shrink-0 px-4 py-1.5 text-xs font-medium bg-amber-500 text-white rounded-md hover:bg-amber-600 transition-colors shadow-sm"
+          >
+            前往设置
+          </button>
+        </div>
+      )}
 
-      <textarea
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder="粘贴需要转换的文本…"
-        className="w-full h-32 p-3 text-sm border border-border-soft rounded-lg bg-white"
-      />
-
-      <div className="flex items-center gap-2">
-        <button
-          onClick={handleGenerate}
-          disabled={loading || !input.trim()}
-          className="px-3 py-1.5 text-sm rounded-md bg-indigo-600 text-white disabled:opacity-50"
-        >
-          {loading ? '生成中…' : '生成（实验）'}
-        </button>
+      {/* 顶部状态栏 - 舒展版 */}
+      <div className="flex items-center justify-between shrink-0 pb-5 border-b border-border-soft mb-5">
+        <div className="flex items-center gap-4">
+          <span className="text-sm font-semibold text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full">🤖 AI 转换</span>
+          <span className="text-sm font-semibold px-3 py-1.5 rounded-full border transition-all" style={{
+            backgroundColor: currentPrompt === 'default' ? '#eef2ff' : '#fce7f3',
+            borderColor: currentPrompt === 'default' ? '#c7d2fe' : '#f9a8d4',
+            color: currentPrompt === 'default' ? '#4338ca' : '#be185d',
+          }}>
+            {promptLabel}
+          </span>
+          <span className="text-sm text-text-muted hidden sm:inline">任意文档 → CHD 格式</span>
+        </div>
+        <div className="flex items-center gap-4">
+          {/* 连接状态指示（仅检查一次，不轮询） */}
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-bg-card border border-border-soft">
+            <span className={`w-2 h-2 rounded-full ${hasApiKey ? 'bg-green-500' : 'bg-red-500'}`} />
+            <span className="text-[10px] font-medium text-text-secondary">{hasApiKey ? '已连接' : '未连接'}</span>
+          </div>
+          <select value={currentModel} onChange={(e) => setCurrentModel(e.target.value as any)} className="px-3 py-1.5 text-sm border border-border-soft rounded-md bg-white text-text-primary cursor-pointer">
+            <option value="deepseek-chat">DeepSeek Flash ⚡</option>
+            <option value="deepseek-reasoner">DeepSeek Pro 🧠</option>
+          </select>
+          {onClose && <button onClick={onClose} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-700 bg-indigo-50 rounded-lg hover:bg-indigo-100 hover:shadow-sm transition-all border border-indigo-200" title="返回首页"><ArrowLeft className="w-3.5 h-3.5" />返回首页</button>}
+        </div>
       </div>
 
-      {error && <div className="text-xs text-red-600">{error}</div>}
+      <div className="shrink-0">
+        <div className="text-base font-semibold text-text-secondary mb-4 flex items-center gap-2">
+          📝 输入文档
+          <span className="font-normal text-text-muted text-sm ml-1">— 拖拽文件 / 选择文件 / URL</span>
+        </div>
+        <AIInputPanel onSubmit={handleGenerate} onStyleChange={handleStyleChange} isGenerating={isGenerating} />
+      </div>
 
-      {output && (
-        <pre className="p-3 text-xs whitespace-pre-wrap bg-bg-card border border-border-soft rounded-lg">
-          {output}
-        </pre>
+      {errorMessage && (
+        <div className="mt-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 flex items-center justify-between">
+          <span>{errorMessage}</span>
+          <button onClick={() => setErrorMessage(null)} className="text-red-400 hover:text-red-600 ml-2">✕</button>
+        </div>
       )}
+
+      {tempFiles.length > 0 && <div className="border-t border-border-soft my-3" />}
+
+      {tempFiles.length > 0 && (
+        <AITempFileList
+          files={tempFiles}
+          selectedFileId={selectedFileId}
+          onSelect={setSelectedFileId}
+          onOpenPreview={handleOpenPreview}
+          onDownload={handleDownload}
+          onDelete={handleDelete}
+          onSaveOne={handleSaveOne}
+          onSaveAll={handleSaveAll}
+          onClearAll={handleClearAll}
+        />
+      )}
+
+      {tempFiles.length === 0 && (
+        <div className="flex-1 flex items-center justify-center text-text-muted/30">
+          <div className="text-center">
+            <div className="text-2xl mb-1">📄</div>
+            <p className="text-xs">拖入文档后点击「AI 生成」</p>
+          </div>
+        </div>
+      )}
+
+      <AISaveDialog
+        open={showExitDialog}
+        unsavedCount={tempFiles.length}
+        unsavedFileNames={tempFiles.map(f => f.fileName)}
+        onSave={async () => {
+          // 退出时保存所有：保存到 posts 并标记为已保存，但保留临时文件
+          const items = TempFileManager.listTemps();
+          for (const item of items) {
+            try {
+              await FileService.saveFile(item.fileName.replace(/\.md$/i, ''), item.content);
+            } catch {}
+          }
+          mutate('/api/files');
+          setShowExitDialog(false);
+          if (onClose) onClose();
+        }}
+        onDiscard={() => { setShowExitDialog(false); if (onClose) onClose(); }}
+        onCancel={() => setShowExitDialog(false)}
+      />
     </div>
   );
 };
